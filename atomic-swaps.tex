@@ -189,6 +189,76 @@ If the timeout expires before the protocol is completed:
 \caption{Protocol execution for a successful swap}
 \end{figure}
 
+\begin{figure}[H]
+\begin{minipage}[t]{0.5\textwidth}
+\begin{pchstack}[boxed]
+\pseudocode{
+    \text{Global input} \:\: (\mathbb{G}, G, q, T, \mathsf{swp}(a), \mathsf{swp}(b),\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
+    (sk_0(01), pk(01)) \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}}(\mathbb{G}, G, q) \\
+    (C, \pi) \gets \mathsf{\textbf{wait}} \:\: \mathsf{receive}(U_1) \\
+    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{VTD}}.\mathsf{Verify}(pk, C, \pi) \neq 1 \\
+    \quad \mathsf{\textbf{return}} \perp \\
+    \mathsf{res} \gets \mathsf{\textbf{select}} \:\: \{ \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \Pi_{\mathsf{VTD}}.\mathsf{ForceOp}(C) \\
+    \quad \} \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad  (pk(10), sk(10)) \gets \Pi_{\mathsf{DS}}.\mathsf{KeyGen}(1^\lambda) \\
+    \qquad tx_\mathsf{frz} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}(pk(0), pk(01), \mathsf{swp(a)}, \mathbb{A}) \\
+    \qquad \sigma_{\mathsf{frz}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(0), tx_\mathsf{frz}) \\
+    \qquad \mathsf{\textbf{wait}} \:\: \mathsf{PubTx}(\sigma_{\mathsf{frz}}, tx_\mathsf{frz}, \mathbb{A}) \\
+    \qquad pk(1) \gets \mathsf{\textbf{wait}} \:\: \mathsf{receive}(U_1) \\
+    \qquad tx_\mathsf{swp} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}(pk(1), pk(10), \mathsf{swp(b)}, \mathbb{B}) \\
+    \qquad \sigma_{swp}(10) \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{Swap}}(sk_0(01), tx_{swp}) \\
+    \qquad \mathsf{\textbf{wait}} \:\: \mathsf{PubTx}(\sigma_{\mathsf{swp}(10)}, tx_{swp}, \mathbb{B}) \\
+    \quad \} \\
+    \} \\
+    \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\
+    \quad sk(01) := sk_0(01) \oplus \mathsf{res} \\
+    \quad tx_\mathsf{rfnd} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}(pk(01), pk(0), \mathsf{swp(a)}, \mathbb{A}) \\
+    \quad \sigma_{\mathsf{rfnd}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(01), tx_\mathsf{rfnd}) \\
+    \quad \mathsf{\textbf{wait}} \:\: \mathsf{PubTx}(\sigma_{\mathsf{rfnd}}, tx_{rfnd}, \mathbb{A}) \\
+}
+\end{pchstack}
+\end{minipage}%
+\begin{minipage}[t]{0.5\textwidth}
+\begin{pchstack}[boxed]
+\pseudocode{
+    \text{Global input} \:\: (\mathbb{G}, G, q, T, \mathsf{swp}(a), \mathsf{swp}(b),\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
+    (sk_1(01), pk(01)) \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}}(\mathbb{G}, G, q) \\
+    (C, \pi) \gets \Pi_{\mathsf{VTD}}.\mathsf{Commit}(sk_1, T) \\
+    \mathsf{send}(U_1,\: (C, \pi)) \\
+    \mathsf{res} \gets \mathsf{\textbf{select}} \:\: \{ \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{timeout}(T/2) \\
+    \quad \} \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{\textbf{do}} \:\: \mathsf{bal} \gets \mathsf{\textbf{wait}} \:\: \mathsf{GetBal}(pk(01), \mathbb{A}) \\
+    \qquad \mathsf{\textbf{while}} \:\: \mathsf{bal} \neq {\mathsf{swp}(a)} \\
+    \qquad \mathsf{send}(U_1,\: \pk(1)) \\
+    \qquad \sigma_{swp}(10) \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{Swap}}(sk_1(01), sk(1)) \\
+    \qquad \mathsf{\textbf{do}} \:\: \mathsf{\sigma_{swp}(10)} \gets \mathsf{\textbf{wait}} \:\: \mathsf{GetSig}(pk(1), \mathbb{B}) \\
+    \qquad \quad sk(01) \gets (lk \oplus \sigma_{swp}(10)) \oplus sk_1 \\
+    \qquad \quad \sigma_{b} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(01), 1) \\
+    \qquad \mathsf{\textbf{while}} \:\: \Pi_{\mathsf{DS}}.\mathsf{Verify}(m, pk, \sigma_{b}) \neq 1 \\
+    \qquad tx_\mathsf{swp} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}(pk(01), pk_{\mathbb{A}}(1), \mathsf{swp(a)}, \mathbb{A}) \\
+    \qquad \sigma_{\mathsf{swp}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(01), tx_\mathsf{rfnd}) \\
+    \qquad \mathsf{\textbf{wait}} \:\: \mathsf{PubTx}(\sigma_{\mathsf{swp}}, tx_{swp}, \mathbb{A}) \\
+    \quad \} \\
+    \} \\
+    \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\
+    \quad  (pk(11), sk(11)) \gets \Pi_{\mathsf{DS}}.\mathsf{KeyGen}(1^\lambda) \\
+    \quad tx_\mathsf{rfnd} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}(pk(1), pk(11), \mathsf{swp(b)}, \mathbb{B}) \\
+    \quad \sigma_{\mathsf{rfnd}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(1), tx_\mathsf{rfnd}) \\
+    \quad \mathsf{\textbf{wait}} \:\: \mathsf{PubTx}(\sigma_{\mathsf{rfnd}}, tx_\mathsf{rfnd}, \mathbb{B}) \\
+}
+\end{pchstack}
+
+\end{minipage}%
+\caption{Full protocol execution for $U_0$ and $U_1$, respectively left and right (alternative syntax)}
+\end{figure}
+
+
 
 
 \begin{figure}[H]
