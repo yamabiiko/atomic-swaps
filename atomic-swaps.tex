@@ -139,23 +139,23 @@
 \maketitle
 
 Parties $U_0$ and $U_1$ hold assets $a$ on blockchain $\mathbb{A}$ and assets $b$ on chain $\mathbb{B}$ respectively. \\
-We define with $\mathsf{swp}(a)$ and $\mathsf{swp}(b)$ the amount of the assets the parties agreed to swap before starting the protocol. \\
+We define with $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$ the amount of the assets the parties agreed to swap before starting the protocol. \\
+In the protocol definition, variables and functions that are blockchain-specific (unless clear from context) are denoted with a subscript, example for a publick key on chain $\mathbb{B}$ we denote $\mathsf{pk_{(\mathbb{B})}}$. \\
+\\
+
+Informally, we want the atomicity security property: parties should either both end up with the original funds in a wallet they own (refund case) or they should own the agreed assets to swap on their respective target wallets. \\
 
 We define the following oracles to interact with the blockchains.
 
-- $\mathsf{PubTx}(\sigma_{tx}, tx, \mathbb{A})$ publish the transaction $tx$ with signature $\sigma_{tx}$ on chain $\mathbb{A}$ \\
-- $\mathsf{InitTx}(pk_{tx}, pk_{rx}, amnt, \mathbb{A})$ create an unsigned transaction paying $amnt$ from $pk_{tx}$ to $pk_{rx}$ on chain $\mathbb{A}$ \\
-- $\mathsf{WatchTx}(tx, \mathbb{A})$ wait for the transaction $tx$ to be confirmed on chain $\mathbb{A}$ \\
-- $\mathsf{GetBal}(pk, \mathbb{A})$ get the balance of assets held by $pk$ \\
-- $\mathsf{GetSig}(pk, \mathbb{A})$ get the signature $\sigma_{tx}$ of the latest transaction in $pk$'s record on chain $\mathbb{A}$ \\
+- $\mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$ publish the transaction $\mathsf{tx}$ with signature $\sigma_{\mathsf{tx}}$ on chain $\mathbb{A}$ \\
+- $\mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt})$ create an unsigned transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ on chain $\mathbb{A}$ \\
+- $\mathsf{WatchTx}_{(\mathbb{A})}(\mathsf{tx})$ wait for the transaction $\mathsf{tx}$ to be confirmed on chain $\mathbb{A}$ \\
+- $\mathsf{GetBal}_{(\mathbb{A})}(\mathsf{pk})$ get the balance of assets held by $\mathsf{pk}$ \\
+- $\mathsf{GetSig}_{(\mathbb{A})}(\mathsf{pk})$ get the signature $\sigma_{\mathsf{tx}}$ of the latest transaction in $\mathsf{pk}$'s record on chain $\mathbb{A}$ \\
 
 $U_1$ starts counting the timeout from the moment they send the $\mathsf{VTD}$ commitment to $U_0$, and respectively $U_0$ starts counting down from the moment they receive it. \\
 \\
-If the timeout expires before the protocol is completed: 
-\begin{itemize}
-    \item $U_1$ will transfer the coins from $pk(1)$ to another wallet on $\mathbb{B}$. From this moment on, if $U_0$ tries to $\mathsf{PubTx}(\sigma_{\mathsf{swp(10)}}, tx_\mathsf{swp}, \mathbb{A})$, the transaction will get rejected. \\
-    \item $U_0$ will wait until $\Pi_{\mathsf{VTD}}.\mathsf{ForceOp}(C)$ is completed to get the other secret key share $sk_1(01)$ of $pk(10)$ to retrieve $sk(10)$ and transfer back assets $a$ to $pk(0)$.
-\end{itemize}
+
 
 \begin{figure}[H]
 \begin{pchstack}[center, boxed]
@@ -181,93 +181,117 @@ If the timeout expires before the protocol is completed:
     \< \sendmessage*{<->}{top={{\Gamma_{\mathsf{Swap}} \qquad \qquad \\ U_0 \xlongrightarrow{} (sk_0(01), tx_\mathsf{swp}) \\ (sk_1(01), sk(1)) \xlongleftarrow{} U_1 }}, bottom={lk := \sigma_{swp}(10) \oplus sk_0(01) \xlongrightarrow{} \\  \xlongleftarrow{} \sigma_{swp}(10) \qquad \qquad  }} \< \\
     \mathsf{PubTx}(\sigma_{\mathsf{swp(10)}}, tx_\mathsf{frz}, \mathbb{A}) \\
     \<\< \mathsf{do}\: \sigma_{swp}(10) \gets \mathsf{GetSig}(pk(1), \mathbb{B}) \\
-    \<\< \qquad sk(01) \gets (lk \oplus \sigma_{swp}(10)) \oplus sk_1 \\
+    \<\< \qquad sk(01) \gets (lk \oplus \sigma_{swp}(10)) + sk_1 \\
     \<\< \qquad \sigma_{m} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(01), 1) \\
     \<\< \mathsf{while}\: \Pi_{\mathsf{DS}}.\mathsf{Verify}(m, pk, \sigma_{m}) \neq 1 \\
 }
 \end{pchstack}
-\caption{Protocol execution for a successful swap}
+\caption{Protocol execution for a successful swap (old)}
 \end{figure}
 
 \begin{figure}[H]
 \begin{minipage}[t]{0.5\textwidth}
 \begin{pchstack}[boxed]
 \pseudocode{
-    \text{Global input} \:\: (\mathbb{G}, G, q, T, \mathsf{swp}(a), \mathsf{swp}(b),\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
-    (sk_0(01), pk(01)) \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}}(\mathbb{G}, G, q) \\
+    \text{Global input} \:\: (\mathbb{G}, [1], q, T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
+    (\mathsf{sk_{frz0}}, \mathsf{pk_{frz}}) \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}_{(\mathbb{A})}}(\mathbb{G}, [1], q) \\
     (C, \pi) \gets \mathsf{\textbf{wait}} \:\: \mathsf{receive}(U_1) \\
-    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{VTD}}.\mathsf{Verify}(pk, C, \pi) \neq 1 \\
+    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{VTD}}.\mathsf{Verify}([\mathsf{pk_{frz}}] - [\mathsf{sk_{frz0}}], C, \pi) \neq 1 \\
     \quad \mathsf{\textbf{return}} \perp \\
     \mathsf{res} \gets \mathsf{\textbf{select}} \:\: \{ \\
     \quad \mathsf{\textbf{wait}} \:\: \{ \\
     \qquad \Pi_{\mathsf{VTD}}.\mathsf{ForceOp}(C) \\
     \quad \} \\
     \quad \mathsf{\textbf{wait}} \:\: \{ \\
-    \qquad  (pk(10), sk(10)) \gets \Pi_{\mathsf{DS}}.\mathsf{KeyGen}(1^\lambda) \\
-    \qquad tx_\mathsf{frz} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}(pk(0), pk(01), \mathsf{swp(a)}, \mathbb{A}) \\
-    \qquad \sigma_{\mathsf{frz}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(0), tx_\mathsf{frz}) \\
-    \qquad \mathsf{\textbf{wait}} \:\: \mathsf{PubTx}(\sigma_{\mathsf{frz}}, tx_\mathsf{frz}, \mathbb{A}) \\
-    \qquad pk(1) \gets \mathsf{\textbf{wait}} \:\: \mathsf{receive}(U_1) \\
-    \qquad tx_\mathsf{swp} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}(pk(1), pk(10), \mathsf{swp(b)}, \mathbb{B}) \\
-    \qquad \sigma_{swp}(10) \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{Swap}}(sk_0(01), tx_{swp}) \\
-    \qquad \mathsf{\textbf{wait}} \:\: \mathsf{PubTx}(\sigma_{\mathsf{swp}(10)}, tx_{swp}, \mathbb{B}) \\
+	\qquad  (\mathsf{pk_{swp}}, \mathsf{sk_{swp}}) \gets \Pi_{\mathsf{DS}}.\mathsf{KeyGen_{(\mathbb{B})}}(1^\lambda) \\
+    \qquad \mathsf{tx_{frz}} \gets \:\: \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{init}}, \mathsf{pk_{frz}}, \mathsf{amnt_a}) \\
+    \qquad \sigma_{\mathsf{frz}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{init}}, \mathsf{tx_{frz}}) \\
+    \qquad \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{frz}}, \mathsf{tx_{frz}}) \\
+    \qquad \mathsf{pk_{init(\mathbb{B})}} \gets  \mathsf{receive}(U_1) \\
+    \qquad \mathsf{tx_{swp}} \gets \mathsf{InitTx}_{(\mathbb{B})}(\mathsf{pk_{init}}, \mathsf{pk_{swp}}, \mathsf{amnt_b}) \\
+    \qquad \sigma_{\mathsf{swp(\mathbb{B})}} \gets \Gamma_{\mathsf{Swap}}(\mathsf{sk_{frz0}}, \mathsf{tx_{swp}}) \\
+    \qquad \mathsf{PubTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
+    \qquad \mathsf{send}(U_1) \\
     \quad \} \\
     \} \\
     \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\
-    \quad sk(01) := sk_0(01) \oplus \mathsf{res} \\
-    \quad tx_\mathsf{rfnd} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}(pk(01), pk(0), \mathsf{swp(a)}, \mathbb{A}) \\
-    \quad \sigma_{\mathsf{rfnd}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(01), tx_\mathsf{rfnd}) \\
-    \quad \mathsf{\textbf{wait}} \:\: \mathsf{PubTx}(\sigma_{\mathsf{rfnd}}, tx_{rfnd}, \mathbb{A}) \\
+    \quad \mathsf{sk_{frz}} := \mathsf{sk_{frz0}} + \mathsf{res} \\
+    \quad \mathsf{tx_{rfnd}} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{init}}, \mathsf{amnt_a}) \\
+    \quad \sigma_{\mathsf{rfnd}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{frz}}, \mathsf{tx_{rfnd}}) \\
+    \quad \mathsf{\textbf{wait}} \:\: \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{rfnd}}, \mathsf{tx_{rfnd}}, \mathbb{A})
 }
 \end{pchstack}
 \end{minipage}%
 \begin{minipage}[t]{0.5\textwidth}
 \begin{pchstack}[boxed]
 \pseudocode{
-    \text{Global input} \:\: (\mathbb{G}, G, q, T, \mathsf{swp}(a), \mathsf{swp}(b),\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
-    (sk_1(01), pk(01)) \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}}(\mathbb{G}, G, q) \\
-    (C, \pi) \gets \Pi_{\mathsf{VTD}}.\mathsf{Commit}(sk_1, T) \\
-    \mathsf{send}(U_1,\: (C, \pi)) \\
+    \text{Global input} \:\: (\mathbb{G}, G, q, T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
+    (\mathsf{sk_{frz1}}, \mathsf{pk_{frz}}) \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}_{(\mathbb{A})}}(\mathbb{G}, [1], q) \\
+    (C, \pi) \gets \Pi_{\mathsf{VTD}}.\mathsf{Commit}(\mathsf{sk_{frz1}}, T) \\
+    \mathsf{send}(U_0,\: (C, \pi)) \\
     \mathsf{res} \gets \mathsf{\textbf{select}} \:\: \{ \\
     \quad \mathsf{\textbf{wait}} \:\: \{ \\
     \qquad \mathsf{timeout}(T/2) \\
     \quad \} \\
     \quad \mathsf{\textbf{wait}} \:\: \{ \\
-    \qquad \mathsf{\textbf{do}} \:\: \mathsf{bal} \gets \mathsf{\textbf{wait}} \:\: \mathsf{GetBal}(pk(01), \mathbb{A}) \\
-    \qquad \mathsf{\textbf{while}} \:\: \mathsf{bal} \neq {\mathsf{swp}(a)} \\
-    \qquad \mathsf{send}(U_1,\: \pk(1)) \\
-    \qquad \sigma_{swp}(10) \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{Swap}}(sk_1(01), sk(1)) \\
-    \qquad \mathsf{\textbf{do}} \:\: \mathsf{\sigma_{swp}(10)} \gets \mathsf{\textbf{wait}} \:\: \mathsf{GetSig}(pk(1), \mathbb{B}) \\
-    \qquad \quad sk(01) \gets (lk \oplus \sigma_{swp}(10)) \oplus sk_1 \\
-    \qquad \quad \sigma_{b} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(01), 1) \\
-    \qquad \mathsf{\textbf{while}} \:\: \Pi_{\mathsf{DS}}.\mathsf{Verify}(m, pk, \sigma_{b}) \neq 1 \\
-    \qquad tx_\mathsf{swp} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}(pk(01), pk_{\mathbb{A}}(1), \mathsf{swp(a)}, \mathbb{A}) \\
-    \qquad \sigma_{\mathsf{swp}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(01), tx_\mathsf{rfnd}) \\
-    \qquad \mathsf{\textbf{wait}} \:\: \mathsf{PubTx}(\sigma_{\mathsf{swp}}, tx_{swp}, \mathbb{A}) \\
+    \qquad \mathsf{\textbf{do}} \:\: \mathsf{bal} \gets \mathsf{GetBal}_{(\mathbb{A})}(\mathsf{pk_{frz}}) \\
+    \qquad \mathsf{\textbf{while}} \:\: \mathsf{bal} \neq {\mathsf{amnt_a}} \\
+    \qquad \mathsf{send}(U_1,\: \mathsf{pk_{init}}) \\
+    \qquad lk \gets \Gamma_{\mathsf{Swap}}(\mathsf{sk_{frz1}}, \mathsf{sk_{init(\mathbb{B})}}) \\
+    \qquad \mathsf{receive}(U_0) \\
+    \qquad \mathsf{\sigma_{lk}} \gets \mathsf{GetSig}_{(\mathbb{B})}(\mathsf{pk_{init}}) \\
+    \qquad \mathsf{sk_{frz}} \gets (lk \oplus \sigma_{lk}) + \mathsf{sk_{frz1}} \\
+    \qquad \mathsf{tx_{swp}} \gets \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{swp}}, \mathsf{amnt_a}) \\
+    \qquad \sigma_{\mathsf{swp}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{frz}}, \mathsf{tx_{rfnd}}) \\
+    \qquad \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
     \quad \} \\
     \} \\
-    \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\
-    \quad  (pk(11), sk(11)) \gets \Pi_{\mathsf{DS}}.\mathsf{KeyGen}(1^\lambda) \\
-    \quad tx_\mathsf{rfnd} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}(pk(1), pk(11), \mathsf{swp(b)}, \mathbb{B}) \\
-    \quad \sigma_{\mathsf{rfnd}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(1), tx_\mathsf{rfnd}) \\
-    \quad \mathsf{\textbf{wait}} \:\: \mathsf{PubTx}(\sigma_{\mathsf{rfnd}}, tx_\mathsf{rfnd}, \mathbb{B}) \\
+    \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \land lk \neq \perp \\
+    \quad  (\mathsf{pk_{rfnd}}, \mathsf{sk_{rfnd}}) \gets \Pi_{\mathsf{DS}}.\mathsf{KeyGen}_{(\mathbb{B})}(1^\lambda) \\
+    \quad \mathsf{tx_{rfnd}} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}_{(\mathbb{B})}(\mathsf{pk_{init}}, \mathsf{pk_{rfnd}}, \mathsf{amnt_b}) \\
+    \quad \sigma_{\mathsf{rfnd}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{B})}(\mathsf{sk_{init}}, \mathsf{tx_{rfnd}}) \\
+    \quad \mathsf{\textbf{wait}} \:\: \mathsf{PubTx}{(\mathbb{B})}(\sigma_{\mathsf{rfnd}}, \mathsf{tx_{rfnd}})
 }
 \end{pchstack}
-
 \end{minipage}%
 \caption{Full protocol execution for $U_0$ and $U_1$, respectively left and right (alternative syntax)}
 \end{figure}
 
+\section*{Proof sketch}
+\subsection*{Party $U_0$}
 
+Informally, we want that the atomic property holds: after the protocol run either $U_0$ ends up with $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ in case of a successful swap or with $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$, in case the swap was aborted or refunded.  \\
+We consider an active adversary over the communication channel with $U_1$ that can also corrupt $U_1$. We assume liveness and correctness for the blockchains.\\
 
+By general 2PC's privacy property, $\mathsf{sk_{frz1}}$ is only known to $U_0$. \\
+By the $\Pi_{\mathsf{VTD}}.\mathsf{Verify}$ algorithm we have that $\Pi_{\mathsf{VTD}}.\mathsf{Verify}(\mathsf{pk_{frz}} - [\mathsf{sk_{frz0}}], C, \pi) = 1$ if and only if the value embedded $x$ in the commitmemt $C$ satisfies $[x] =  \mathsf{pk_{frz}} - [\mathsf{sk_{frz0}}]$. \\
+Assuming a group based $\Pi_{\mathsf{DS}}$ with $\mathsf{pk} := [\mathsf{sk}]$, we have that $\mathsf{sk_{frz}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}$ and thus $[\mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}] - [\mathsf{sk_{frz0}}] = [\mathsf{sk_{frz1}}] = [x] $. Hence $U_0$ proceeds to swap the assets if and only if the value committed in $C$ is $\mathsf{sk_{frz1}}$ and $\mathsf{pk_{frz}} = [\mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}]$.   \\
+Note that by the $\mathsf{VTD}$'s soundness property the $\mathsf{ForceOp}$ algorithm will produce the committed dlog value $x$ in time $\textbf{T}$, thus $U_0$ will be able to retrieve  $\mathsf{sk_{frz1}}$ after time $T$ and sign a refund transaction. \\
+Now $U_0$ transfer the funds to $\mathsf{pk_{frz}}$ and proceeds to generate a new keypair $(\mathsf{pk_{swp}}, \mathsf{sk_{swp}})$ secret to the outside world. \\
+When calling the 2PC protocol $\Gamma_{\mathsf{Swap}}(\mathsf{sk_{frz0}}, \mathsf{tx_{swp}})$, note that the inputs are again secret by 2PC's privacy property. \\
+If $\sigma_{\mathsf{swp(\mathbb{B})}}$ is invalid, $\mathsf{PubTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}})$ will fail and $U_0$ will wait until $\mathsf{ForceOp}$ completes to compute $\mathsf{sk_{frz}}$ and sign the refund transaction with it, ending up with $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$. \\
+Otherwise, the swap will complete successfully, and $U_0$ ends up with $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$. \\
+An adversary has no information about $\mathsf{sk_{frz0}}$ and $(\mathsf{pk_{swp}}, \mathsf{sk_{swp}})$, thus it cannot sign transaction from $\mathsf{pk_{frz}}$ or compute a valid signature for $\mathsf{pk_{swp}}$, and is thus unable to retrieve information about $\mathsf{sk_{frz0}}$ from $lk$.\\
 
+\subsection*{Party $U_1$}
+After the protocol run either $U_1$ ends up with $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$ in case of a successful swap, with $\mathsf{amnt_b}$ on $\mathsf{pk_{rfnd(\mathbb{B})}}$ in case the swap was refunded or $\mathsf{amnt_b}$ on $\mathsf{pk_{init(\mathbb{B})}}$ if the swap was aborted. \\
+We consider an active adversary over the communication channel with $U_0$ that can also corrupt $U_0$. We assume liveness and correctness for the blockchains.\\
+
+Note that before calling $\Gamma_{\mathsf{Swap}}(\mathsf{sk_{frz1}}, \mathsf{sk_{init(\mathbb{B})}})$, $U_1$ is in control of their assets on $\mathsf{pk_{init(\mathbb{B})}}$ if it were to abort, and by general 2PC's privacy property both inputs are private. \\
+Also note that $U_1$ waits until the funds $\mathsf{amnt_a}$ have been transferred to $\mathsf{pk_{frz}}$ before proceeding with  $\Gamma_{\mathsf{Swap}}$.
+An adversary can only get the signature $\sigma_{swp(\mathbb{B})}$ if and only if it provided the correct $\mathsf{sk_{frz0}}$ and thus $U_1$ has received by correctness of 2PC $lk := \sigma_{swp(\mathbb{B})} \oplus \mathsf{sk_{frz0}}$. \\
+If $U_1$ is unable to retrieve $\sigma_{swp(\mathbb{B})}$ before $T/2$, it proceeds to move the funds from $\mathsf{pk_{init}}$ to a newly generated $\mathsf{pk_{rfnd}}$, and thus an adversary holding $\sigma_{swp(\mathbb{B})}$ will be unable to get a transaction accepted by the correctness property of the blockchain (otherwise we occur in a double spending), so we end up with  $\mathsf{amnt_b}$ on $\mathsf{pk_{rfnd(\mathbb{B})}}$. \\
+\\
+If the transaction with signature $\sigma_{swp(\mathbb{B})}$ gets posted on $\mathbb{B}$, then $U_1$ will be able to retrieve $\mathsf{sk_{frz0}}$ by the above argument, and thus compute $\mathsf{sk_{frz}}$ and sign the swap transaction with it, ending up with $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$.
+
+\newpage
 \begin{figure}[H]
 \begin{pchstack}[center, boxed]
 
 \pseudocode{
     \textbf{$U_0(pk(0)\:, sk(0)$)} \< \< \textbf{$U_1(pk(1)\:, sk(1))$} \\[0.1\baselineskip ][\hline] 
     \<\< \\[-0.5\baselineskip ]
-    sk(01) := sk_0(01) \oplus sk_1(01) \\
+    sk(01) := sk_0(01) + sk_1(01) \\
     \sigma_{swp}(10) \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(1), tx_\mathsf{swp}) \\
     lk := \sigma_{swp}(10) \oplus sk_0(01) \\
 }
