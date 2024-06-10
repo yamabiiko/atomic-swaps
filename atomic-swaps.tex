@@ -31,6 +31,7 @@
     asymptotics,
     keys]{cryptocode}
 
+\usepackage{todonotes}
 
  \usepackage{amsmath,amsfonts,graphicx,amssymb,amsthm}
 \mathchardef\mhyphen="2D
@@ -141,6 +142,17 @@
 
 \tableofcontents
 \section{Introduction}
+
+\todo[inline]{TODO starts}
+\begin{itemize}
+\item General description of problem (swapping), motivations, etc.
+\item Introduce Universal Atomic Swaps (UAS) and its building blocks, briefly discuss how the protocol works, and highlight the issue of both parties needing to solve a VTS
+\item The ``our contribution'' subsection: e.g. ``We propose an alternative construction ... we provide an open source implementation ...''
+\item (Not so) Related work (subsection or section): Other ways to get atomic swaps, e.g. TEE, relays, HTLC, ...
+\end{itemize}
+
+\todo[inline]{TODO ends}
+
 \subsection{Problem description}
 Consider two ledgers $\mathbb{B}_a$ and $\mathbb{B}_b$. Alice holds assets $a$ in $\mathbb{B}_a$ and Bob holds assets beta in $\mathbb{B}_b$. We want to ensure that Alice transfers her assets $a$ in $\mathbb{B}_a$ to Bob if and only if Bob transfers his asset $b$ to Alice in $\mathbb{B}_b$.
 
@@ -267,7 +279,21 @@ differences to open the VTD commitments.
 %\caption{Universal atomic swap protocol execution for a successful swap}
 %\end{figure}
 %
+
+\section{Preliminaries}
+
+\todo[inline]{
+Put the basic definitions here, e.g. signatures, hash functions, commitment, blockchains (maybe for this report just do it informally), etc.}
+
+\section{Atomic Swaps from Commit Transactions}
+
+\todo[inline]{For the current report, put a formal syntax, but maybe informal definitions of correctness and security. Especially, there should be an (informal) definition of commit transaction. }
+
+
 \section{Protocol improvement proposal}
+
+\todo[inline]{Set things up (e.g. let ... be a signature scheme, ... be a ... scheme. We construct a ... in Figure ...)}
+
 Parties $U_0$ and $U_1$ hold assets $a$ on blockchain $\mathbb{A}$ and assets $b$ on chain $\mathbb{B}$ respectively. \\
 We define with $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$ the amount of the assets the parties agreed to swap before starting the protocol. \\
 In the protocol definition, variables and functions that are blockchain-specific (unless clear from context) are denoted with a subscript, example for a publick key on chain $\mathbb{B}$ we denote $\mathsf{pk_{(\mathbb{B})}}$. \\
@@ -356,6 +382,9 @@ $U_1$ starts counting the timeout from the moment they send the $\mathsf{VTD}$ c
 \end{figure}
 
 \section{Proof sketch}
+
+\todo[inline]{Informal theorems for correctness and security and proof sketch}
+
 \subsection{Party $U_0$}
 
 Informally, we want that the atomic property holds: after the protocol run either $U_0$ ends up with $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ in case of a successful swap or with $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$, in case the swap was aborted or refunded.  \\
