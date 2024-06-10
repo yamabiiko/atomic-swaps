@@ -10,6 +10,7 @@
 \usepackage{hyperref}
 \usepackage{extarrows}
 \usepackage{float}
+\usepackage{makeidx}
 \usepackage{enumitem}        % possibility to label list items by alphabet
 \newcommand{\M}[1]{\ensuremath{\text{\texttt{#1}}}}
 \usepackage[
@@ -138,6 +139,135 @@
 
 \maketitle
 
+\tableofcontents
+\section{Introduction}
+\subsection{Problem description}
+Consider two ledgers $\mathbb{B}_a$ and $\mathbb{B}_b$. Alice holds assets $a$ in $\mathbb{B}_a$ and Bob holds assets beta in $\mathbb{B}_b$. We want to ensure that Alice transfers her assets $a$ in $\mathbb{B}_a$ to Bob if and only if Bob transfers his asset $b$ to Alice in $\mathbb{B}_b$.
+
+There must be only two possible outcomes
+
+1) Bob owns $a$ in $\mathbb{B}_a$ and Alice owns $b$ in $\mathbb{B}_b$ (swaps of assets)
+
+2) Alice owns $a$ in $\mathbb{B}_a$ and Bob owns $b$ in $\mathbb{B}_b$ (assets refund)
+
+Additionally, we want that the following properties hold: 
+
+\textbf{Transparent}: an observer should not distinguish a transfer executed as part of an atomic swap from a standard transfer in such ledger. \\
+\textbf{Trustless}: there are no trust assumption on any party executing the protocol. \\
+\textbf{Scriptless}: the protocol does not require any script capabilities on both of the ledgers. \\
+
+\section{Existing works}
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Type} & \textbf{Trustless} & \textbf{Transparent} & \textbf{Scriptless} \\
+\hline
+TEE [BJZLZBDJ'17] & & \checkmark & \checkmark \\
+\hline
+HTLC [Gugger '20] & \checkmark & &\\
+\hline
+Relays [LMP'21] & \checkmark & &  \\
+\hline
+Universal [MTS'20] & \checkmark & \checkmark & \checkmark \\
+\hline
+\end{tabular}
+\caption{Properties comparison of different atomic swaps protocol}
+\end{table}
+\subsection{TEE}
+\subsection{Hashed Timelock Contract (HTLC)}
+
+Closest solution to a universal protocol for atomic swaps, implemented by large majority of trustless exchange protocols. Using HTLC as building block, an atomic swap can be constructed as follows: Alice chooses r, computes h = H(r), transfers a into an HTLC$(a, h, t, A, B)$ in $\mathbb{B}_a$ and sends $h,t$ to Bob.
+
+Bob cannot claim the HTLC yet because r is only known by Alice. Bob finishes the setup of the exchange by choosing a time $t' < t$ and transferring his $b$ assets into an HTLC$(b, h, t', b, a)$ in $\mathbb{B}_b$. Thus either
+
+(1) Alice claims HTLC in $\mathbb{B}_b$, effectively revealing $r$ to Bob (and anyone observing $\mathbb{B}_b$) before $t'$. Bob can then use $r$ to claim the HTLC in $\mathbb{B}_a$;
+
+(2) Alice does not claim HTLC in $\mathbb{B}_b$ and Bob cannot claim the HTLC in $\mathbb{B}_a$. After the timeout they get the funds back.
+
+These cross-chain swaps are deployed in practice but have high execution costs and transactions sizes, in addition to following problems.
+
+(1) Both ledgers must support compatible hash functions within their scripting language. In fact both should support the same hash function and each ledger must use the same number of bits to represent it. An observer can use the same h value at two ledgers and link HTLC as part of the same swap. Monero, Mimblewimble, Ripple, Stellar and Zcash do not support the computation of the HTLC contract
+
+(2) Presence of timelock. Adding timelock functionality is at odds with privacy because (i) if implemented naively, makes time-locked transfers easy to distinguish from normal ones (ii) including it can conflict other privacy operations available in the ledger (iii) adds a non trivial overhead to computation and storage of the ledger if implemented correctly
+
+(3) swap is restricted to only two HTLC, one per ledger, and thus to exchange of a assets in $\mathbb{B}_a$ and b assets in $\mathbb{B}_b$ (no multi coin swap).
+\subsection{Relays}
+Another strategy to achieve atomic swaps relies on relays. Relays are abstractions (in general a smart contract or a script) hosted on some
+chain $\mathbb{B}_a$ that has light client like verification capabilities over chain $\mathbb{B}_b$. For each new block appended to chain $\mathbb{B}_a$,
+the block header is passed on to the relay on chain $\mathbb{B}_b$. \\
+The relay itself implements the standard verification procedure of chain $\mathbb{B}_a$’s consensus algorithm and can therefore verify the
+validity of the block. Once the proof of work has been verified,
+in the case of a Proof of Work (or PoW) blockchain, or the
+two-thirds of validators signatures, in the case of a Byzantine
+Fault Tolerant (or BFT) blockchain, it is possible to verify any
+transaction of chain $\mathbb{B}_a$ from chain $\mathbb{B}_b$. With light client
+like verification capabilities of chain $\mathbb{B}_a$ from chain $\mathbb{B}_b$,
+we can imagine the following scenario. Bob has X assets of
+chain $\mathbb{B}_b$. He is willing to exchange them for Y assets of
+chain $\mathbb{B}_a$.  \\
+    Bob sets up a smart contract SC1 and locks his
+assets in it (1). This smart contract SC1 is set to release the
+assets to anyone providing the proof that they made a payment
+of Y assets of chain $\mathbb{B}_a$ to Bob’s address. Alice, who is
+interested in this trade, transfers Y assets to Bob’s address (2).
+She retrieves the transaction hash tx and provide it to SC1 (3).
+SC1 calls the relay and asks for verification of transaction tx
+(4). The relay verifies that the transfer has taken place and if
+so, returns ok to SC1 (5). On receiving the answer from the
+relay, SC1 transfers the X assets of $\mathbb{B}_b$ to Alice’s address.
+
+\subsection{Verifiable Timed Signatures (VTS) / Universal Atomic Swaps}
+The central challenge that the protocol needs to address is in ensuring atomicity of the swap even in the presence of malicious parties, which is guaranteed by the HTLC-based protocols. Drawing inspiration from that approach, an immediate barrier is the absence of scripting language does not allow to set “time-outs” on transactions.
+
+A timeout $t$ for a transaction $\mathsf{tx}$ means that the transaction is accepted by the nodes in the network only after time $t$ has expired. Typically this is implemented by expressing $t$ in terms of a block number and leveraging a timelock script which is explicitly included in the transaction. \\
+
+To simulate  such functionality without using any on-chain script, the main leverage will be VTS, which lets a user generate a timed commitment $C$ of a signature $\sigma$ on a message $m$ under a public key $\mathsf{pk}$. The commitment $C $ must hide the signature $\sigma$ for time $\mathsf{T}$. At the same time, the committer also generates a proof $\pi$ that proves that the commitment $C$ contains a valid signature $\sigma$. This guarantees that $\sigma$ can be publicly recovered in time $\mathsf{T}$ by anyone who solves the computational puzzle.
+
+To give an intuition, imagine Alice and Bob sharing an address $\mathsf{pk}(ab)$ where each party owns a share of the corresponding secret key.  Before sending the funds to $\mathsf{pk}(ab)$, Alice and Bob sign a refund transaction $\mathsf{tx}(\mathsf{rfnd})$ that transfers all funds from $\mathsf{pk}(ab)$ back to Alice, in such a way that only Bob learns the signatures. Bob then generates a VTS on this refund signature and provides Alice the commitment $C$ and proof $\pi$. \\
+
+Note that the parties must make conservative estimates of each other’s computational
+power in force opening the VTD commitments. This is to
+prevent scenarios where Alice or Bob with a powerful machine
+force opens its VTD commitments earlier than expected in
+terms of real time. The party could potentially steal the coins
+of the other party during the swap lock or swap complete
+phase. In particular, the parties must ensure that $\Delta$ (such that
+T0 = T1 + $\Delta$) is large enough such that it tolerates the time
+differences to open the VTD commitments.
+%\begin{figure}[H]
+%\begin{pchstack}[center, boxed]
+%\pseudocode{
+%    \textbf{$U_0(pk(0)\:, sk(0)$)} \< \< \textbf{$U_1(pk(1)\:, sk(1))$} \\[0.1\baselineskip ][\hline] 
+%    \<\< \\[-0.5\baselineskip ]
+%    \< \sendmessage*{<->}{top={{\Gamma_{\mathsf{KeyGen}}(\mathbb{G},G,q)}}, bottom={\xlongleftarrow{} (sk_0(01), pk(01)) \\ (sk_1(01), pk(01)) \xlongrightarrow{} }} \< \\
+%    \<\< (C, \pi) \gets \Pi_{\mathsf{VTD}}.\mathsf{Commit}(sk_1, T) \\
+%    \< \sendmessageleft*{(C, \pi)} \< \\
+%    \mathsf{starts}\: \mathsf{Timeout}(T - \Delta)
+%    \<\< \mathsf{starts}\: \mathsf{Timeout}(T - \Delta) \\
+%    \mathsf{if}\: \Pi_{\mathsf{VTD}}.\mathsf{Verify}(pk, C, \pi) \neq 1 \\
+%    \qquad \mathsf{abort}\\
+%    tx_\mathsf{frz} \gets \mathsf{InitTx}(pk(0), pk(01), \mathsf{swp(a)}, \mathbb{A}) \\
+%    \sigma_{\mathsf{frz}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(0), tx_\mathsf{frz}) \\
+%    \mathsf{PubTx}(\sigma_{\mathsf{frz}}, tx_\mathsf{frz}, \mathbb{A}) \\
+%    \mathsf{starts}\: \Pi_{\mathsf{VTD}}.\mathsf{ForceOp}(C) \\
+%    \<\< \mathsf{do}\: \mathsf{bal} \gets \mathsf{GetBal}(pk(01), \mathbb{A}) \\
+%    \<\< \mathsf{while}\: \mathsf{bal} \neq \mathsf{swp(a)}\\
+%    \< \sendmessageleft*{pk(1)} \< \\
+%    (pk(10), sk(10)) \gets \Pi_{\mathsf{DS}}.\mathsf{KeyGen}(1^\lambda) \\
+%    tx_\mathsf{swp} \gets \mathsf{InitTx}(pk(1), pk(10), \mathsf{swp(b)}, \mathbb{A}) \\
+%    \< \sendmessage*{<->}{top={{\Gamma_{\mathsf{Swap}} \qquad \qquad \\ U_0 \xlongrightarrow{} (sk_0(01), tx_\mathsf{swp}) \\ (sk_1(01), sk(1)) \xlongleftarrow{} U_1 }}, bottom={lk := \sigma_{swp}(10) \oplus sk_0(01) \xlongrightarrow{} \\  \xlongleftarrow{} \sigma_{swp}(10) \qquad \qquad  }} \< \\
+%    \mathsf{PubTx}(\sigma_{\mathsf{swp(10)}}, tx_\mathsf{frz}, \mathbb{A}) \\
+%    \<\< \mathsf{do}\: \sigma_{swp}(10) \gets \mathsf{GetSig}(pk(1), \mathbb{B}) \\
+%    \<\< \qquad sk(01) \gets (lk \oplus \sigma_{swp}(10)) + sk_1 \\
+%    \<\< \qquad \sigma_{m} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(01), 1) \\
+%    \<\< \mathsf{while}\: \Pi_{\mathsf{DS}}.\mathsf{Verify}(m, pk, \sigma_{m}) \neq 1 \\
+%}
+%\end{pchstack}
+%\caption{Universal atomic swap protocol execution for a successful swap}
+%\end{figure}
+%
+\section{Protocol improvement proposal}
 Parties $U_0$ and $U_1$ hold assets $a$ on blockchain $\mathbb{A}$ and assets $b$ on chain $\mathbb{B}$ respectively. \\
 We define with $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$ the amount of the assets the parties agreed to swap before starting the protocol. \\
 In the protocol definition, variables and functions that are blockchain-specific (unless clear from context) are denoted with a subscript, example for a publick key on chain $\mathbb{B}$ we denote $\mathsf{pk_{(\mathbb{B})}}$. \\
@@ -156,38 +286,6 @@ We define the following oracles to interact with the blockchains.
 $U_1$ starts counting the timeout from the moment they send the $\mathsf{VTD}$ commitment to $U_0$, and respectively $U_0$ starts counting down from the moment they receive it. \\
 \\
 
-
-\begin{figure}[H]
-\begin{pchstack}[center, boxed]
-\pseudocode{
-    \textbf{$U_0(pk(0)\:, sk(0)$)} \< \< \textbf{$U_1(pk(1)\:, sk(1))$} \\[0.1\baselineskip ][\hline] 
-    \<\< \\[-0.5\baselineskip ]
-    \< \sendmessage*{<->}{top={{\Gamma_{\mathsf{KeyGen}}(\mathbb{G},G,q)}}, bottom={\xlongleftarrow{} (sk_0(01), pk(01)) \\ (sk_1(01), pk(01)) \xlongrightarrow{} }} \< \\
-    \<\< (C, \pi) \gets \Pi_{\mathsf{VTD}}.\mathsf{Commit}(sk_1, T) \\
-    \< \sendmessageleft*{(C, \pi)} \< \\
-    \mathsf{starts}\: \mathsf{Timeout}(T - \Delta)
-    \<\< \mathsf{starts}\: \mathsf{Timeout}(T - \Delta) \\
-    \mathsf{if}\: \Pi_{\mathsf{VTD}}.\mathsf{Verify}(pk, C, \pi) \neq 1 \\
-    \qquad \mathsf{abort}\\
-    tx_\mathsf{frz} \gets \mathsf{InitTx}(pk(0), pk(01), \mathsf{swp(a)}, \mathbb{A}) \\
-    \sigma_{\mathsf{frz}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(0), tx_\mathsf{frz}) \\
-    \mathsf{PubTx}(\sigma_{\mathsf{frz}}, tx_\mathsf{frz}, \mathbb{A}) \\
-    \mathsf{starts}\: \Pi_{\mathsf{VTD}}.\mathsf{ForceOp}(C) \\
-    \<\< \mathsf{do}\: \mathsf{bal} \gets \mathsf{GetBal}(pk(01), \mathbb{A}) \\
-    \<\< \mathsf{while}\: \mathsf{bal} \neq \mathsf{swp(a)}\\
-    \< \sendmessageleft*{pk(1)} \< \\
-    (pk(10), sk(10)) \gets \Pi_{\mathsf{DS}}.\mathsf{KeyGen}(1^\lambda) \\
-    tx_\mathsf{swp} \gets \mathsf{InitTx}(pk(1), pk(10), \mathsf{swp(b)}, \mathbb{A}) \\
-    \< \sendmessage*{<->}{top={{\Gamma_{\mathsf{Swap}} \qquad \qquad \\ U_0 \xlongrightarrow{} (sk_0(01), tx_\mathsf{swp}) \\ (sk_1(01), sk(1)) \xlongleftarrow{} U_1 }}, bottom={lk := \sigma_{swp}(10) \oplus sk_0(01) \xlongrightarrow{} \\  \xlongleftarrow{} \sigma_{swp}(10) \qquad \qquad  }} \< \\
-    \mathsf{PubTx}(\sigma_{\mathsf{swp(10)}}, tx_\mathsf{frz}, \mathbb{A}) \\
-    \<\< \mathsf{do}\: \sigma_{swp}(10) \gets \mathsf{GetSig}(pk(1), \mathbb{B}) \\
-    \<\< \qquad sk(01) \gets (lk \oplus \sigma_{swp}(10)) + sk_1 \\
-    \<\< \qquad \sigma_{m} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}(sk(01), 1) \\
-    \<\< \mathsf{while}\: \Pi_{\mathsf{DS}}.\mathsf{Verify}(m, pk, \sigma_{m}) \neq 1 \\
-}
-\end{pchstack}
-\caption{Protocol execution for a successful swap (old)}
-\end{figure}
 
 \begin{figure}[H]
 \begin{minipage}[t]{0.5\textwidth}
@@ -257,8 +355,8 @@ $U_1$ starts counting the timeout from the moment they send the $\mathsf{VTD}$ c
 \caption{Full protocol execution for $U_0$ and $U_1$, respectively left and right (alternative syntax)}
 \end{figure}
 
-\section*{Proof sketch}
-\subsection*{Party $U_0$}
+\section{Proof sketch}
+\subsection{Party $U_0$}
 
 Informally, we want that the atomic property holds: after the protocol run either $U_0$ ends up with $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ in case of a successful swap or with $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$, in case the swap was aborted or refunded.  \\
 We consider an active adversary over the communication channel with $U_1$ that can also corrupt $U_1$. We assume liveness and correctness for the blockchains.\\
@@ -273,7 +371,7 @@ If $\sigma_{\mathsf{swp(\mathbb{B})}}$ is invalid, $\mathsf{PubTx}_{(\mathbb{B})
 Otherwise, the swap will complete successfully, and $U_0$ ends up with $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$. \\
 An adversary has no information about $\mathsf{sk_{frz0}}$ and $(\mathsf{pk_{swp}}, \mathsf{sk_{swp}})$, thus it cannot sign transaction from $\mathsf{pk_{frz}}$ or compute a valid signature for $\mathsf{pk_{swp}}$, and is thus unable to retrieve information about $\mathsf{sk_{frz0}}$ from $lk$.\\
 
-\subsection*{Party $U_1$}
+\subsection{Party $U_1$}
 After the protocol run either $U_1$ ends up with $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$ in case of a successful swap, with $\mathsf{amnt_b}$ on $\mathsf{pk_{rfnd(\mathbb{B})}}$ in case the swap was refunded or $\mathsf{amnt_b}$ on $\mathsf{pk_{init(\mathbb{B})}}$ if the swap was aborted. \\
 We consider an active adversary over the communication channel with $U_0$ that can also corrupt $U_0$. We assume liveness and correctness for the blockchains.\\
 
