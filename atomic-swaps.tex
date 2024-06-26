@@ -291,6 +291,7 @@ Put the basic definitions here, e.g. signatures, hash functions, commitment, blo
 
 
 \section{Protocol improvement proposal}
+\subsection{Version 0}
 
 \todo[inline]{Set things up (e.g. let ... be a signature scheme, ... be a ... scheme. We construct a ... in Figure ...)}
 
@@ -306,6 +307,7 @@ We define the following oracles to interact with the blockchains.
 - $\mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$ publish the transaction $\mathsf{tx}$ with signature $\sigma_{\mathsf{tx}}$ on chain $\mathbb{A}$ \\
 - $\mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt})$ create an unsigned transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ on chain $\mathbb{A}$ \\
 - $\mathsf{WatchTx}_{(\mathbb{A})}(\mathsf{tx})$ wait for the transaction $\mathsf{tx}$ to be confirmed on chain $\mathbb{A}$ \\
+- $\mathsf{CommitTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$ commit transaction
 - $\mathsf{GetBal}_{(\mathbb{A})}(\mathsf{pk})$ get the balance of assets held by $\mathsf{pk}$ \\
 - $\mathsf{GetSig}_{(\mathbb{A})}(\mathsf{pk})$ get the signature $\sigma_{\mathsf{tx}}$ of the latest transaction in $\mathsf{pk}$'s record on chain $\mathbb{A}$ \\
 
@@ -375,6 +377,88 @@ $U_1$ starts counting the timeout from the moment they send the $\mathsf{VTD}$ c
     \quad \mathsf{tx_{rfnd}} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}_{(\mathbb{B})}(\mathsf{pk_{init}}, \mathsf{pk_{rfnd}}, \mathsf{amnt_b}) \\
     \quad \sigma_{\mathsf{rfnd}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{B})}(\mathsf{sk_{init}}, \mathsf{tx_{rfnd}}) \\
     \quad \mathsf{\textbf{wait}} \:\: \mathsf{PubTx}{(\mathbb{B})}(\sigma_{\mathsf{rfnd}}, \mathsf{tx_{rfnd}})
+}
+\end{pchstack}
+\end{minipage}%
+\caption{Full protocol execution for $U_0$ and $U_1$, respectively left and right (alternative syntax)}
+\end{figure}
+
+\subsection{Version 1}
+
+Protocol version using commitment transaction with arbitrary value replacing VTD. \\
+We define the following oracles to interact with the blockchains. \\
+\todo[inline]{User 1: watch txs from wallet to get recvTx and extract $\mathsf{sec}_1$ to reveal/redeem related commitment transaction. Improve blockchain interface}
+
+- $(0,1) \leftarrow \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$ publish the transaction $\mathsf{tx}$ with signature $\sigma_{\mathsf{tx}}$ on chain $\mathbb{A}$ \\
+- $(0,1) \leftarrow \mathsf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{tx})$ open the (on-chain) committed transaction $\mathsf{tx}$ by revealing the commited secret $\mathsf{sec}$ \\
+- $\mathsf{tx} \leftarrow \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt})$ create an unsigned transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ on chain $\mathbb{A}$ \\
+- $(0,1) \gets \mathsf{WatchTx}_{(\mathbb{A})}(\mathsf{tx})$ wait for the transaction $\mathsf{tx}$ to be confirmed on chain $\mathbb{A}$ \\
+- $\mathsf{ctx} \leftarrow \mathsf{CommitTx}_{(\mathbb{A})}(C, \mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{t})$ create an unsigned commit transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ valid until block $\mathsf{t}$. The transaction can be later completed by opening C.
+- $\mathsf{bal} \gets \mathsf{GetBal}_{(\mathbb{A})}(\mathsf{pk})$ get the balance of assets held by $\mathsf{pk}$ \\
+
+\\
+
+\begin{figure}[H]
+\begin{minipage}[t]{0.5\textwidth}
+\begin{pchstack}[boxed]
+\pseudocode{
+    \text{Global input} \:\: (\mathbb{G}, [1], q, T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
+    \mathsf{sec_{0}}  \gets \mathbb{Z}_q \\
+    (C_1, \pi_1, [\mathsf{sec}]) \gets \Gamma_{\mathsf{Commit}}(\mathsf{sec_{0}}) \\
+    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{NIZK}}.\mathsf{Verify}([\mathsf{sec}], C_1, \pi) \neq 1 \\ % verify that sec = sec_0 + sec_1 has been commited
+    \quad \mathsf{\textbf{return}} \perp \\
+    (C_0, \pi_0) \gets \Pi_{\mathsf{NIZK}}.\mathsf{Commit}(\mathsf{sec_0}) \\ % verify that sec_0 has been commited
+    \mathsf{ctx_0} \gets \mathsf{CommitTx}_{(\mathbb{A})}(C_0, \mathsf{pk_0}, \mathsf{pk_1}, \mathsf{amnt_a}, T) \\
+    \sigma_{\mathsf{ctx_0}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{0}}, \mathsf{ctx_0}) \\
+    \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{ctx_0}}, \mathsf{ctx_0}) \\
+    \mathsf{res} \gets \mathsf{\textbf{select}} \:\: \{ \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{timeout}(T) \\
+    \quad \} \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{send}(\mathsf{ctx_0}) \\
+    \qquad \mathsf{receive}(\mathsf{ctx_1}) \\
+    \qquad \mathsf{res_1} \gets \mathsf{\textbf{wait}} \:\: \mathsf{WatchTx}_{(\mathbb{B})}(\mathsf{ctx_1}) \\
+    \qquad \mathsf{\textbf{if}} \:\: \mathsf{ctx_1}.C \neq C_1 \lor \mathsf{ctx_1}.T \neq T \lor \mathsf{res_1} \neq 1 \\ % verify that commit transaction is valid and accepted
+    \qquad \quad \mathsf{\textbf{return}} \perp \\
+    \qquad \mathsf{receive}(\mathsf{sec_1}) \\
+    \qquad \mathsf{\textbf{if}} \:\: [\mathsf{sec_0}+\mathsf{sec_1}] \neq [\mathsf{sec}]\\ % verify that sec = sec_0 + sec_1 has been commited
+    \qquad \quad \mathsf{\textbf{return}} \perp \\
+    \qquad \mathsf{revTx_0} \gets \mathsf{RevTx}(\mathsf{sec_1}+\mathsf{sec_0}, \mathsf{ctx_1}) \\
+    \qquad \mathsf{rev_1} \gets \mathsf{\textbf{wait}} \:\: \mathsf{WatchTx}_{(\mathbb{B})}(\mathsf{RevTx_0}) \\
+    \qquad \mathsf{\textbf{if}} \:\: \mathsf{rev_1} \neq 1 \\
+    \qquad \quad \mathsf{\textbf{return}} \perp \\
+    \quad \} \\
+    \} \\
+}
+\end{pchstack}
+\end{minipage}%
+\begin{minipage}[t]{0.5\textwidth}
+\begin{pchstack}[boxed]
+\pseudocode{
+    \text{Global input} \:\: (\mathbb{G}, [1], q, T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
+    \mathsf{sec_{1}}  \gets \mathbb{Z}_q \\
+    (C_1, \pi_1, [\mathsf{sec}]) \gets \Gamma_{\mathsf{Commit}}(\mathsf{sec_{1}}) \\
+    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{NIZK}}.\mathsf{Verify}([\mathsf{sec}], C_1, \pi) \neq 1 \\ % verify that sec = sec_0 + sec_1 has been commited
+    \quad \mathsf{\textbf{return}} \perp \\
+    \mathsf{ctx_1} \gets \mathsf{CommitTx}_{(\mathbb{B})}(C_1, \mathsf{pk_1}, \mathsf{pk_0}, \mathsf{amnt_b}, T) \\
+    \sigma_{\mathsf{ctx_1}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{B})}(\mathsf{sk_{1}}, \mathsf{ctx_1}) \\
+    \mathsf{PubTx}_{(\mathbb{B})}(\sigma_{\mathsf{ctx_1}}, \mathsf{ctx_1}) \\
+    \mathsf{res} \gets \mathsf{\textbf{select}} \:\: \{ \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{timeout}(T) \\
+    \quad \} \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{send}(\mathsf{ctx_1}) \\
+    \qquad \mathsf{receive}(\mathsf{ctx_0}) \\
+    \qquad \mathsf{res_0} \gets \mathsf{\textbf{wait}} \:\: \mathsf{WatchTx}_{(\mathbb{A})}(\mathsf{ctx_0}) \\
+    \qquad \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{NIZK}}.\mathsf{Verify}([\mathsf{sec}]-[\mathsf{sec_1}], \mathsf{ctx_0}.C, \pi) \neq 1 \\ % verify that sec = sec_0 + sec_1 has been commited
+    \qquad \quad \mathsf{\textbf{return}} \perp \\
+    \qquad \mathsf{\textbf{if}} \:\: \mathsf{ctx_0}.C \neq C_0 \lor \mathsf{ctx_0}.T \neq T + \Delta \lor \mathsf{res_0} \neq 1 \\ % verify that commit transaction is valid and accepted
+    \qquad \quad \mathsf{\textbf{return}} \perp \\
+    \qquad \mathsf{send}(\mathsf{sec_{1}}) \\
+    \quad \} \\
+    \} \\
 }
 \end{pchstack}
 \end{minipage}%
