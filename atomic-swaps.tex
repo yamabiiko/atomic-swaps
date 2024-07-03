@@ -393,10 +393,16 @@ We define the following oracles to interact with the blockchains. \\
 - $(0,1) \leftarrow \mathsf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{tx})$ open the (on-chain) committed transaction $\mathsf{tx}$ by revealing the commited secret $\mathsf{sec}$ \\
 - $\mathsf{tx} \leftarrow \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt})$ create an unsigned transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ on chain $\mathbb{A}$ \\
 - $(0,1) \gets \mathsf{WatchTx}_{(\mathbb{A})}(\mathsf{tx})$ wait for the transaction $\mathsf{tx}$ to be confirmed on chain $\mathbb{A}$ \\
-- $\mathsf{ctx} \leftarrow \mathsf{CommitTx}_{(\mathbb{A})}(C, \mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{t})$ create an unsigned commit transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ valid until block $\mathsf{t}$. The transaction can be later completed by opening C.
+- $\mathsf{ctx} \leftarrow \mathsf{CommitTx}_{(\mathbb{A})}(C, \mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{t})$ creates an unsigned commit transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ valid until block $\mathsf{t}$. The transaction can be later completed by opening and broadcasting $C$ through $\mathsf{RevTx}$ \\
 - $\mathsf{bal} \gets \mathsf{GetBal}_{(\mathbb{A})}(\mathsf{pk})$ get the balance of assets held by $\mathsf{pk}$ \\
 
 \\
+
+\textbf{Definition (CP-NIZK)} \\
+Public parameters $[1], a$. \\
+- $(\pi) \gets \mathsf{Prove}(C, r, x, y)$: generate a proof that $C = [1]x + [a]r \land [1]x = y$. \\
+- $(0,1) \gets \mathsf{Verify}(C, y, \pi)$: returns 1 if and only if value $x$ embedded in $C$ satisfies $[1]x = y$. \\
+
 
 \begin{figure}[H]
 \begin{minipage}[t]{0.5\textwidth}
@@ -405,10 +411,11 @@ We define the following oracles to interact with the blockchains. \\
     \text{Global input} \:\: (\mathbb{G}, [1], q, T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
     \mathsf{sec_{0}}  \gets \mathbb{Z}_q \\
     (C_1, \pi_1, [\mathsf{sec}]) \gets \Gamma_{\mathsf{Commit}}(\mathsf{sec_{0}}) \\
-    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{NIZK}}.\mathsf{Verify}([\mathsf{sec}], C_1, \pi) \neq 1 \\ % verify that sec = sec_0 + sec_1 has been commited
+    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{CP-NIZK}}.\mathsf{Verify}([\mathsf{sec}], C_1, \pi) \neq 1 \\ % verify that sec = sec_0 + sec_1 has been commited
     \quad \mathsf{\textbf{return}} \perp \\
-    (C_0, \pi_0) \gets \Pi_{\mathsf{NIZK}}.\mathsf{Commit}(\mathsf{sec_0}) \\ % verify that sec_0 has been commited
-    \mathsf{ctx_0} \gets \mathsf{CommitTx}_{(\mathbb{A})}(C_0, \mathsf{pk_0}, \mathsf{pk_1}, \mathsf{amnt_a}, T) \\
+    (C_0, r) \gets \Pi_{\mathsf{PCom}}.\mathsf{Commit}(\mathsf{sec_0}) \\ % verify that sec_0 has been commited
+    \pi_0 \gets \Pi_{\mathsf{CP-NIZK}}.\mathsf{Prove}(C_0, r, \mathsf{sec_0}, [\mathsf{sec_0]}) \\ 
+    \mathsf{ctx_0} \gets \mathsf{CommitTx}_{(\mathbb{A})}(C_0, \mathsf{pk_0}, \mathsf{pk_1}, \mathsf{amnt_a}, T + \Delta) \\
     \sigma_{\mathsf{ctx_0}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{0}}, \mathsf{ctx_0}) \\
     \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{ctx_0}}, \mathsf{ctx_0}) \\
     \mathsf{res} \gets \mathsf{\textbf{select}} \:\: \{ \\
@@ -416,7 +423,7 @@ We define the following oracles to interact with the blockchains. \\
     \qquad \mathsf{timeout}(T) \\
     \quad \} \\
     \quad \mathsf{\textbf{wait}} \:\: \{ \\
-    \qquad \mathsf{send}(\mathsf{ctx_0}) \\
+    \qquad \mathsf{send}(\pi_0, \mathsf{ctx_0}) \\
     \qquad \mathsf{receive}(\mathsf{ctx_1}) \\
     \qquad \mathsf{res_1} \gets \mathsf{\textbf{wait}} \:\: \mathsf{WatchTx}_{(\mathbb{B})}(\mathsf{ctx_1}) \\
     \qquad \mathsf{\textbf{if}} \:\: \mathsf{ctx_1}.C \neq C_1 \lor \mathsf{ctx_1}.T \neq T \lor \mathsf{res_1} \neq 1 \\ % verify that commit transaction is valid and accepted
@@ -425,9 +432,6 @@ We define the following oracles to interact with the blockchains. \\
     \qquad \mathsf{\textbf{if}} \:\: [\mathsf{sec_0}+\mathsf{sec_1}] \neq [\mathsf{sec}]\\ % verify that sec = sec_0 + sec_1 has been commited
     \qquad \quad \mathsf{\textbf{return}} \perp \\
     \qquad \mathsf{revTx_0} \gets \mathsf{RevTx}(\mathsf{sec_1}+\mathsf{sec_0}, \mathsf{ctx_1}) \\
-    \qquad \mathsf{rev_1} \gets \mathsf{\textbf{wait}} \:\: \mathsf{WatchTx}_{(\mathbb{B})}(\mathsf{RevTx_0}) \\
-    \qquad \mathsf{\textbf{if}} \:\: \mathsf{rev_1} \neq 1 \\
-    \qquad \quad \mathsf{\textbf{return}} \perp \\
     \quad \} \\
     \} \\
 }
@@ -439,7 +443,7 @@ We define the following oracles to interact with the blockchains. \\
     \text{Global input} \:\: (\mathbb{G}, [1], q, T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
     \mathsf{sec_{1}}  \gets \mathbb{Z}_q \\
     (C_1, \pi_1, [\mathsf{sec}]) \gets \Gamma_{\mathsf{Commit}}(\mathsf{sec_{1}}) \\
-    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{NIZK}}.\mathsf{Verify}([\mathsf{sec}], C_1, \pi) \neq 1 \\ % verify that sec = sec_0 + sec_1 has been commited
+    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{CP-NIZK}}.\mathsf{Verify}([\mathsf{sec}], C_1, \pi) \neq 1 \\ % verify that sec = sec_0 + sec_1 has been commited
     \quad \mathsf{\textbf{return}} \perp \\
     \mathsf{ctx_1} \gets \mathsf{CommitTx}_{(\mathbb{B})}(C_1, \mathsf{pk_1}, \mathsf{pk_0}, \mathsf{amnt_b}, T) \\
     \sigma_{\mathsf{ctx_1}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{B})}(\mathsf{sk_{1}}, \mathsf{ctx_1}) \\
@@ -450,19 +454,36 @@ We define the following oracles to interact with the blockchains. \\
     \quad \} \\
     \quad \mathsf{\textbf{wait}} \:\: \{ \\
     \qquad \mathsf{send}(\mathsf{ctx_1}) \\
-    \qquad \mathsf{receive}(\mathsf{ctx_0}) \\
+    \qquad \mathsf{receive}(\pi_0, \mathsf{ctx_0}) \\
     \qquad \mathsf{res_0} \gets \mathsf{\textbf{wait}} \:\: \mathsf{WatchTx}_{(\mathbb{A})}(\mathsf{ctx_0}) \\
-    \qquad \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{NIZK}}.\mathsf{Verify}([\mathsf{sec}]-[\mathsf{sec_1}], \mathsf{ctx_0}.C, \pi) \neq 1 \\ % verify that sec = sec_0 + sec_1 has been commited
+    \qquad \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{CP-NIZK}}.\mathsf{Verify}([\mathsf{sec}]-[\mathsf{sec_1}], \mathsf{ctx_0}.C, \pi_0) \neq 1 \\ % verify that sec = sec_0 + sec_1 has been commited
     \qquad \quad \mathsf{\textbf{return}} \perp \\
     \qquad \mathsf{\textbf{if}} \:\: \mathsf{ctx_0}.C \neq C_0 \lor \mathsf{ctx_0}.T \neq T + \Delta \lor \mathsf{res_0} \neq 1 \\ % verify that commit transaction is valid and accepted
     \qquad \quad \mathsf{\textbf{return}} \perp \\
     \qquad \mathsf{send}(\mathsf{sec_{1}}) \\
+    \qquad \mathsf{sec} \gets \mathsf{\textbf{wait}} \:\: \mathsf{WatchWalletForRevTx}_{(\mathbb{B})}(pk_1) \\
+    \qquad \mathsf{sec}_0 := \mathsf{sec} - \mathsf{sec_1} \\
+    \qquad \mathsf{revTx_1} \gets \mathsf{RevTx}(\mathsf{sec}_0, \mathsf{ctx_0}) \\
     \quad \} \\
     \} \\
 }
 \end{pchstack}
 \end{minipage}%
 \caption{Full protocol execution for $U_0$ and $U_1$, respectively left and right (alternative syntax)}
+\end{figure}
+
+\begin{figure}[H]
+\begin{pchstack}[center, boxed]
+\pseudocode{
+    \textbf{$U_0(\mathsf{sec_0}$)} \< \< \textbf{$U_1(\matshf{sec_1})$} \\[0.1\baselineskip ][\hline] 
+    \<\< \\[-0.5\baselineskip ]
+    \mathsf{sec} := \mathsf{sec_0} + \mathsf{sec_1} \\
+    (C, r) \gets \Pi_{\mathsf{PCom}}.\mathsf{Commit}(\mathsf{sec}) \\
+    \pi \gets \Pi_{\mathsf{CP-NIZK}}.\mathsf{Prove}(C, r, \mathsf{sec}, [\mathsf{sec]}) \\ 
+    \mathsf{\textbf{return}} (C, \pi, [\mathsf{sec}]) \\
+}
+\end{pchstack}
+\caption{Protocol definition of 2PC $\Gamma_{\mathsf{Commit}}$}
 \end{figure}
 
 \section{Proof sketch}
