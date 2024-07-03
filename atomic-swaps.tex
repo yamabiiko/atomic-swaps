@@ -396,8 +396,6 @@ We define the following oracles to interact with the blockchains. \\
 - $\mathsf{ctx} \leftarrow \mathsf{CommitTx}_{(\mathbb{A})}(C, \mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{t})$ creates an unsigned commit transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ valid until block $\mathsf{t}$. The transaction can be later completed by opening and broadcasting $C$ through $\mathsf{RevTx}$ \\
 - $\mathsf{bal} \gets \mathsf{GetBal}_{(\mathbb{A})}(\mathsf{pk})$ get the balance of assets held by $\mathsf{pk}$ \\
 
-\\
-
 \textbf{Definition (CP-NIZK)} \\
 Public parameters $[1], a$. \\
 - $(\pi) \gets \mathsf{Prove}(C, r, x, y)$: generate a proof that $C = [1]x + [a]r \land [1]x = y$. \\
@@ -475,7 +473,7 @@ Public parameters $[1], a$. \\
 \begin{figure}[H]
 \begin{pchstack}[center, boxed]
 \pseudocode{
-    \textbf{$U_0(\mathsf{sec_0}$)} \< \< \textbf{$U_1(\matshf{sec_1})$} \\[0.1\baselineskip ][\hline] 
+    \textbf{$U_0(\mathsf{sec_0}$)} \< \< \textbf{$U_1(\mathsf{sec_1})$} \\[0.1\baselineskip ][\hline] 
     \<\< \\[-0.5\baselineskip ]
     \mathsf{sec} := \mathsf{sec_0} + \mathsf{sec_1} \\
     (C, r) \gets \Pi_{\mathsf{PCom}}.\mathsf{Commit}(\mathsf{sec}) \\
