@@ -309,10 +309,16 @@ We define the following oracles to interact with the blockchains.
 - $\mathsf{WatchTx}_{(\mathbb{A})}(\mathsf{tx})$ wait for the transaction $\mathsf{tx}$ to be confirmed on chain $\mathbb{A}$ \\
 - $\mathsf{CommitTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$ commit transaction
 - $\mathsf{GetBal}_{(\mathbb{A})}(\mathsf{pk})$ get the balance of assets held by $\mathsf{pk}$ \\
-- $\mathsf{GetSig}_{(\mathbb{A})}(\mathsf{pk})$ get the signature $\sigma_{\mathsf{tx}}$ of the latest transaction in $\mathsf{pk}$'s record on chain $\mathbb{A}$ \\
+- $\mathsf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk})$ get the the latest transaction of $\mathsf{pk}$'s record on chain $\mathbb{A}$ \\
 
 $U_1$ starts counting the timeout from the moment they send the $\mathsf{VTD}$ commitment to $U_0$, and respectively $U_0$ starts counting down from the moment they receive it. \\
 \\
+
+\textbf{Definition 1} (encrypted Verifiable Timed Discrelog) \\
+Public parameters $(\mathbb{G}, G, T)$ \\
+- $(eC, C, d, \pi) \gets \mathsf{Commit}(x, y, \textbf{T}$): the commit algorithm (randomized) takes as input a discrete log value $x \in \mathbb{Z}_q$, a hiding time $\textbf{T}$ and an encryption key $ y \in \mathbb{Z}_q$ and outputs a commitment $eC$ containing the encrypted puzzles, a commitment $C$ of $y$ with opening $d$ and a proof $\pi$. \\
+- $(0,1) \gets \mathsf{Verify}(H, eC, C, \pi)$: returns 1 if and only if the value $x$ embedded in $C$ decrypts $eC$ such that the value $y$ in decrypted $eC$ satisfies $H = G^y$  \\ \\
+- $(y, d) \gets \mathsf{ForceOp}(eC, x)$: the force open algorithm takes as input the encrypted commitment $eC$ and the encryption key $x$, outputs the committed value $y$ and the randomness $d$ used in generating $eC$
 
 
 \begin{figure}[H]
@@ -321,12 +327,12 @@ $U_1$ starts counting the timeout from the moment they send the $\mathsf{VTD}$ c
 \pseudocode{
     \text{Global input} \:\: (\mathbb{G}, [1], q, T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
     (\mathsf{sk_{frz0}}, \mathsf{pk_{frz}}) \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}_{(\mathbb{A})}}(\mathbb{G}, [1], q) \\
-    (C, \pi) \gets \mathsf{\textbf{wait}} \:\: \mathsf{receive}(U_1) \\
-    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{VTD}}.\mathsf{Verify}([\mathsf{pk_{frz}}] - [\mathsf{sk_{frz0}}], C, \pi) \neq 1 \\
+    (C_0, \pi) \gets \mathsf{\textbf{wait}} \:\: \mathsf{receive}(U_1) \\
+    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{VTD}}.\mathsf{Verify}([\mathsf{pk_{frz}}] - [\mathsf{sk_{frz0}}], C_0, \pi) \neq 1 \\
     \quad \mathsf{\textbf{return}} \perp \\
     \mathsf{res} \gets \mathsf{\textbf{select}} \:\: \{ \\
     \quad \mathsf{\textbf{wait}} \:\: \{ \\
-    \qquad \Pi_{\mathsf{VTD}}.\mathsf{ForceOp}(C) \\
+    \qquad \Pi_{\mathsf{VTD}}.\mathsf{ForceOp}(C_0) \\
     \quad \} \\
     \quad \mathsf{\textbf{wait}} \:\: \{ \\
 	\qquad  (\mathsf{pk_{swp}}, \mathsf{sk_{swp}}) \gets \Pi_{\mathsf{DS}}.\mathsf{KeyGen_{(\mathbb{B})}}(1^\lambda) \\
@@ -335,7 +341,9 @@ $U_1$ starts counting the timeout from the moment they send the $\mathsf{VTD}$ c
     \qquad \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{frz}}, \mathsf{tx_{frz}}) \\
     \qquad \mathsf{pk_{init(\mathbb{B})}} \gets  \mathsf{receive}(U_1) \\
     \qquad \mathsf{tx_{swp}} \gets \mathsf{InitTx}_{(\mathbb{B})}(\mathsf{pk_{init}}, \mathsf{pk_{swp}}, \mathsf{amnt_b}) \\
-    \qquad \sigma_{\mathsf{swp(\mathbb{B})}} \gets \Gamma_{\mathsf{Swap}}(\mathsf{sk_{frz0}}, \mathsf{tx_{swp}}) \\
+    \qquad (eC, C_1, d, \pi_1) \leftarrow \Pi_\mathsf{eVTD}.\mathsf{Commit}(\mathsf{sk_{frz0}}, \mathsf{pk_{swp}}, T_1) \\
+    \qquad \mathsf{send}(U_1, eC, C_1) \\
+    \qquad \sigma_{\mathsf{swp(\mathbb{B})}} \gets \Gamma_{\mathsf{Swap}}(d, \mathsf{tx_{swp}}) \\
     \qquad \mathsf{PubTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
     \qquad \mathsf{send}(U_1) \\
     \quad \} \\
@@ -353,8 +361,8 @@ $U_1$ starts counting the timeout from the moment they send the $\mathsf{VTD}$ c
 \pseudocode{
     \text{Global input} \:\: (\mathbb{G}, G, q, T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
     (\mathsf{sk_{frz1}}, \mathsf{pk_{frz}}) \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}_{(\mathbb{A})}}(\mathbb{G}, [1], q) \\
-    (C, \pi) \gets \Pi_{\mathsf{VTD}}.\mathsf{Commit}(\mathsf{sk_{frz1}}, T) \\
-    \mathsf{send}(U_0,\: (C, \pi)) \\
+    (C_0, \pi) \gets \Pi_{\mathsf{VTD}}.\mathsf{Commit}(\mathsf{sk_{frz1}}, T_1) \\
+    \mathsf{send}(U_0,\: (C_0, \pi)) \\
     \mathsf{res} \gets \mathsf{\textbf{select}} \:\: \{ \\
     \quad \mathsf{\textbf{wait}} \:\: \{ \\
     \qquad \mathsf{timeout}(T/2) \\
@@ -363,12 +371,16 @@ $U_1$ starts counting the timeout from the moment they send the $\mathsf{VTD}$ c
     \qquad \mathsf{\textbf{do}} \:\: \mathsf{bal} \gets \mathsf{GetBal}_{(\mathbb{A})}(\mathsf{pk_{frz}}) \\
     \qquad \mathsf{\textbf{while}} \:\: \mathsf{bal} \neq {\mathsf{amnt_a}} \\
     \qquad \mathsf{send}(U_1,\: \mathsf{pk_{init}}) \\
-    \qquad lk \gets \Gamma_{\mathsf{Swap}}(\mathsf{sk_{frz1}}, \mathsf{sk_{init(\mathbb{B})}}) \\
-    \qquad \mathsf{receive}(U_0) \\
-    \qquad \mathsf{\sigma_{lk}} \gets \mathsf{GetSig}_{(\mathbb{B})}(\mathsf{pk_{init}}) \\
-    \qquad \mathsf{sk_{frz}} \gets (lk \oplus \sigma_{lk}) + \mathsf{sk_{frz1}} \\
-    \qquad \mathsf{tx_{swp}} \gets \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{swp}}, \mathsf{amnt_a}) \\
-    \qquad \sigma_{\mathsf{swp}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{frz}}, \mathsf{tx_{rfnd}}) \\
+    \qquad (eC, C_1, \pi_1) \leftarrow \mathsf{receive}(U_0) \\
+    \qquad \mathsf{\textbf{if}} \:\: \Pi_\mathsf{eVTD}.\mathsf{Verify}([\mathsf{pk_{frz}}] - [\mathsf{sk_{frz0}}], eC, C_1, \pi_1, T_1) \neq 1 \\
+    \qquad \quad \mathsf{\textbf{return}} \perp \\
+    \qquad \Gamma_{\mathsf{Swap}}(C, \mathsf{sk_{init(\mathbb{B})}}(1)) \\
+    \qquad \mathsf{receive}(U_1) \\
+    \qquad \mathsf{tx_{swp(\mathbb{B})}} \leftarrow \mathsf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk}) \\
+    \qquad \mathsf{pk_{swp(\mathbb{B})}} \leftarrow \mathsf{tx_{swp(\mathbb{B})}.rx} \\
+    \qquad \mathsf{sk_{frz0}} \leftarrow \Pi_\mathsf{eVTD}.\mathsf{ForceOp}(C_1, \mathsf{pk_{swp(\mathbb{B})}}) \\
+    \qquad \mathsf{tx_{swp(\mathbb{A})}} \gets \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{swp}}, \mathsf{amnt_a}) \\
+    \qquad \sigma_{\mathsf{swp}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}, \mathsf{tx_{rfnd}}) \\
     \qquad \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
     \quad \} \\
     \} \\
@@ -381,6 +393,18 @@ $U_1$ starts counting the timeout from the moment they send the $\mathsf{VTD}$ c
 \end{pchstack}
 \end{minipage}%
 \caption{Full protocol execution for $U_0$ and $U_1$, respectively left and right (alternative syntax)}
+\end{figure}
+\begin{figure}[H]
+\begin{pchstack}[center, boxed]
+\pseudocode{
+    U_0(d, \mathsf{tx_{swp}}) \< \< U_1(C, \mathsf{sk_{init(\mathbb{B})}}(1)) \\[0.1\baselineskip ][\hline] 
+    \<\< \\[-0.5\baselineskip ]
+    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{PCom}}.\mathsf{Open}(d, \mathsf{tx_{swp}}.\mathsf{rx}, C) \neq 1 \\
+    \qquad \mathsf{\textbf{return}} \perp \\
+    \sigma_\mathsf{swp(\mathbb{B})} \leftarrow \Pi_{\mathsf{DS}}.\mathsf{Sign}(\mathsf{sk_{init(\mathbb{B})}}, \mathsf{tx_{swp}})
+}
+\end{pchstack}
+\caption{Protocol definition of 2PC $\Gamma_{\mathsf{Commit}}$}
 \end{figure}
 
 \subsection{Version 1}
