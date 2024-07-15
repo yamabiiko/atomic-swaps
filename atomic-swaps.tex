@@ -143,6 +143,13 @@
 \tableofcontents
 \section{Introduction}
 
+An atomic swap cross-chain swap is an exchange of assets held at two different blockchains between two users without any additional trust assumption. \\
+Consider two ledgers $\mathbb{A}$ and $\mathbb{B}$, where Alice holds assets $a$ in $\mathbb{A}$ and Bob holds assets beta in $\mathbb{B}$. We want to ensure that Alice transfers her assets $a$ in $\mathbb{B}_a$ to Bob if and only if Bob transfers his asset $b$ to Alice in $\mathbb{B}_b$. \\
+\\
+The word \textit{atomic} implies that the protocol execution can only have two possible outcomes: \\
+1) the asset swap is successful, with Bob owning $a$ in $\mathbb{A}$ and Alice owning $b$ in $\mathbb{B}$ \\
+2) the swap aborts with an asset refund, so Alice owns $a$ in $\mathbb{A}$ and Bob owns $b$ in $\mathbb{B}$ \\
+
 \todo[inline]{TODO starts}
 \begin{itemize}
 \item General description of problem (swapping), motivations, etc.
@@ -153,20 +160,11 @@
 
 \todo[inline]{TODO ends}
 
-\subsection{Problem description}
-Consider two ledgers $\mathbb{B}_a$ and $\mathbb{B}_b$. Alice holds assets $a$ in $\mathbb{B}_a$ and Bob holds assets beta in $\mathbb{B}_b$. We want to ensure that Alice transfers her assets $a$ in $\mathbb{B}_a$ to Bob if and only if Bob transfers his asset $b$ to Alice in $\mathbb{B}_b$.
+%Additionally, we want that the following properties hold: 
 
-There must be only two possible outcomes
-
-1) Bob owns $a$ in $\mathbb{B}_a$ and Alice owns $b$ in $\mathbb{B}_b$ (swaps of assets)
-
-2) Alice owns $a$ in $\mathbb{B}_a$ and Bob owns $b$ in $\mathbb{B}_b$ (assets refund)
-
-Additionally, we want that the following properties hold: 
-
-\textbf{Transparent}: an observer should not distinguish a transfer executed as part of an atomic swap from a standard transfer in such ledger. \\
-\textbf{Trustless}: there are no trust assumption on any party executing the protocol. \\
-\textbf{Scriptless}: the protocol does not require any script capabilities on both of the ledgers. \\
+%\textbf{Transparent}: an observer should not distinguish a transfer executed as part of an atomic swap from a standard transfer in such ledger. \\
+%\textbf{Trustless}: there are no trust assumption on any party executing the protocol. \\
+%\textbf{Scriptless}: the protocol does not require any script capabilities on both of the ledgers. \\
 
 \section{Existing works}
 \begin{table}[H]
@@ -186,7 +184,6 @@ Universal [MTS'20] & \checkmark & \checkmark & \checkmark \\
 \end{tabular}
 \caption{Properties comparison of different atomic swaps protocol}
 \end{table}
-\subsection{TEE}
 \subsection{Hashed Timelock Contract (HTLC)}
 
 Closest solution to a universal protocol for atomic swaps, implemented by large majority of trustless exchange protocols. Using HTLC as building block, an atomic swap can be constructed as follows: Alice chooses r, computes h = H(r), transfers a into an HTLC$(a, h, t, A, B)$ in $\mathbb{B}_a$ and sends $h,t$ to Bob.
@@ -285,6 +282,28 @@ differences to open the VTD commitments.
 \todo[inline]{
 Put the basic definitions here, e.g. signatures, hash functions, commitment, blockchains (maybe for this report just do it informally), etc.}
 
+\subsection{Syntax definition}
+$\mathbf{wait} \: \mathsf{fn}()$ - waits until the function $\mathsf{fn}()$ execution is complete. If $\mathsf{fn}()$ returns $\perp$, then it causes to abort the execution block returning $\perp$. \\
+$\mathbf{wait} \: \{...\}$ - syntax sugar, enforces $\mathbf{wait}$ routine to all function calls inside the block. Behaves as above.
+$\mathbf{select} \: \{...\}$ - concurrently runs all the $\mathbf{wait}$ routines in the block and returns the value of the first routine that successfully returns a value or $\perp$ if all the $\mathbf{wait}$ routines aborted with $\perp$. When a $\mathbf{wait}$ routine aborts returning $\perp$, it waits until execution of another $\mathbf{wait}$ is successfully completed. 
+
+In the protocol definition, variables and functions that are blockchain-specific (unless clear from context) are denoted with a subscript, example for a publick key on chain $\mathbb{B}$ we denote $\mathsf{pk_{(\mathbb{B})}}$. \\
+
+
+\subsection{Blockchain interface}
+
+We define the following oracles to interact with the blockchains. The subscript $\mathbb{A}$ indicates that we are interacting with chain $\mathbb{A}$.
+
+\begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
+    \item $\mathbf{0/1} \leftarrow \mathsf{\textbf{PubTx}}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$: publish the transaction $\mathsf{tx}$ with signature $\sigma_{\mathsf{tx}}$. Outputs 1 if the transaction is accepted, 0 otherwise.
+    \item $\mathbf{tx}_{\mathbb{A}} := (\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{id})  \leftarrow \mathbf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt})$: creates an unsigned transaction with the unique identifier $\mathsf{id}$ paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$.
+    \item $\mathbf{0/1} \leftarrow \mathbf{WatchTx}_{(\mathbb{A})}(\mathsf{tx})$: wait for the transaction $\mathsf{tx}$ to be confirmed.
+    \item $\mathbf{amnt} \leftarrow \mathbf{GetBal}_{(\mathbb{A})}(\mathsf{pk})$: get the balance of assets held by $\mathsf{pk}$
+    \item $\mathbf{tx} \leftarrow \mathbf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk})$: get the the latest transaction of $\mathsf{pk}$'s record on the chain
+    \item $\mathbf{ctx}_{\mathbb{A}} := (\mathsf{tx_{\mathbb{A}}}, C) \leftarrow \mathbf{CommitTx}_{(\mathbb{A})}(C, \mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{t})$: creates an unsigned commit transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ valid until block $\mathsf{t}$. The transaction can be later completed by opening and broadcasting $C$ through $\mathsf{RevTx}$
+    \item $ \mathbf{0/1} \leftarrow \mathbf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{tx})$: open the (on-chain) committed transaction $\mathsf{tx}$ by revealing the commited secret $\mathsf{sec}$
+\end{itemize}
+
 \section{Atomic Swaps from Commit Transactions}
 
 \todo[inline]{For the current report, put a formal syntax, but maybe informal definitions of correctness and security. Especially, there should be an (informal) definition of commit transaction. }
@@ -297,29 +316,18 @@ Put the basic definitions here, e.g. signatures, hash functions, commitment, blo
 
 Parties $U_0$ and $U_1$ hold assets $a$ on blockchain $\mathbb{A}$ and assets $b$ on chain $\mathbb{B}$ respectively. \\
 We define with $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$ the amount of the assets the parties agreed to swap before starting the protocol. \\
-In the protocol definition, variables and functions that are blockchain-specific (unless clear from context) are denoted with a subscript, example for a publick key on chain $\mathbb{B}$ we denote $\mathsf{pk_{(\mathbb{B})}}$. \\
 \\
 
-Informally, we want the atomicity security property: parties should either both end up with the original funds in a wallet they own (refund case) or they should own the agreed assets to swap on their respective target wallets. \\
+%\textbf{Definition 1} (encrypted Verifiable Timed Discrelog) \\
+%Public parameters $(\mathbb{G}, G, T)$ \\
+%- $(eC, C, d, \pi) \gets \mathsf{Commit}(x, y, \textbf{T}$): the commit algorithm (randomized) takes as input a discrete log value $x \in \mathbb{Z}_q$, a hiding time $\textbf{T}$ and an encryption key $ y \in \mathbb{Z}_q$ and outputs a commitment $eC$ containing the encrypted puzzles, a commitment $C$ of $y$ with opening $d$ and a proof $\pi$. \\
+%- $(0,1) \gets \mathsf{Verify}(H, eC, C, \pi)$: returns 1 if and only if the value $x$ embedded in $C$ decrypts $eC$ such that the value $y$ in decrypted $eC$ satisfies $H = G^y$  \\ \\
+%- $(y, d) \gets \mathsf{ForceOp}(eC, x)$: the force open algorithm takes as input the encrypted commitment $eC$ and the encryption key $x$, outputs the committed value $y$ and the randomness $d$ used in generating $eC$
 
-We define the following oracles to interact with the blockchains.
-
-- $\mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$ publish the transaction $\mathsf{tx}$ with signature $\sigma_{\mathsf{tx}}$ on chain $\mathbb{A}$ \\
-- $\mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt})$ create an unsigned transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ on chain $\mathbb{A}$ \\
-- $\mathsf{WatchTx}_{(\mathbb{A})}(\mathsf{tx})$ wait for the transaction $\mathsf{tx}$ to be confirmed on chain $\mathbb{A}$ \\
-- $\mathsf{CommitTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$ commit transaction
-- $\mathsf{GetBal}_{(\mathbb{A})}(\mathsf{pk})$ get the balance of assets held by $\mathsf{pk}$ \\
-- $\mathsf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk})$ get the the latest transaction of $\mathsf{pk}$'s record on chain $\mathbb{A}$ \\
-
-$U_1$ starts counting the timeout from the moment they send the $\mathsf{VTD}$ commitment to $U_0$, and respectively $U_0$ starts counting down from the moment they receive it. \\
-\\
-
-\textbf{Definition 1} (encrypted Verifiable Timed Discrelog) \\
-Public parameters $(\mathbb{G}, G, T)$ \\
-- $(eC, C, d, \pi) \gets \mathsf{Commit}(x, y, \textbf{T}$): the commit algorithm (randomized) takes as input a discrete log value $x \in \mathbb{Z}_q$, a hiding time $\textbf{T}$ and an encryption key $ y \in \mathbb{Z}_q$ and outputs a commitment $eC$ containing the encrypted puzzles, a commitment $C$ of $y$ with opening $d$ and a proof $\pi$. \\
-- $(0,1) \gets \mathsf{Verify}(H, eC, C, \pi)$: returns 1 if and only if the value $x$ embedded in $C$ decrypts $eC$ such that the value $y$ in decrypted $eC$ satisfies $H = G^y$  \\ \\
-- $(y, d) \gets \mathsf{ForceOp}(eC, x)$: the force open algorithm takes as input the encrypted commitment $eC$ and the encryption key $x$, outputs the committed value $y$ and the randomness $d$ used in generating $eC$
-
+\[
+    \mathcal{L}_{\mathsf{lock}} := \left\{\begin{array}{lr}  \mathsf{stmt} = (lk, y, h, \pi, T) : \exists (x) \text{s.t} \\
+    (\mathcal{H}(x) = h \land \Pi_\mathsf{VTD}.\mathsf{Verify}(y, (lk \oplus x), \pi, T)) \end{array}\right\}
+\]
 
 \begin{figure}[H]
 \begin{minipage}[t]{0.5\textwidth}
@@ -341,8 +349,10 @@ Public parameters $(\mathbb{G}, G, T)$ \\
     \qquad \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{frz}}, \mathsf{tx_{frz}}) \\
     \qquad \mathsf{pk_{init(\mathbb{B})}} \gets  \mathsf{receive}(U_1) \\
     \qquad \mathsf{tx_{swp}} \gets \mathsf{InitTx}_{(\mathbb{B})}(\mathsf{pk_{init}}, \mathsf{pk_{swp}}, \mathsf{amnt_b}) \\
-    \qquad (eC, C_1, d, \pi_1) \leftarrow \Pi_\mathsf{eVTD}.\mathsf{Commit}(\mathsf{sk_{frz0}}, \mathsf{pk_{swp}}, T_1) \\
-    \qquad \mathsf{send}(U_1, eC, C_1) \\
+    \qquad (C_1, \pi_1) \leftarrow \Pi_\mathsf{VTD}.\mathsf{Commit}(\mathsf{sk_{frz0}}, T_1) \\
+    \qquad lk \leftarrow \mathsf{pk_{swp}} \oplus C_1 \\
+    \qquad \pi_2 \leftarrow \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Pr}((lk, [\mathsf{sk_{frz0}}], \mathcal{H}(\mathsf{pk_{swp}}), \pi_1, T_1), \mathsf{pk_{swp}}) \\
+    \qquad \mathsf{send}(U_1, \pi_1, \pi_2, \mathcal{H}(\mathsf{pk_{swp}}), lk) \\
     \qquad \sigma_{\mathsf{swp(\mathbb{B})}} \gets \Gamma_{\mathsf{Swap}}(d, \mathsf{tx_{swp}}) \\
     \qquad \mathsf{PubTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
     \qquad \mathsf{send}(U_1) \\
@@ -371,20 +381,22 @@ Public parameters $(\mathbb{G}, G, T)$ \\
     \qquad \mathsf{\textbf{do}} \:\: \mathsf{bal} \gets \mathsf{GetBal}_{(\mathbb{A})}(\mathsf{pk_{frz}}) \\
     \qquad \mathsf{\textbf{while}} \:\: \mathsf{bal} \neq {\mathsf{amnt_a}} \\
     \qquad \mathsf{send}(U_1,\: \mathsf{pk_{init}}) \\
-    \qquad (eC, C_1, \pi_1) \leftarrow \mathsf{receive}(U_0) \\
-    \qquad \mathsf{\textbf{if}} \:\: \Pi_\mathsf{eVTD}.\mathsf{Verify}([\mathsf{pk_{frz}}] - [\mathsf{sk_{frz0}}], eC, C_1, \pi_1, T_1) \neq 1 \\
+    \qquad (\pi_1, \pi_2, \mathcal{H}(\mathsf{pk_{swp}}), lk) \leftarrow \mathsf{receive}(U_0) \\
+    \qquad \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}((lk, [\mathsf{sk_{frz0}}], \mathcal{H}(\mathsf{pk_{swp}}), \pi_1, T_1), \pi_2) \neq 1 \\
     \qquad \quad \mathsf{\textbf{return}} \perp \\
-    \qquad \Gamma_{\mathsf{Swap}}(C, \mathsf{sk_{init(\mathbb{B})}}(1)) \\
+    \qquad \Gamma_{\mathsf{Swap}}(\mathcal{H}(\mathsf{pk_{swp}}), \mathsf{sk_{init(\mathbb{B})}}(1)) \\
     \qquad \mathsf{receive}(U_1) \\
     \qquad \mathsf{tx_{swp(\mathbb{B})}} \leftarrow \mathsf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk}) \\
-    \qquad \mathsf{pk_{swp(\mathbb{B})}} \leftarrow \mathsf{tx_{swp(\mathbb{B})}.rx} \\
-    \qquad \mathsf{sk_{frz0}} \leftarrow \Pi_\mathsf{eVTD}.\mathsf{ForceOp}(C_1, \mathsf{pk_{swp(\mathbb{B})}}) \\
-    \qquad \mathsf{tx_{swp(\mathbb{A})}} \gets \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{swp}}, \mathsf{amnt_a}) \\
-    \qquad \sigma_{\mathsf{swp}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}, \mathsf{tx_{rfnd}}) \\
-    \qquad \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
     \quad \} \\
     \} \\
-    \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \land lk \neq \perp \\
+    \mathsf{\textbf{if}} \:\: \mathsf{res} = 1 \\
+    \quad \mathsf{pk_{swp(\mathbb{B})}} \leftarrow \mathsf{tx_{swp(\mathbb{B})}.rx} \\
+    \quad C_1 \leftarrow (lk \oplus \mathsf{pk_{swp(\mathbb{B})}}, T_1) \\
+    \quad \mathsf{sk_{frz0}} \leftarrow \Pi_\mathsf{VTD}.\mathsf{ForceOp}(C_1) \\
+    \quad \mathsf{tx_{swp(\mathbb{A})}} \gets \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{swp}}, \mathsf{amnt_a}) \\
+    \quad \sigma_{\mathsf{swp}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}, \mathsf{tx_{rfnd}}) \\
+    \quad \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
+    \mathsf{\textbf{else}} \\
     \quad  (\mathsf{pk_{rfnd}}, \mathsf{sk_{rfnd}}) \gets \Pi_{\mathsf{DS}}.\mathsf{KeyGen}_{(\mathbb{B})}(1^\lambda) \\
     \quad \mathsf{tx_{rfnd}} \gets \mathsf{\textbf{wait}} \:\: \mathsf{InitTx}_{(\mathbb{B})}(\mathsf{pk_{init}}, \mathsf{pk_{rfnd}}, \mathsf{amnt_b}) \\
     \quad \sigma_{\mathsf{rfnd}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{B})}(\mathsf{sk_{init}}, \mathsf{tx_{rfnd}}) \\
@@ -399,26 +411,19 @@ Public parameters $(\mathbb{G}, G, T)$ \\
 \pseudocode{
     U_0(d, \mathsf{tx_{swp}}) \< \< U_1(C, \mathsf{sk_{init(\mathbb{B})}}(1)) \\[0.1\baselineskip ][\hline] 
     \<\< \\[-0.5\baselineskip ]
-    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{PCom}}.\mathsf{Open}(d, \mathsf{tx_{swp}}.\mathsf{rx}, C) \neq 1 \\
+    \mathsf{\textbf{if}} \:\: \mathcal{H}(\mathsf{tx_{swp}}.rx) \neq \mathcal{H}(\mathsf{pk_{swp}}) \\
     \qquad \mathsf{\textbf{return}} \perp \\
     \sigma_\mathsf{swp(\mathbb{B})} \leftarrow \Pi_{\mathsf{DS}}.\mathsf{Sign}(\mathsf{sk_{init(\mathbb{B})}}, \mathsf{tx_{swp}})
 }
 \end{pchstack}
-\caption{Protocol definition of 2PC $\Gamma_{\mathsf{Commit}}$}
+\caption{Protocol definition of 2PC $\Gamma_{\mathsf{Swap}}$}
 \end{figure}
 
 \subsection{Version 1}
 
 Protocol version using commitment transaction with arbitrary value replacing VTD. \\
 We define the following oracles to interact with the blockchains. \\
-\todo[inline]{User 1: watch txs from wallet to get recvTx and extract $\mathsf{sec}_1$ to reveal/redeem related commitment transaction. Improve blockchain interface}
 
-- $(0,1) \leftarrow \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$ publish the transaction $\mathsf{tx}$ with signature $\sigma_{\mathsf{tx}}$ on chain $\mathbb{A}$ \\
-- $(0,1) \leftarrow \mathsf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{tx})$ open the (on-chain) committed transaction $\mathsf{tx}$ by revealing the commited secret $\mathsf{sec}$ \\
-- $\mathsf{tx} \leftarrow \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt})$ create an unsigned transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ on chain $\mathbb{A}$ \\
-- $(0,1) \gets \mathsf{WatchTx}_{(\mathbb{A})}(\mathsf{tx})$ wait for the transaction $\mathsf{tx}$ to be confirmed on chain $\mathbb{A}$ \\
-- $\mathsf{ctx} \leftarrow \mathsf{CommitTx}_{(\mathbb{A})}(C, \mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{t})$ creates an unsigned commit transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ valid until block $\mathsf{t}$. The transaction can be later completed by opening and broadcasting $C$ through $\mathsf{RevTx}$ \\
-- $\mathsf{bal} \gets \mathsf{GetBal}_{(\mathbb{A})}(\mathsf{pk})$ get the balance of assets held by $\mathsf{pk}$ \\
 
 \textbf{Definition (CP-NIZK)} \\
 Public parameters $[1], a$. \\
