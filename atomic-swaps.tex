@@ -131,8 +131,10 @@
 \newcommand{\indrsidcpa}{\mathrm{IND\$}\mhyphen\mathrm{sID}\mhyphen\mathrm{CPA}}
 %\newcommand{\oplus}{\, \texttt{XOR} \,} % shorthand for typing the XOR operator in mathmode
 
-% feel free to add packages you need
-% feel free to add packages you need
+
+\usepackage{biblatex}
+\addbibresource{references.bib}
+
 
 \begin{document}         
 \author{Lorenzo Tucci}
@@ -145,10 +147,11 @@
 
 An atomic swap cross-chain swap is an exchange of assets held at two different blockchains between two users without any additional trust assumption. \\
 Consider two ledgers $\mathbb{A}$ and $\mathbb{B}$, where Alice holds assets $a$ in $\mathbb{A}$ and Bob holds assets beta in $\mathbb{B}$. We want to ensure that Alice transfers her assets $a$ in $\mathbb{B}_a$ to Bob if and only if Bob transfers his asset $b$ to Alice in $\mathbb{B}_b$. \\
-\\
+
 The word \textit{atomic} implies that the protocol execution can only have two possible outcomes: \\
 1) the asset swap is successful, with Bob owning $a$ in $\mathbb{A}$ and Alice owning $b$ in $\mathbb{B}$ \\
 2) the swap aborts with an asset refund, so Alice owns $a$ in $\mathbb{A}$ and Bob owns $b$ in $\mathbb{B}$ \\
+
 
 \todo[inline]{TODO starts}
 \begin{itemize}
@@ -160,13 +163,7 @@ The word \textit{atomic} implies that the protocol execution can only have two p
 
 \todo[inline]{TODO ends}
 
-%Additionally, we want that the following properties hold: 
-
-%\textbf{Transparent}: an observer should not distinguish a transfer executed as part of an atomic swap from a standard transfer in such ledger. \\
-%\textbf{Trustless}: there are no trust assumption on any party executing the protocol. \\
-%\textbf{Scriptless}: the protocol does not require any script capabilities on both of the ledgers. \\
-
-\section{Existing works}
+\subsection{Existing solutions}
 \begin{table}[H]
 \centering
 \begin{tabular}{|c|c|c|c|}
@@ -184,59 +181,52 @@ Universal [MTS'20] & \checkmark & \checkmark & \checkmark \\
 \end{tabular}
 \caption{Properties comparison of different atomic swaps protocol}
 \end{table}
-\subsection{Hashed Timelock Contract (HTLC)}
+\subsubsection{Hashed Timelock Contract (HTLC)}
 
-Closest solution to a universal protocol for atomic swaps, implemented by large majority of trustless exchange protocols. Using HTLC as building block, an atomic swap can be constructed as follows: Alice chooses r, computes h = H(r), transfers a into an HTLC$(a, h, t, A, B)$ in $\mathbb{B}_a$ and sends $h,t$ to Bob.
+Using a blockchain's scripting language and timelock functionalities it is possible to create a script that functions as a timed escrow that can be claimed if some condition is satisfied or refunded when expired. \\
+More specifically, a hash-time lock contract (HTLC) has on input a tuple $(\mathsf{amnt_a}, h, T, \mathsf{pk_0}, \mathsf{pk_1})$ where $\mathsf{amnt_a}$ denotes the amount of $\mathsf{a}$ assets to be exchanged, $h$ is a hash value, $T$ the timeout, $\mathsf{pk_0}$ and $\mathsf{pk_1}$ the public key addresses of
+two users, the HTLC transfers $\mathsf{amnt_a}$ to $\mathsf{pk_1}$ if invoked before timeout $T$ with input value $r$ such that $\mathcal{H}(r) = h$. 
+If the contract is invoked after timeout $T$, it refunds the assets $\mathsf{amnt_a}$ to $\mathsf{pk_0}$ unconditionally. \\
 
-Bob cannot claim the HTLC yet because r is only known by Alice. Bob finishes the setup of the exchange by choosing a time $t' < t$ and transferring his $b$ assets into an HTLC$(b, h, t', b, a)$ in $\mathbb{B}_b$. Thus either
+Using HTLCs as a building block, an atomic swap protocol can be constructed as follows: \\
+Alice chooses $r$, computes $h = \mathcal{H}(r)$, transfers $\mathsf{amnt_a}$ into an $(\mathsf{amnt_a}, h, T_0, \mathsf{pk_0}, \mathsf{pk_1})$ on blockchain $\mathbb{A}$ and sends $h,T$ to Bob. \\
+Bob finishes the setup of the exchange by choosing a time $T_1 < T_0$ and transferring his $\mathsf{amnt_b}$ assets into an HTLC$(\mathsf{amnt_b}, h, T_1, \mathsf{pk_1}, \mathsf{pk_0})$ on blockchain $\mathbb{B}$. We note that Bob cannot claim the HTLC yet as $r$ is only known by Alice, thus there are only two possible outcomes: \\
 
-(1) Alice claims HTLC in $\mathbb{B}_b$, effectively revealing $r$ to Bob (and anyone observing $\mathbb{B}_b$) before $t'$. Bob can then use $r$ to claim the HTLC in $\mathbb{B}_a$;
+(1) Alice claims the HTLC on $\mathbb{B}$ before $T_0$, effectively revealing $r$ to bob (and anyone observing $\mathbb{B}$), Bob can then proceed to compute $h = \mathcal{H}(r)$ to claim the counterpart HTLC on chain $\mathbb{A}$ \\
+(2) Alice does not claim the HTLC on $\mathbb{B}$ in time and thus Bob cannot claim the HTLC on $\mathbb{A}$. After the respective timeouts they can refund the assets by invoking the contracts.
 
-(2) Alice does not claim HTLC in $\mathbb{B}_b$ and Bob cannot claim the HTLC in $\mathbb{B}_a$. After the timeout they get the funds back.
+We note that this functionality can be realized without requiring complex scripting functionality \cite{h4sh3d} using semi-scriptless scripts. \\
+A slightly different protocol can also be realized even if only one blockchain supports HTLCs or timelocks, as done in \cite{h4sh3d} for the Monero counterpart.
+\todo[inline]{explain (splitting secret key, BTC party needs to move first)}
 
-\subsection{Relays}
-Another strategy to achieve atomic swaps relies on relays. Relays are abstractions (in general a smart contract or a script) hosted on some
-chain $\mathbb{B}_a$ that has light client like verification capabilities over chain $\mathbb{B}_b$. For each new block appended to chain $\mathbb{B}_a$,
-the block header is passed on to the relay on chain $\mathbb{B}_b$. \\
-The relay itself implements the standard verification procedure of chain $\mathbb{B}_a$’s consensus algorithm and can therefore verify the
-validity of the block. Once the proof of work has been verified,
-in the case of a Proof of Work (or PoW) blockchain, or the
-two-thirds of validators signatures, in the case of a Byzantine
-Fault Tolerant (or BFT) blockchain, it is possible to verify any
-transaction of chain $\mathbb{B}_a$ from chain $\mathbb{B}_b$. With light client
-like verification capabilities of chain $\mathbb{B}_a$ from chain $\mathbb{B}_b$,
-we can imagine the following scenario. Bob has X assets of
-chain $\mathbb{B}_b$. He is willing to exchange them for Y assets of
-chain $\mathbb{B}_a$.  \\
-    Bob sets up a smart contract SC1 and locks his
-assets in it (1). This smart contract SC1 is set to release the
-assets to anyone providing the proof that they made a payment
-of Y assets of chain $\mathbb{B}_a$ to Bob’s address. Alice, who is
-interested in this trade, transfers Y assets to Bob’s address (2).
-She retrieves the transaction hash tx and provide it to SC1 (3).
-SC1 calls the relay and asks for verification of transaction tx
-(4). The relay verifies that the transfer has taken place and if
-so, returns ok to SC1 (5). On receiving the answer from the
-relay, SC1 transfers the X assets of $\mathbb{B}_b$ to Alice’s address.
+%\subsubsection{Relays}
+%Another strategy to achieve atomic swaps relies on relays. Relays are abstractions (in general a smart contract or a script) hosted on some
+%chain $\mathbb{B}_a$ that has light client like verification capabilities over chain $\mathbb{B}_b$. For each new block appended to chain $\mathbb{B}_a$,
+%the block header is passed on to the relay on chain $\mathbb{B}_b$. \\
+%The relay itself implements the standard verification procedure of chain $\mathbb{B}_a$’s consensus algorithm and can therefore verify the
+%validity of the block. Once the proof of work has been verified,
+%in the case of a Proof of Work (or PoW) blockchain, or the
+%two-thirds of validators signatures, in the case of a Byzantine
+%Fault Tolerant (or BFT) blockchain, it is possible to verify any
+%transaction of chain $\mathbb{B}_a$ from chain $\mathbb{B}_b$. With light client
+%like verification capabilities of chain $\mathbb{B}_a$ from chain $\mathbb{B}_b$,
+%we can imagine the following scenario. Bob has X assets of
+%chain $\mathbb{B}_b$. He is willing to exchange them for Y assets of
+%chain $\mathbb{B}_a$.  \\
+%    Bob sets up a smart contract SC1 and locks his
+%assets in it (1). This smart contract SC1 is set to release the
+%assets to anyone providing the proof that they made a payment
+%of Y assets of chain $\mathbb{B}_a$ to Bob’s address. Alice, who is
+%interested in this trade, transfers Y assets to Bob’s address (2).
+%She retrieves the transaction hash tx and provide it to SC1 (3).
+%SC1 calls the relay and asks for verification of transaction tx
+%(4). The relay verifies that the transfer has taken place and if
+%so, returns ok to SC1 (5). On receiving the answer from the
+%relay, SC1 transfers the X assets of $\mathbb{B}_b$ to Alice’s address.
 
-\subsection{Verifiable Timed Signatures (VTS) / Universal Atomic Swaps}
-The central challenge that the protocol needs to address is in ensuring atomicity of the swap even in the presence of malicious parties, which is guaranteed by the HTLC-based protocols. Drawing inspiration from that approach, an immediate barrier is the absence of scripting language does not allow to set “time-outs” on transactions.
+\subsubsection{Timed crypto}
+While HTLCs can be an effective solution when supported, it is not possible to realize when both blockchains do not support timelocks. Furthermore, the transactions incure in higher execution costs due to scripting, and they are have additional on-chain data which may reduce privacy. \\
 
-A timeout $t$ for a transaction $\mathsf{tx}$ means that the transaction is accepted by the nodes in the network only after time $t$ has expired. Typically this is implemented by expressing $t$ in terms of a block number and leveraging a timelock script which is explicitly included in the transaction. \\
-
-To simulate  such functionality without using any on-chain script, the main leverage will be VTS, which lets a user generate a timed commitment $C$ of a signature $\sigma$ on a message $m$ under a public key $\mathsf{pk}$. The commitment $C $ must hide the signature $\sigma$ for time $\mathsf{T}$. At the same time, the committer also generates a proof $\pi$ that proves that the commitment $C$ contains a valid signature $\sigma$. This guarantees that $\sigma$ can be publicly recovered in time $\mathsf{T}$ by anyone who solves the computational puzzle.
-
-To give an intuition, imagine Alice and Bob sharing an address $\mathsf{pk}(ab)$ where each party owns a share of the corresponding secret key.  Before sending the funds to $\mathsf{pk}(ab)$, Alice and Bob sign a refund transaction $\mathsf{tx}(\mathsf{rfnd})$ that transfers all funds from $\mathsf{pk}(ab)$ back to Alice, in such a way that only Bob learns the signatures. Bob then generates a VTS on this refund signature and provides Alice the commitment $C$ and proof $\pi$. \\
-
-Note that the parties must make conservative estimates of each other’s computational
-power in force opening the VTD commitments. This is to
-prevent scenarios where Alice or Bob with a powerful machine
-force opens its VTD commitments earlier than expected in
-terms of real time. The party could potentially steal the coins
-of the other party during the swap lock or swap complete
-phase. In particular, the parties must ensure that $\Delta$ (such that
-T0 = T1 + $\Delta$) is large enough such that it tolerates the time
-differences to open the VTD commitments.
 %\begin{figure}[H]
 %\begin{pchstack}[center, boxed]
 %\pseudocode{
@@ -269,6 +259,20 @@ differences to open the VTD commitments.
 %\caption{Universal atomic swap protocol execution for a successful swap}
 %\end{figure}
 %
+
+\subsubsection{Universal Atomic Swaps}
+
+One of the first works proposing an atomic swap protocol that substitutes blockchain timelocks with a cryptographic primitive has been proposed by Thyagarajan et al. \cite{uas}, which utilizes Verifiable Timed Signatures (VTS) \cite{vts} as the core building block.
+
+A VTS lets a user generate a timed commitment $C$ of a signature $\sigma$ on a message $m$ under a public key $\mathsf{pk}$. The commitment $C $ must hide the signature $\sigma$ for time $\mathsf{T}$. At the same time, the committer also generates a proof $\pi$ that proves that the commitment $C$ contains a valid signature $\sigma$. This guarantees that $\sigma$ can be publicly recovered in time $\mathsf{T}$ by anyone who solves the computational puzzle.
+
+To give an intuition, imagine Alice and Bob sharing an address $\mathsf{pk_{ab}}$ where each party owns a share of the corresponding secret key.  Before sending the funds to $\mathsf{pk_{ab}}$, Alice and Bob sign a refund transaction $\mathsf{tx_{rfnd}}$ that transfers all funds from $\mathsf{pk_{ab}}$ back to Alice, in such a way that only Bob learns the signatures. Bob then generates a VTS on this refund signature and provides Alice the commitment $C$ and proof $\pi$. \\
+
+Note that parties must account for potential differences in the computational power available for force opening the VTS commitments. This is to prevent scenarios where Alice or Bob with a powerful machine force opens its VTS commitments earlier than expected in terms of real time, resulting in being able 
+to steal the coins of the other party during the swap lock or swap complete phase. In particular, the parties must ensure that $\Delta$ (such that T0 = T1 + $\Delta$) is large enough such that it tolerates the time differences to open the VTS commitments. \\
+
+Parties are incentivized to make worst-case estimates for the counterparty's computational power which can be orders of magnitude faster when accounting for novel algorithms \cite{squaring_algo} and application-specific integrated circuits (ASIC) \cite{squaring_asic}. \\
+This leads to an impractical protocol, as parties need to uninterruptedly compute a force opening for a significant amount of time.
 
 \section{Preliminaries}
 
@@ -530,6 +534,8 @@ If the transaction with signature $\sigma_{swp(\mathbb{B})}$ gets posted on $\ma
 \subsection{Performance Evaluation}
 
 \todo[inline]{self explanatory}
+
+\printbibliography
 
 
 \end{document}

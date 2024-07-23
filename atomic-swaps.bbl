@@ -1,0 +1,221 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.2 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{nty/global//global/global}
+    \entry{h4sh3d}{misc}{}
+      \name{author}{1}{}{%
+        {{hash=7d09c45fbf50c4461cdabbc8d8ab2b4d}{%
+           family={Gugger},
+           familyi={G\bibinitperiod},
+           given={Joël},
+           giveni={J\bibinitperiod}}}%
+      }
+      \strng{namehash}{7d09c45fbf50c4461cdabbc8d8ab2b4d}
+      \strng{fullhash}{7d09c45fbf50c4461cdabbc8d8ab2b4d}
+      \strng{bibnamehash}{7d09c45fbf50c4461cdabbc8d8ab2b4d}
+      \strng{authorbibnamehash}{7d09c45fbf50c4461cdabbc8d8ab2b4d}
+      \strng{authornamehash}{7d09c45fbf50c4461cdabbc8d8ab2b4d}
+      \strng{authorfullhash}{7d09c45fbf50c4461cdabbc8d8ab2b4d}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{Cryptology ePrint Archive, Paper 2020/1126}
+      \field{title}{Bitcoin-Monero Cross-chain Atomic Swap}
+      \field{year}{2020}
+      \verb{urlraw}
+      \verb https://eprint.iacr.org/2020/1126
+      \endverb
+      \verb{url}
+      \verb https://eprint.iacr.org/2020/1126
+      \endverb
+    \endentry
+    \entry{vts}{misc}{}
+      \name{author}{6}{}{%
+        {{hash=debde2bfa1c9c1b859c9b87d1b977427}{%
+           family={KrishnanThyagarajan},
+           familyi={K\bibinitperiod},
+           given={Sri\bibnamedelima Aravinda},
+           giveni={S\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+        {{hash=c9d59eaf46a5c72e1812f50e09bbd749}{%
+           family={Bhat},
+           familyi={B\bibinitperiod},
+           given={Adithya},
+           giveni={A\bibinitperiod}}}%
+        {{hash=39f36844bb95530987dbeba2dba22ddc}{%
+           family={Malavolta},
+           familyi={M\bibinitperiod},
+           given={Giulio},
+           giveni={G\bibinitperiod}}}%
+        {{hash=7bb59232281cd4900b14f93a1d5aa648}{%
+           family={Döttling},
+           familyi={D\bibinitperiod},
+           given={Nico},
+           giveni={N\bibinitperiod}}}%
+        {{hash=720d5181b12368e1a1e450c13b0a32c0}{%
+           family={Kate},
+           familyi={K\bibinitperiod},
+           given={Aniket},
+           giveni={A\bibinitperiod}}}%
+        {{hash=890841a57bd8dc897ebf4191944a025a}{%
+           family={Schröder},
+           familyi={S\bibinitperiod},
+           given={Dominique},
+           giveni={D\bibinitperiod}}}%
+      }
+      \strng{namehash}{3f3e0d6690df39928dd64dc1d365b8d3}
+      \strng{fullhash}{d50ef0695f9ce8ffcf659e24ec5e8e3e}
+      \strng{bibnamehash}{3f3e0d6690df39928dd64dc1d365b8d3}
+      \strng{authorbibnamehash}{3f3e0d6690df39928dd64dc1d365b8d3}
+      \strng{authornamehash}{3f3e0d6690df39928dd64dc1d365b8d3}
+      \strng{authorfullhash}{d50ef0695f9ce8ffcf659e24ec5e8e3e}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{Cryptology ePrint Archive, Paper 2020/1563}
+      \field{note}{\url{https://eprint.iacr.org/2020/1563}}
+      \field{title}{Verifiable Timed Signatures Made Practical}
+      \field{year}{2020}
+      \verb{doi}
+      \verb 10.1145/3372297.3417263
+      \endverb
+      \verb{urlraw}
+      \verb https://eprint.iacr.org/2020/1563
+      \endverb
+      \verb{url}
+      \verb https://eprint.iacr.org/2020/1563
+      \endverb
+    \endentry
+    \entry{squaring_asic}{article}{}
+      \name{author}{3}{}{%
+        {{hash=e1420193d03574358c6e569899524cf8}{%
+           family={Mert},
+           familyi={M\bibinitperiod},
+           given={Ahmet\bibnamedelima Can},
+           giveni={A\bibinitperiod\bibinitdelim C\bibinitperiod}}}%
+        {{hash=79828cb28395071aca1130f908bcb60e}{%
+           family={Öztürk},
+           familyi={Ö\bibinitperiod},
+           given={Erdinç},
+           giveni={E\bibinitperiod}}}%
+        {{hash=62ef6e524067db775a2f3ed6569c4ddb}{%
+           family={Savaş},
+           familyi={S\bibinitperiod},
+           given={Erkay},
+           giveni={E\bibinitperiod}}}%
+      }
+      \strng{namehash}{2d9d61ea2423d5a5852a51e78428229e}
+      \strng{fullhash}{2d9d61ea2423d5a5852a51e78428229e}
+      \strng{bibnamehash}{2d9d61ea2423d5a5852a51e78428229e}
+      \strng{authorbibnamehash}{2d9d61ea2423d5a5852a51e78428229e}
+      \strng{authornamehash}{2d9d61ea2423d5a5852a51e78428229e}
+      \strng{authorfullhash}{2d9d61ea2423d5a5852a51e78428229e}
+      \field{sortinit}{M}
+      \field{sortinithash}{4625c616857f13d17ce56f7d4f97d451}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{IEEE Transactions on Computers}
+      \field{number}{1}
+      \field{title}{Low-Latency ASIC Algorithms of Modular Squaring of Large Integers for VDF Evaluation}
+      \field{volume}{71}
+      \field{year}{2022}
+      \field{pages}{107\bibrangedash 120}
+      \range{pages}{14}
+      \verb{doi}
+      \verb 10.1109/TC.2020.3043400
+      \endverb
+      \keyw{Delays;Logic gates;Hardware;Measurement;Adders;Throughput;Field programmable gate arrays;Verifiable delay functions;modular squaring;reduction;montgomery;redundant representation}
+    \endentry
+    \entry{squaring_algo}{article}{}
+      \name{author}{1}{}{%
+        {{hash=79828cb28395071aca1130f908bcb60e}{%
+           family={Öztürk},
+           familyi={Ö\bibinitperiod},
+           given={Erdinç},
+           giveni={E\bibinitperiod}}}%
+      }
+      \strng{namehash}{79828cb28395071aca1130f908bcb60e}
+      \strng{fullhash}{79828cb28395071aca1130f908bcb60e}
+      \strng{bibnamehash}{79828cb28395071aca1130f908bcb60e}
+      \strng{authorbibnamehash}{79828cb28395071aca1130f908bcb60e}
+      \strng{authornamehash}{79828cb28395071aca1130f908bcb60e}
+      \strng{authorfullhash}{79828cb28395071aca1130f908bcb60e}
+      \field{sortinit}{Ö}
+      \field{sortinithash}{2cd7140a07aea5341f9e2771efe90aae}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{IEEE Transactions on Circuits and Systems I: Regular Papers}
+      \field{number}{6}
+      \field{title}{Design and Implementation of a Low-Latency Modular Multiplication Algorithm}
+      \field{volume}{67}
+      \field{year}{2020}
+      \field{pages}{1902\bibrangedash 1911}
+      \range{pages}{10}
+      \verb{doi}
+      \verb 10.1109/TCSI.2020.2966755
+      \endverb
+      \keyw{Delays;Field programmable gate arrays;Hardware;Public key;Computer architecture;Verifiable delay function (VDF);modular multiplication;FPGA;reduction;low-latency circuit design}
+    \endentry
+    \entry{uas}{misc}{}
+      \name{author}{3}{}{%
+        {{hash=07c32402403f6d7dbf9272e142b531f1}{%
+           family={Thyagarajan},
+           familyi={T\bibinitperiod},
+           given={Sri\bibnamedelima AravindaKrishnan},
+           giveni={S\bibinitperiod\bibinitdelim A\bibinitperiod}}}%
+        {{hash=39f36844bb95530987dbeba2dba22ddc}{%
+           family={Malavolta},
+           familyi={M\bibinitperiod},
+           given={Giulio},
+           giveni={G\bibinitperiod}}}%
+        {{hash=7b05387fccb6b6491019cc9dc0a46dff}{%
+           family={Moreno-Sánchez},
+           familyi={M\bibinithyphendelim S\bibinitperiod},
+           given={Pedro},
+           giveni={P\bibinitperiod}}}%
+      }
+      \strng{namehash}{d9270006c9893feb602c208195e57144}
+      \strng{fullhash}{d9270006c9893feb602c208195e57144}
+      \strng{bibnamehash}{d9270006c9893feb602c208195e57144}
+      \strng{authorbibnamehash}{d9270006c9893feb602c208195e57144}
+      \strng{authornamehash}{d9270006c9893feb602c208195e57144}
+      \strng{authorfullhash}{d9270006c9893feb602c208195e57144}
+      \field{sortinit}{T}
+      \field{sortinithash}{9af77f0292593c26bde9a56e688eaee9}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{Cryptology ePrint Archive, Paper 2021/1612}
+      \field{title}{Universal Atomic Swaps: Secure Exchange of Coins Across All Blockchains}
+      \field{year}{2021}
+      \verb{doi}
+      \verb 10.1109/SP46214.2022.9833731
+      \endverb
+      \verb{urlraw}
+      \verb https://eprint.iacr.org/2021/1612
+      \endverb
+      \verb{url}
+      \verb https://eprint.iacr.org/2021/1612
+      \endverb
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+
