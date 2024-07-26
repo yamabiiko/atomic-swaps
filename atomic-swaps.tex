@@ -230,7 +230,7 @@ While HTLCs can be an effective solution when supported, it is not possible to r
 %\begin{figure}[H]
 %\begin{pchstack}[center, boxed]
 %\pseudocode{
-%    \textbf{$U_0(pk(0)\:, sk(0)$)} \< \< \textbf{$U_1(pk(1)\:, sk(1))$} \\[0.1\baselineskip ][\hline] 
+%    \textbf{$P_0(pk(0)\:, sk(0)$)} \< \< \textbf{$P_1(pk(1)\:, sk(1))$} \\[0.1\baselineskip ][\hline] 
 %    \<\< \\[-0.5\baselineskip ]
 %    \< \sendmessage*{<->}{top={{\Gamma_{\mathsf{KeyGen}}(\mathbb{G},G,q)}}, bottom={\xlongleftarrow{} (sk_0(01), pk(01)) \\ (sk_1(01), pk(01)) \xlongrightarrow{} }} \< \\
 %    \<\< (C, \pi) \gets \Pi_{\mathsf{VTD}}.\mathsf{Commit}(sk_1, T) \\
@@ -248,7 +248,7 @@ While HTLCs can be an effective solution when supported, it is not possible to r
 %    \< \sendmessageleft*{pk(1)} \< \\
 %    (pk(10), sk(10)) \gets \Pi_{\mathsf{DS}}.\mathsf{KeyGen}(1^\lambda) \\
 %    tx_\mathsf{swp} \gets \mathsf{InitTx}(pk(1), pk(10), \mathsf{swp(b)}, \mathbb{A}) \\
-%    \< \sendmessage*{<->}{top={{\Gamma_{\mathsf{Swap}} \qquad \qquad \\ U_0 \xlongrightarrow{} (sk_0(01), tx_\mathsf{swp}) \\ (sk_1(01), sk(1)) \xlongleftarrow{} U_1 }}, bottom={lk := \sigma_{swp}(10) \oplus sk_0(01) \xlongrightarrow{} \\  \xlongleftarrow{} \sigma_{swp}(10) \qquad \qquad  }} \< \\
+%    \< \sendmessage*{<->}{top={{\Gamma_{\mathsf{Swap}} \qquad \qquad \\ P_0 \xlongrightarrow{} (sk_0(01), tx_\mathsf{swp}) \\ (sk_1(01), sk(1)) \xlongleftarrow{} P_1 }}, bottom={lk := \sigma_{swp}(10) \oplus sk_0(01) \xlongrightarrow{} \\  \xlongleftarrow{} \sigma_{swp}(10) \qquad \qquad  }} \< \\
 %    \mathsf{PubTx}(\sigma_{\mathsf{swp(10)}}, tx_\mathsf{frz}, \mathbb{A}) \\
 %    \<\< \mathsf{do}\: \sigma_{swp}(10) \gets \mathsf{GetSig}(pk(1), \mathbb{B}) \\
 %    \<\< \qquad sk(01) \gets (lk \oplus \sigma_{swp}(10)) + sk_1 \\
@@ -273,6 +273,12 @@ to steal the coins of the other party during the swap lock or swap complete phas
 
 Parties are incentivized to make worst-case estimates for the counterparty's computational power which can be orders of magnitude faster when accounting for novel algorithms \cite{squaring_algo} and application-specific integrated circuits (ASIC) \cite{squaring_asic}. \\
 This leads to an impractical protocol, as parties need to uninterruptedly compute a force opening for a significant amount of time.
+\subsection{Contribution}
+
+We propose an alternative construction of an universal atomic swap protocol which uses a single timelock $T$ for both parties. This approach eliminates the need to set a large $\Delta$ to mitigate potential differences in computation power. 
+The protocol is asymmetric, with one party acting the client, who is required to compute a short timed commitment equivalent to the blockchain's confimation time, and the other party functioning as an exchange server, computing the commitment with timelock $T$,
+
+We furthermore define a new interface to generalizes timed commitments independent of the specific construction.
 
 \section{Preliminaries}
 
@@ -295,8 +301,9 @@ In the protocol definition, variables and functions that are blockchain-specific
 We define the following oracles to interact with the blockchains. The subscript $\mathbb{A}$ indicates that we are interacting with chain $\mathbb{A}$.
 
 \begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
-    \item $\mathbf{0/1} \leftarrow \mathsf{\textbf{PubTx}}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$: publish the transaction $\mathsf{tx}$ with signature $\sigma_{\mathsf{tx}}$. Outputs 1 if the transaction is accepted, 0 otherwise.
+    \item $\mathbf{0/1} \leftarrow \mathbf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$: publish the transaction $\mathsf{tx}$ with signature $\sigma_{\mathsf{tx}}$. Outputs 1 if the transaction is accepted, 0 otherwise.
     \item $\mathbf{tx}_{\mathbb{A}} := (\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{id})  \leftarrow \mathbf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt})$: creates an unsigned transaction with the unique identifier $\mathsf{id}$ paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$.
+    \item $\mathbf{0/1} \leftarrow \mathbf{VerifyTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$: verifies the signature of the transaction and the validity of the transaction based on consensus rules. Outputs 1 if the verification succeeds, 0 otherwise.
     \item $\mathbf{0/1} \leftarrow \mathbf{WatchTx}_{(\mathbb{A})}(\mathsf{tx})$: wait for the transaction $\mathsf{tx}$ to be confirmed.
     \item $\mathbf{amnt} \leftarrow \mathbf{GetBal}_{(\mathbb{A})}(\mathsf{pk})$: get the balance of assets held by $\mathsf{pk}$
     \item $\mathbf{tx} \leftarrow \mathbf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk})$: get the the latest transaction of $\mathsf{pk}$'s record on the chain
@@ -310,13 +317,13 @@ We define the following oracles to interact with the blockchains. The subscript 
 \vspace{0.5em}
 \\
 That is, after the protocol run there can be only two outcomes: \\
-1) $U_0$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ and $U_1$ holds $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$ (successful swap) \\
-2) $U_0$ holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ and $U_1$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{init(\mathbb{B})}}$ or $\mathsf{pk_{rfnd(\mathbb{B})}}$ (swap aborted) \\
+1) $P_0$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ and $P_1$ holds $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$ (successful swap) \\
+2) $P_0$ holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ and $P_1$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{init(\mathbb{B})}}$ or $\mathsf{pk_{rfnd(\mathbb{B})}}$ (swap aborted) \\
 
 \textbf{Definition 2} (Ownership): \textit{All parties gain exclusive knowledge of the secret keys of their respective wallets holding the exchanged or refunded assets upon completion of the protocol.} 
 \vspace{0.5em}
 \\
-That is after a successful protocol run $U_0$ owns $\mathsf{sk_{swp(\mathbb{B})}}$ and $U_1$ owns $\mathsf{sk_{swp(\mathbb{A})}}$, and respectively for the aborted swap  $\mathsf{sk_{init(\mathbb{A})}}$ and $\mathsf{sk_{init(\mathbb{B})}}$ or $\mathsf{sk_{rfnd(\mathbb{B})}}$. \\
+That is after a successful protocol run $P_0$ owns $\mathsf{sk_{swp(\mathbb{B})}}$ and $P_1$ owns $\mathsf{sk_{swp(\mathbb{A})}}$, and respectively for the aborted swap  $\mathsf{sk_{init(\mathbb{A})}}$ and $\mathsf{sk_{init(\mathbb{B})}}$ or $\mathsf{sk_{rfnd(\mathbb{B})}}$. \\
 
 
 \section{Atomic Swaps from Commit Transactions}
@@ -331,7 +338,7 @@ That is after a successful protocol run $U_0$ owns $\mathsf{sk_{swp(\mathbb{B})}
 
 \subsection{Version 0}
 
-Parties $U_0$ and $U_1$ hold assets $a$ on blockchain $\mathbb{A}$ and assets $b$ on chain $\mathbb{B}$ respectively. \\
+Parties $P_0$ and $P_1$ hold assets $a$ on blockchain $\mathbb{A}$ and assets $b$ on chain $\mathbb{B}$ respectively. \\
 We define with $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$ the amount of the assets the parties agreed to swap before starting the protocol.
 %\textbf{Definition 1} (encrypted Verifiable Timed Discrelog) \\
 %Public parameters $(\mathbb{G}, G, T)$ \\
@@ -353,7 +360,7 @@ We define with $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$ the amount of the assets 
 \pseudocode{
     \text{Global input} \:\: (\mathbb{G}, [1], q, T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
     (\mathsf{sk_{frz0}}, \mathsf{pk_{frz}})_{(\mathbb{A})} \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}_{(\mathbb{A})}}(\mathbb{G}, [1], q) \\
-    (C_0, \pi) \gets \mathsf{\textbf{wait}} \:\: \mathsf{receive}(U_1) \\
+    (C_0, \pi) \gets \mathsf{\textbf{wait}} \:\: \mathsf{receive}(P_1) \\
     \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{VTD}}.\mathsf{Verify}([\mathsf{pk_{frz}}] - [\mathsf{sk_{frz0}}], C_0, \pi) \neq 1 \\
     \quad \mathsf{\textbf{return}} \perp \\
     \mathsf{res} \gets \mathsf{\textbf{select}} \:\: \{ \\
@@ -365,16 +372,18 @@ We define with $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$ the amount of the assets 
     \qquad \mathsf{tx_{frz(\mathbb{A})}} \gets \:\: \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{init}}, \mathsf{pk_{frz}}, \mathsf{amnt_a}) \\
     \qquad \sigma_{\mathsf{frz(\mathbb{A})}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{init}}, \mathsf{tx_{frz}}) \\
     \qquad \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{frz}}, \mathsf{tx_{frz}}) \\
-    \qquad \mathsf{pk_{init(\mathbb{B})}} \gets  \mathsf{receive}(U_1) \\
+    \qquad \mathsf{pk_{init(\mathbb{B})}} \gets  \mathsf{receive}(P_1) \\
     \qquad \mathsf{tx_{swp(\mathbb{B})}} \gets \mathsf{InitTx}_{(\mathbb{B})}(\mathsf{pk_{init}}, \mathsf{pk_{swp}}, \mathsf{amnt_b}) \\
     \qquad (C_1, \pi_1) \leftarrow \Pi_\mathsf{VTD}.\mathsf{Commit}(\mathsf{sk_{frz0}}, T_1) \\
     \qquad lk \leftarrow \mathsf{pk_{swp(\mathbb{B})}} \oplus C_1 \\
     \qquad \mathsf{hpk} \leftarrow \mathcal{H}(\mathsf{pk_{swp(\mathbb{B})}}) \\
     \qquad \pi_2 \leftarrow \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Pr}((lk, [\mathsf{sk_{frz0}}], \mathsf{hpk}, \pi_1, T_1), \mathsf{pk_{swp(\mathbb{B})}}) \\
-    \qquad \mathsf{send}(U_1, \pi_1, \pi_2, \mathsf{hpk}, lk) \\
+    \qquad \mathsf{send}(P_1, \pi_1, \pi_2, \mathsf{hpk}, lk) \\
     \qquad \sigma_{\mathsf{swp(\mathbb{B})}} \gets \Gamma_{\mathsf{Swap}}(d, \mathsf{tx_{swp(\mathbb{B})}}) \\
+    \qquad \textbf{if} \:\: \mathsf{VerifyTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \neq 1 \\
+    \qquad \quad \mathsf{\textbf{return}} \perp \\
     \qquad \mathsf{PubTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
-    \qquad \mathsf{send}(U_1) \\
+    \qquad \mathsf{send}(P_1) \\
     \quad \} \\
     \} \\
     \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\
@@ -391,7 +400,7 @@ We define with $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$ the amount of the assets 
     \text{Global input} \:\: (\mathbb{G}, G, q, T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
     (\mathsf{sk_{frz1}}, \mathsf{pk_{frz}})_{(\mathbb{A})} \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}_{(\mathbb{A})}}(\mathbb{G}, [1], q) \\
     (C_0, \pi) \gets \Pi_{\mathsf{VTD}}.\mathsf{Commit}(\mathsf{sk_{frz1}}, T_1) \\
-    \mathsf{send}(U_0,\: (C_0, \pi)) \\
+    \mathsf{send}(P_0,\: (C_0, \pi)) \\
     \mathsf{res} \gets \mathsf{\textbf{select}} \:\: \{ \\
     \quad \mathsf{\textbf{wait}} \:\: \{ \\
     \qquad \mathsf{timeout}(T/2) \\
@@ -399,12 +408,12 @@ We define with $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$ the amount of the assets 
     \quad \mathsf{\textbf{wait}} \:\: \{ \\
     \qquad \mathsf{\textbf{do}} \:\: \mathsf{bal} \gets \mathsf{GetBal}_{(\mathbb{A})}(\mathsf{pk_{frz}}) \\
     \qquad \mathsf{\textbf{while}} \:\: \mathsf{bal} \neq {\mathsf{amnt_a}} \\
-    \qquad \mathsf{send}(U_0,\: \mathsf{pk_{init}}) \\
-    \qquad (\pi_1, \pi_2, \mathsf{hpk}, lk) \leftarrow \mathsf{receive}(U_0) \\
+    \qquad \mathsf{send}(P_0,\: \mathsf{pk_{init}}) \\
+    \qquad (\pi_1, \pi_2, \mathsf{hpk}, lk) \leftarrow \mathsf{receive}(P_0) \\
     \qquad \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}((lk, \mathsf{pk_{frz}} - [\mathsf{sk_{frz1}}], \mathsf{hpk}, \pi_1, T_1), \pi_2) \neq 1 \\
     \qquad \quad \mathsf{\textbf{return}} \perp \\
     \qquad \Gamma_{\mathsf{Swap}}(\mathsf{hpk}, \mathsf{sk_{init(\mathbb{B})}}) \\
-    \qquad \mathsf{receive}(U_0) \\
+    \qquad \mathsf{receive}(P_0) \\
     \qquad \mathsf{tx_{swp(\mathbb{B})}} \leftarrow \mathsf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk}) \\
     \quad \} \\
     \} \\
@@ -423,13 +432,13 @@ We define with $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$ the amount of the assets 
 }
 \end{pchstack}
 \end{minipage}%
-\caption{Full protocol execution for $U_0$ and $U_1$, respectively left and right (alternative syntax)}
+\caption{Full protocol execution for $P_0$ and $P_1$, respectively left and right (alternative syntax)}
 \end{figure}
 
 \begin{figure}[H]
 \begin{pchstack}[center, boxed]
 \pseudocode{
-    U_0(\mathsf{tx_{swp}}) \< \< U_1(\mathsf{hpk}, \mathsf{sk_{init(\mathbb{B})}}) \\[0.1\baselineskip ][\hline] 
+    P_0(\mathsf{tx_{swp}}) \< \< P_1(\mathsf{hpk}, \mathsf{sk_{init(\mathbb{B})}}) \\[0.1\baselineskip ][\hline] 
     \<\< \\[-0.5\baselineskip ]
     \mathsf{\textbf{if}} \:\: \mathcal{H}(\mathsf{tx_{swp}}.rx) \neq \mathsf{hpk}) \\
     \qquad \mathsf{\textbf{return}} \perp \\
@@ -492,7 +501,7 @@ Protocol version using commitment transaction with arbitrary value replacing VTD
 }
 \end{pchstack}
 \end{minipage}%
-\caption{Full protocol execution for $U_0$ and $U_1$, respectively left and right (alternative syntax)}
+\caption{Full protocol execution for $P_0$ and $P_1$, respectively left and right (alternative syntax)}
 \end{figure}
 
 
@@ -500,29 +509,36 @@ Protocol version using commitment transaction with arbitrary value replacing VTD
 
 \todo[inline]{Informal theorems for correctness and security and proof sketch}
 
+We model the interaction in a zero trust setting: both parties are mutually distrusting and potentially malicious as they have an incentive to deceive the counter-party. \\
+We further assume that a party cannot deny the counter-party from transacting on the blockchain.
 
-\subsection{Party $U_0$}
 
-By general 2PC's privacy property, $\mathsf{sk_{frz0}}$ is only known to $U_0$. \\
-By the $\Pi_{\mathsf{VTD}}.\mathsf{Verify}$ algorithm we have that $\Pi_{\mathsf{VTD}}.\mathsf{Verify}(\mathsf{pk_{frz}} - [\mathsf{sk_{frz0}}], C_0, \pi_0) = 1$ if and only if the value embedded $x$ in the commitmemt $C_0$ satisfies $[x] =  \mathsf{pk_{frz}} - [\mathsf{sk_{frz0}}]$. \\
-Assuming a group based $\Pi_{\mathsf{DS}}$ with $\mathsf{pk} := [\mathsf{sk}]$, we have that $\mathsf{sk_{frz}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}$ and thus $[\mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}] - [\mathsf{sk_{frz0}}] = [\mathsf{sk_{frz1}}] = [x] $. Hence $U_0$ proceeds to swap the assets if and only if the value committed in $C$ is $\mathsf{sk_{frz1}}$ and $\mathsf{pk_{frz}} = [\mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}]$.   \\
-Note that by the $\mathsf{VTD}$'s soundness property the $\mathsf{ForceOp}$ algorithm will produce the committed dlog value $x$ in time $\textbf{T}$, thus $U_0$ will be able to retrieve  $\mathsf{sk_{frz1}}$ after time $T$ and sign a refund transaction. \\
-Now $U_0$ transfer the funds to $\mathsf{pk_{frz}}$ and proceeds to generate a new keypair $(\mathsf{pk_{swp}}, \mathsf{sk_{swp}})$ secret to the outside world. \\
-$U_0$ commits $\mathsf{sk_{frz0}}$ to $\mathsf{VTD}$ obtaining $C_1$, masks the value with the newly generate public key $ lk := \mathsf{pk_{swp}} \oplus C_1 $. \\
-If $\sigma_{\mathsf{swp(\mathbb{B})}}$ is invalid, $\mathsf{PubTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}})$ will fail and $U_0$ will wait until $\mathsf{ForceOp}$ completes to compute $\mathsf{sk_{frz}}$ and sign the refund transaction with it, ending up with $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$. \\
-Otherwise, the swap will complete successfully, and $U_0$ ends up with $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$. \\
-An adversary has no information about $\mathsf{sk_{frz0}}$ and $(\mathsf{pk_{swp}}, \mathsf{sk_{swp}})$, thus it cannot sign transaction from $\mathsf{pk_{frz}}$ or compute a valid signature for $\mathsf{pk_{swp}}$, and is thus unable to retrieve information about $\mathsf{sk_{frz0}}$ from $lk$.\\
+\subsection{Party $P_0$}
+We want to prove that $P_0$ at the end of a protocol run either holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ with exclusive knowledge of $\mathsf{sk_{init(\mathbb{A})}}$ or they hold $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$. \\
 
-\subsection{Party $U_1$}
-After the protocol run either $U_1$ ends up with $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$ in case of a successful swap, with $\mathsf{amnt_b}$ on $\mathsf{pk_{rfnd(\mathbb{B})}}$ in case the swap was refunded or $\mathsf{amnt_b}$ on $\mathsf{pk_{init(\mathbb{B})}}$ if the swap was aborted. \\
-We consider an active adversary over the communication channel with $U_0$ that can also corrupt $U_0$. We assume liveness and correctness for the blockchains.\\
 
-Note that before calling $\Gamma_{\mathsf{Swap}}(\mathsf{sk_{frz1}}, \mathsf{sk_{init(\mathbb{B})}})$, $U_1$ is in control of their assets on $\mathsf{pk_{init(\mathbb{B})}}$ if it were to abort, and by general 2PC's privacy property both inputs are private. \\
-Also note that $U_1$ waits until the funds $\mathsf{amnt_a}$ have been transferred to $\mathsf{pk_{frz}}$ before proceeding with  $\Gamma_{\mathsf{Swap}}$.
-An adversary can only get the signature $\sigma_{swp(\mathbb{B})}$ if and only if it provided the correct $\mathsf{sk_{frz0}}$ and thus $U_1$ has received by correctness of 2PC $lk := \sigma_{swp(\mathbb{B})} \oplus \mathsf{sk_{frz0}}$. \\
-If $U_1$ is unable to retrieve $\sigma_{swp(\mathbb{B})}$ before $T/2$, it proceeds to move the funds from $\mathsf{pk_{init}}$ to a newly generated $\mathsf{pk_{rfnd}}$, and thus an adversary holding $\sigma_{swp(\mathbb{B})}$ will be unable to get a transaction accepted by the correctness property of the blockchain (otherwise we occur in a double spending), so we end up with  $\mathsf{amnt_b}$ on $\mathsf{pk_{rfnd(\mathbb{B})}}$. \\
+$P_0$ signs and publishes a transaction transferring $\mathsf{amnt_a}$ from $\mathsf{pk_{init(\mathbb{A})}}$ to the freeze wallet $\mathsf{pk_{frz(\mathbb{A})}}$ if and only if $\Pi_{\mathsf{VTD}}.\mathsf{Verify}(\mathsf{pk_{frz}} - [\mathsf{sk_{frz0}}], C_0, \pi_0) = 1$, thus by the soundess property of the VTD scheme $P_0$ is guaranteed of retrieving the commited diiscrete log value $x$ in $C_0$ that satisfies $[x] =  \mathsf{pk_{frz}} - [\mathsf{sk_{frz0}}]$ after $T$ steps. \\
+Note that $\mathsf{pk_{frz}}$ has been generated in the 2PC protocol $\Gamma_{\mathsf{KeyGen}}$ with $\mathsf{pk_{frz}} := [\mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}]$, hence we have $[x] = [\mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}] - [\mathsf{sk_{frz0}}] = [\mathsf{sk_{frz1}}]$. \\
+
+The party proceeds to concurrently executes two asynchronous $\textbf{wait}$ blocks, one performing $\Pi_{\mathsf{VTD}}.\mathsf{ForceOp}(C_0)$ and the other continuing the protocol execution. We note that from this point onwards, if any routine in the protocol execution timeouts or faults, $P_0$ will retrieve $\mathsf{sk_{frz0}}$ after $T_0$. \\
+$P_0$ generates a new keypair $(\mathsf{pk_{swp}}, \mathsf{sk_{swp}})$ on $\mathbb{B}$, retrieves $\mathsf{pk_{init(\mathbb{B})}}$ from $P_1$ and  initialize the transaction $\mathsf{tx_{swp(\mathbb{B})}}$ transferring $\mathsf{amnt_b}$ from $\mathsf{pk_{init(\mathbb{B})}}$ to $\mathsf{pk_{swp(\mathbb{B})}}$.
+They now proceed to commit their own secret share of $\mathsf{sk_{frz}}$ to $C_1$ with $\Pi_\mathsf{VTD}.\mathsf{Commit}(\mathsf{sk_{frz0}}, T_1)$ and generate a lock for the commitment $lk := C_1 \oplus \mathsf{pk_{swp(\mathbb{B})}}$, where $\mathsf{pk_{swp(\mathbb{B})}}$ is secret to $P_1$. \\
+% They send the lock together with a proof of 
+Note that $P_1$ gains no information about $\mathsf{pk_{swp(\mathbb{B})}}$ and thus can retrieve $C_1$ from $lk$ and force opening it only after $\mathsf{tx_{swp}}$ has been published by $P_0$. The privacy provery of the VTD scheme ensures that $P_1$ will retrieve $\mathsf{sk_{frz0}}$ only after time $T_1$, and since $T_1 \geq \mathbb{B}.\mathsf{ctime}$ $P_1$ will gain knowledge of $\mathsf{sk_{frz}}$ only after $P_0$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$.
+
+Now assume instead that some routine in the protocol execution timed out or faulted, resulting in $\Pi_{\mathsf{VTD}}.\mathsf{ForceOp}(C_0)$ being solved: the party can retrieve $\mathsf{sk_{frz}}$ and they sign and publish $\mathsf{tx_{rfnd(\mathbb{A})}}$ transferring back $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{init(\mathbb{A})}}$, thus resulting in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$.
+
+
+\subsection{Party $P_1$}
+After the protocol run either $P_1$ ends up with $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$ in case of a successful swap, with $\mathsf{amnt_b}$ on $\mathsf{pk_{rfnd(\mathbb{B})}}$ in case the swap was refunded or $\mathsf{amnt_b}$ on $\mathsf{pk_{init(\mathbb{B})}}$ if the swap was aborted. \\
+We consider an active adversary over the communication channel with $P_0$ that can also corrupt $P_0$. We assume liveness and correctness for the blockchains.\\
+
+Note that before calling $\Gamma_{\mathsf{Swap}}(\mathsf{sk_{frz1}}, \mathsf{sk_{init(\mathbb{B})}})$, $P_1$ is in control of their assets on $\mathsf{pk_{init(\mathbb{B})}}$ if it were to abort, and by general 2PC's privacy property both inputs are private. \\
+Also note that $P_1$ waits until the funds $\mathsf{amnt_a}$ have been transferred to $\mathsf{pk_{frz}}$ before proceeding with  $\Gamma_{\mathsf{Swap}}$.
+An adversary can only get the signature $\sigma_{swp(\mathbb{B})}$ if and only if it provided the correct $\mathsf{sk_{frz0}}$ and thus $P_1$ has received by correctness of 2PC $lk := \sigma_{swp(\mathbb{B})} \oplus \mathsf{sk_{frz0}}$. \\
+If $P_1$ is unable to retrieve $\sigma_{swp(\mathbb{B})}$ before $T/2$, it proceeds to move the funds from $\mathsf{pk_{init}}$ to a newly generated $\mathsf{pk_{rfnd}}$, and thus an adversary holding $\sigma_{swp(\mathbb{B})}$ will be unable to get a transaction accepted by the correctness property of the blockchain (otherwise we occur in a double spending), so we end up with  $\mathsf{amnt_b}$ on $\mathsf{pk_{rfnd(\mathbb{B})}}$. \\
 \\
-If the transaction with signature $\sigma_{swp(\mathbb{B})}$ gets posted on $\mathbb{B}$, then $U_1$ will be able to retrieve $\mathsf{sk_{frz0}}$ by the above argument, and thus compute $\mathsf{sk_{frz}}$ and sign the swap transaction with it, ending up with $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$.
+If the transaction with signature $\sigma_{swp(\mathbb{B})}$ gets posted on $\mathbb{B}$, then $P_1$ will be able to retrieve $\mathsf{sk_{frz0}}$ by the above argument, and thus compute $\mathsf{sk_{frz}}$ and sign the swap transaction with it, ending up with $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$.
 
 
 \section{Implementation and Evaluation}
