@@ -2,6 +2,7 @@
 *.aux
 *.lof
 *.log
+*.lgpl
 *.lot
 *.fls
 *.out
