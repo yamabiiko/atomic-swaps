@@ -265,17 +265,39 @@ One of the first works proposing an atomic swap protocol that substitutes blockc
 
 A VTS lets a user generate a timed commitment $C$ of a signature $\sigma$ on a message $m$ under a public key $\mathsf{pk}$. The commitment $C $ must hide the signature $\sigma$ for time $\mathsf{T}$. At the same time, the committer also generates a proof $\pi$ that proves that the commitment $C$ contains a valid signature $\sigma$. This guarantees that $\sigma$ can be publicly recovered in time $\mathsf{T}$ by anyone who solves the computational puzzle.
 
-To give an intuition, imagine Alice and Bob sharing an address $\mathsf{pk_{ab}}$ where each party owns a share of the corresponding secret key.  Before sending the funds to $\mathsf{pk_{ab}}$, Alice and Bob sign a refund transaction $\mathsf{tx_{rfnd}}$ that transfers all funds from $\mathsf{pk_{ab}}$ back to Alice, in such a way that only Bob learns the signatures. Bob then generates a VTS on this refund signature and provides Alice the commitment $C$ and proof $\pi$. \\
+Let $P_0$ and $P_1$ be two parties where $P_0$ wants to exchange $\mathsf{amnt_a}$ on blockchain $\mathbb{A}$ from their address $\mathsf{pk_{init(\mathbb{A})}}$ for $\mathsf{amnt_b}$ on blockchain $\mathbb{B}$ to $\mathsf{pk_{swp(\mathbb{B})}}$ and vice-versa for $P_1$.
 
-Note that parties must account for potential differences in the computational power available for force opening the VTS commitments. This is to prevent scenarios where Alice or Bob with a powerful machine force opens its VTS commitments earlier than expected in terms of real time, resulting in being able 
+In the setup phase of the protocol, the parties run a 2PC protocol to setup two freeze address on the respective chains $\mathsf{pk_{frz(\mathbb{A})}}$ and $\mathsf{pk_{frz(\mathbb{B})}}$, where each party posseses one share of the respective secret keys, e.g. $\mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0}} \oplus  \mathsf{sk_{frz1}}$. \\
+Now the parties create a refund transaction transferring back the assets in case of timeout, for $P_0$ we have $\mathsf{tx_{rfnd(\mathbb{A})}}$ refunding $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{init(\mathbb{A})}}$ and similarly for $P_1$ $\mathsf{tx_{rfnd(\mathbb{B})}}$. Now each party generates a timed commitment on the signature of the counterparty's refund transaction, where $P_0$ receives a $\mathsf{VTS}$ with commitment $C_0$ and timeout $T_0 = T_1 + \Delta$ and $P_1$ receives a $\mathsf{VTS}$ with commitment $C_1$ and timeout $T_1$. Once both $\mathsf{VTS}$ commitment are verified the parties can proceed to transfer the assets to the freeze addresses, as they are guaranteed to  retreive the signature of the refund transaction after they force open the commitments after the specified timeouts. \\
+
+In the subsequential lock phase, parties first initialize the swap transactions $\mathsf{tx_{swp}}$ transferring $\mathsf{amnt}$ from $\mathsf{pk_{frz}}$ to $\mathsf{pk_{swp}}$ for the respective chains and then compute via 2PC $\mathsf{lk} := \sigma_{swp(\mathbb{A})} \oplus \mathcal{H}(\sigma_{swp(\mathbb{B})})$, where the output for $P_0$ is $\sigma_{swp(\mathbb{B})}$ and $\mathsf{lk}$ for $P_1$. Now when $P_0$ publishes $\mathsf{tx_{swp(\mathbb{B})}}$ together with  $\sigma_{swp(\mathbb{B})}$, $P_1$ will be able to unmask $\mathsf{lk}$ by computing $\mathcal{H}(\sigma_{swp(\mathbb{B})})$ and thus retrieving $\sigma_{swp(\mathbb{A})}$ and publishing $\mathsf{tx_{swp(\mathbb{A})}}$.
+
+In case $P_0$ fails to publish $\mathsf{tx_{swp(\mathbb{B})}}$ before $T_1$, $P_1$ will publish refund transaction  $\mathsf{tx_{rfnd(\mathbb{B})}}$ and similarly for $P_0$ if $P_1$ timeouts during the protocol execution. \\
+
+We note however that the protocol fails to take into account two possible racing conditions: \\
+1) the party $P_0$ can wait until $T_1$ to post $\mathsf{tx_{swp(\mathbb{B})}}$ , when $P_1$ is posting the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$. Since $\mathsf{tx_{rfnd(\mathbb{B})}}$ is not confirmed until $\mathbb{B}.\mathsf{ctime}$, there is an equal probability that $\mathsf{tx_{swp(\mathbb{B})}}$ will win the race, thus $P_1$ will be unable to refund the assets. \\ 
+2) Similarly, if $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ after $T_1 - \mathbb{B}.\mathsf{ctime}$, $P_1$ can now try to simultaneously post $\mathsf{tx_{rfnd(\mathbb{B})}}$ and $\mathsf{tx_{swp(\mathbb{A})}}$ \\
+
+Thus in order to preserve the atomicity property, we propose the following changes: \\
+1) When $P_1$ timeouts on $T_1$ the party should check, while $\mathsf{tx_{rfnd(\mathbb{B})}}$ is unconfirmed, if $P_0$ is publishing $\mathsf{tx_{swp(\mathbb{B})}}$ and if so retrieve $\sigma_{swp(\mathbb{A})}$ and publish $\mathsf{tx_{swp(\mathbb{A})}}$. It is also required that $\Delta > \mathbb{A}.\mathsf{ctime} + \mathsf{B}.\mathsf{ctime}$ \\
+2) $P_0$ should be required to post $\mathsf{tx_{swp(\mathbb{B})}}$ no later than $T_1 - \mathbb{B}.\mathsf{ctime}$, and abort otherwise \\
+
+Note that parties must also take into account potential differences in the computational power available for force opening the VTS commitments. This is to prevent scenarios where Alice or Bob with a powerful machine force opens its VTS commitments earlier than expected in terms of real time, resulting in being able 
 to steal the coins of the other party during the swap lock or swap complete phase. In particular, the parties must ensure that $\Delta$ (such that T0 = T1 + $\Delta$) is large enough such that it tolerates the time differences to open the VTS commitments. \\
 
 Parties are incentivized to make worst-case estimates for the counterparty's computational power which can be orders of magnitude faster when accounting for novel algorithms \cite{squaring_algo} and application-specific integrated circuits (ASIC) \cite{squaring_asic}. \\
 This leads to an impractical protocol, as parties may need to uninterruptedly compute a force opening for a significant amount of time.
+
+
+
+
+
+
+
 \subsection{Contribution}
 
-We propose an alternative construction of an universal atomic swap protocol which uses a one-sided refund timed commitment.  \\
-The protocol is asymmetric, with one party acting as a client, who is required to compute a short timed commitment equivalent to the blockchain's confimation time, and the other party functioning as an exchange server, force opening the timed commitment with timelock $T_0$,
+We propose an alternative construction of a timed-crypto based atomic swap protocol which uses a one-sided refund timed commitment.  \\
+The protocol is asymmetric, with one party acting as a client, who is required to compute a short timed commitment equivalent to the blockchains confimation time, and the other party functioning as an exchange server, force opening the timed commitment with timelock $T_0$.
 This approach also eliminates the need to set up a freeze wallet for the client, reducing the number of transactions for a successful swap.
 
 We furthermore define a new interface that generalizes timed commitments independent of the underlying construction.
