@@ -12,6 +12,7 @@
 \usepackage{float}
 \usepackage{makeidx}
 \usepackage{enumitem}        % possibility to label list items by alphabet
+\usepackage[a4paper, top=0.5in]{geometry}
 \newcommand{\M}[1]{\ensuremath{\text{\texttt{#1}}}}
 \usepackage[
     lambda,
@@ -130,6 +131,24 @@
 
 \newcommand{\indrsidcpa}{\mathrm{IND\$}\mhyphen\mathrm{sID}\mhyphen\mathrm{CPA}}
 %\newcommand{\oplus}{\, \texttt{XOR} \,} % shorthand for typing the XOR operator in mathmode
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathreplacing}
+\usetikzlibrary{decorations.pathmorphing}
+
+
+\newcommand{\commentline}[2]{%
+    \tikz[remember picture, overlay]{
+        \node [black,anchor=west,xshift=10pt] at (#1) {#2};
+    }
+}
+
+\newcommand{\blockcomment}[3]{%
+    \tikz[remember picture, overlay]{
+        \draw [decorate,decoration={lineto,amplitude=10pt,mirror,raise=4pt},yshift=0pt,very thick,{#3}] 
+        (#1) -- (#2) node [black,midway,xshift=10pt] {};
+    }
+}
+
 
 
 \usepackage{biblatex}
@@ -377,6 +396,7 @@ We denote with $\mathbb{A}$ and $\mathbb{B}$ two different blockchains, where $P
 
 \begin{figure}[H]
 \begin{pchstack}[center, boxed]
+\vspace{-1cm}
 \pseudocode{
 	P_0(\mathsf{sk_{frz0(\mathbb{B})}}) \< \< P_1(\mathsf{sk_{frz1(\mathbb{B})}}, \mathsf{tx_{rfnd}}) \\[0.1\baselineskip ][\hline] 
     \<\< \\[-0.5\baselineskip ]
@@ -403,20 +423,21 @@ We denote with $\mathbb{A}$ and $\mathbb{B}$ two different blockchains, where $P
 \end{figure}
 
 
-
-
 \begin{figure}[H]
-\begin{minipage}[t]{0.5\textwidth}
+\hspace{-2cm}
+\begin{minipage}[t]{0.65\textwidth}
 \begin{pchstack}[boxed]
 \pseudocode{
     \text{Global input} \:\: (T_0, T_1, T_2, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
     (\mathsf{sk_{frz0}}, \mathsf{pk_{frz}})_{(\mathbb{A})} \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}_{(\mathbb{A})}} \\
     (\mathsf{sk_{frz1}}, \mathsf{pk_{frz}})_{(\mathbb{B})} \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}_{(\mathbb{B})}} \\
     \mathsf{hsig} \gets \mathsf{\textbf{wait}} \:\:  \Gamma_{\mathsf{Refund}}(\mathsf{sk_{frz1(\mathbb{B})}}, \mathsf{tx_{rfnd(\mathbb{B})}}) \\
-    (C_0, \pi_0, \pi_1, \pi_2,, \mathsf{lk_0} ) \gets \mathsf{\textbf{wait}} \:\: \mathsf{receive}(P_1) \\
-    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{VTD}}.\mathsf{Verify}(\mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz0(\mathbb{A})}}], C_0, \pi) \neq 1 \\
+    (C_0, \pi_0, \pi_1, \pi_2, \mathsf{lk_0} ) \gets \mathsf{\textbf{wait}} \:\: \mathsf{receive}(P_1) \\
+    {[\mathsf{sk_{frz1(\mathbb{A})}}]} := \mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz0(\mathbb{A})}}] \\
+    \mathsf{stmnt_0} := (\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1) \\
+    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{VTD}}.\mathsf{Verify}({[\mathsf{sk_{frz1(\mathbb{A})}}]}, C_0, \pi) \neq 1 \\
         \quad \mathsf{\textbf{return}} \perp \\
-    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}((\mathsf{lk_0}, \mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz0(\mathbb{A})}}], \mathsf{hsig}, \pi_1, T_1), \pi_2) \neq 1 \\
+    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}(\mathsf{stmnt_0}, \pi_2) \neq 1 \\
         \quad \mathsf{\textbf{return}} \perp \\
     \mathsf{\textbf{select}} \:\: \{ \\
         \quad \mathsf{\textbf{wait}} \:\: \{ \\
@@ -448,7 +469,8 @@ We denote with $\mathbb{A}$ and $\mathbb{B}$ two different blockchains, where $P
             \qquad (C_2, \pi_3) \gets \Pi_\mathsf{VTD}.\mathsf{Commit}(\mathsf{sk_{frz0}}, T_2) \\
             \qquad \mathsf{lk_1} := \mathsf{pk_{swp(\mathbb{B})}} \oplus C_2 \\
             \qquad \mathsf{hpk} \gets \mathcal{H}(\mathsf{pk_{swp(\mathbb{B})}}) \\
-            \qquad \pi_4 \gets \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Pr}((\mathsf{lk_1}, [\mathsf{sk_{frz0}}], \mathsf{hpk}, \pi_3, T_2), \mathsf{pk_{swp(\mathbb{B})}}) \\
+            \qquad \mathsf{stmnt_1} := (\mathsf{lk_1}, [\mathsf{sk_{frz0}}], \mathsf{hpk}, \pi_3, T_2) \\
+            \qquad \pi_4 \gets \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Pr}(\mathsf{stmnt_1}, \mathsf{pk_{swp(\mathbb{B})}}) \\
             \qquad \mathsf{send}(P_1, \pi_3, \pi_4, \mathsf{hpk}, \mathsf{lk_1}) \\
             \qquad \sigma_{\mathsf{swp(\mathbb{B})}} \gets \Gamma_{\mathsf{Swap}}(\mathsf{sk_{frz0(\mathbb{B})}}, \mathsf{tx_{swp(\mathbb{B})}}) \\
             \qquad \textbf{if} \:\: \mathsf{VerifyTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \neq 1 \\
@@ -458,10 +480,21 @@ We denote with $\mathbb{A}$ and $\mathbb{B}$ two different blockchains, where $P
         \quad \} \\
     \} \\
 }
+\hspace{1cm}
+
+\blockcomment{-1.4,-5}{-1.4,-1}{}
+\commentline{-1.5,-3.5}{Setup}
+\blockcomment{-0.93,-9.5}{-0.93,-6}{}
+\commentline{-1.1,-7.5}{Timeout}
+\blockcomment{-1.4,-14}{-1.4,-10}{}
+\commentline{-1.5,-12}{Refund}
+\blockcomment{-1.865,-24.5}{-1.865,-14.5}{}
+\commentline{-2,-19}{Swap}
+
 \end{pchstack}
 \end{minipage}%
-\hspace{0.01\textwidth} 
-\begin{minipage}[t]{0.5\textwidth}
+\hspace{0.04\textwidth} 
+\begin{minipage}[t]{0.65\textwidth}
 \begin{pchstack}[boxed]
 \pseudocode{
     \text{Global input} \:\: (T_0, T_1, T_2, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
@@ -478,7 +511,8 @@ We denote with $\mathbb{A}$ and $\mathbb{B}$ two different blockchains, where $P
     (C_1, \pi_1) \gets \Pi_\mathsf{VTD}.\mathsf{Commit}(\mathsf{sk_{frz1(\mathbb{A})}}, T_1) \\
     \mathsf{lk_0} := \sigma_{\mathsf{rfnd(\mathbb{B})}} \oplus C_1 \\
     \mathsf{hsig} := \mathcal{H}(\sigma_{\mathsf{rfnd(\mathbb{B})}}) \\
-    \pi_2 \gets \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Pr}((\mathsf{lk_0}, [\mathsf{sk_{frz1}}], \mathsf{hsig}, \pi_1, T_1), \sigma_{\mathsf{rfnd(\mathbb{B})}}) \\
+    \mathsf{stmnt_0} := (\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1) \\
+    \pi_2 \gets \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Pr}(\mathsf{stmnt_0}, \sigma_{\mathsf{rfnd(\mathbb{B})}}) \\
     \mathsf{\textbf{wait}} \:\: \mathsf{send}(P_0,\: (C_0, \pi_0, \pi_1, \pi_2, \mathsf{lk_0})) \\
     \mathsf{\textbf{select}} \:\: \{ \\
         \quad \mathsf{\textbf{wait}} \:\: \{ \\
@@ -490,7 +524,9 @@ We denote with $\mathbb{A}$ and $\mathbb{B}$ two different blockchains, where $P
             \qquad \mathsf{\textbf{while}} \:\: \mathsf{bal_a} \neq {\mathsf{amnt_a}} \\
             \qquad \mathsf{send}(P_0,\: \mathsf{pk_{init}}) \\
 	    \qquad (\pi_3, \pi_4, \mathsf{hpk}, \mathsf{lk_1}) \gets \mathsf{receive}(P_0) \\
-	    \qquad \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}((\mathsf{lk_1}, \mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz1(\mathbb{A})}}], \mathsf{hpk}, \pi_3, T_2), \pi_4) \neq 1 \\
+            \qquad {[\mathsf{sk_{frz0(\mathbb{A})}}]} := \mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz1(\mathbb{A})}}] \\
+            \qquad \mathsf{stmnt_1} := (\mathsf{lk_1}, {[\mathsf{sk_{frz0(\mathbb{A})}}]}, \mathsf{hpk}, \pi_3, T_2) \\
+            \qquad \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}(\mathsf{stmnt_1}, \pi_4) \neq 1 \\
                 \qquad \quad \mathsf{\textbf{return}} \perp \\
             \qquad \Gamma_{\mathsf{Swap}}(\mathsf{sk_{frz1(\mathbb{B})}}, \mathsf{hpk}) \\
             \qquad \mathsf{receive}(P_0) \\
@@ -498,11 +534,19 @@ We denote with $\mathbb{A}$ and $\mathbb{B}$ two different blockchains, where $P
 	    \qquad C_2 := \mathsf{lk_1} \oplus \mathsf{tx_{swp(\mathbb{B})}}.\mathsf{pk_{rx}} \\
             \qquad \mathsf{sk_{frz0}} \gets \Pi_\mathsf{VTD}.\mathsf{ForceOp}(C_2) \\
             \qquad \mathsf{tx_{swp(\mathbb{A})}} \gets \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{swp}}, \mathsf{amnt_a}) \\
-            \qquad \sigma_{\mathsf{swp(\mathbb{A})}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}, \mathsf{tx_{rfnd}}) \\
+            \qquad \mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}} \\
+            \qquad \sigma_{\mathsf{swp(\mathbb{A})}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{frz}}, \mathsf{tx_{rfnd}}) \\
             \qquad \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
         \quad \} \\
     \} \\
 }
+\blockcomment{-0.7,-8.5}{-0.7,-0.5}{}
+\commentline{-1,-3.5}{Setup}
+\blockcomment{-0.75,-11}{-0.75,-9}{}
+\commentline{-1.2,-10}{Timeout}
+\blockcomment{-1.2,-20}{-1.2,-11.5}{}
+\commentline{-1.4,-15}{Swap}
+
 \end{pchstack}
 \end{minipage}%
 \caption{Full protocol execution for $P_0$ and $P_1$, respectively left and right (alternative syntax)}
