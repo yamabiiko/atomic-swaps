@@ -136,6 +136,11 @@
 \usetikzlibrary{decorations.pathmorphing}
 
 
+\definecolor{cgreen}{RGB}{0, 153, 51}
+\definecolor{cblue}{RGB}{0, 102, 204}
+\definecolor{cyellow}{RGB}{255, 204, 0} 
+\definecolor{cred}{RGB}{204, 51, 0} 
+
 \newcommand{\commentline}[2]{%
     \tikz[remember picture, overlay]{
         \node [black,anchor=west,xshift=10pt] at (#1) {#2};
@@ -316,10 +321,9 @@ This leads to an impractical protocol, as parties may need to uninterruptedly co
 \subsection{Contribution}
 
 We propose an alternative construction of a timed-crypto based atomic swap protocol which uses a one-sided refund timed commitment.  \\
-The protocol is asymmetric, with one party acting as a client, who is required to compute a short timed commitment equivalent to the blockchains confimation time, and the other party functioning as an exchange server, force opening the timed commitment with timelock $T_0$.
-This approach also eliminates the need to set up a freeze wallet for the client, reducing the number of transactions for a successful swap.
-
-We furthermore define a new interface that generalizes timed commitments independent of the underlying construction.
+The protocol is asymmetric, with one party acting as an exchange server, force opening a refund timed commitment with timelock $T_0$ , and the other as a client who is required to compute, at worst, a timed commitment equivalent to $2\mathbb{B}.\mathsf{ctime} + \mathbb{A}.\mathsf{ctime}$. \\
+We also note that the client can safely abort from the protocol by posting the refund transaction at any time before $T_0 - \mathbb{B}.\mathsf{ctime}$.
+This construction allows to relax the time parameter $T_0$.
 
 \section{Preliminaries}
 
@@ -347,7 +351,8 @@ We define the following oracles to interact with the blockchains. The subscript 
     \item $\mathbf{0/1} \gets \mathbf{VerifyTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$: verifies the signature of the transaction and the validity of the transaction based on consensus rules. Outputs 1 if the verification succeeds, 0 otherwise.
     \item $\mathbf{0/1} \gets \mathbf{WatchTx}_{(\mathbb{A})}(\mathsf{tx})$: wait for the transaction $\mathsf{tx}$ to be confirmed.
     \item $\mathbf{amnt} \gets \mathbf{GetBal}_{(\mathbb{A})}(\mathsf{pk})$: get the balance of assets held by $\mathsf{pk}$
-    \item $(\sigma_{\mathsf{tx}}, \mathsf{tx}) \gets \mathbf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk})$: get the the latest confirmed transaction and its signature from $\mathsf{pk}$'s record on the chain
+    \item $(\sigma_{\mathsf{tx}}, \mathsf{tx}) \gets \mathbf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk})$: get the the latest confirmed transaction and its signature from $\mathsf{pk}$'s record on the chain.
+    \item $(\mathbf{tx}_{\mathbb{A}}, \mathbf{0/1})  \gets \mathbf{FullTx}_{(\mathbb{A})}(\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{sk_{tx}})$: an helper function that initializes a transaction, signs it with the given secret key and publishes it to the chain. Returns the transaction $\mathbf{tx}_{\mathbb{A}}$ and 1 if the transaction is accepted, 0 otherise.
 \end{itemize}
 
 \subsection{Security definitions}
@@ -365,7 +370,7 @@ That is, after the protocol run there can be only two outcomes: \\
 That is after a successful protocol run $P_0$ owns $\mathsf{sk_{swp(\mathbb{B})}}$ and $P_1$ owns $\mathsf{sk_{swp(\mathbb{A})}}$, and respectively for the aborted swap  $\mathsf{sk_{init(\mathbb{A})}}$ and $\mathsf{sk_{init(\mathbb{B})}}$ or $\mathsf{sk_{rfnd(\mathbb{B})}}$. \\
 
 
-\section{Atomic Swaps from Commit Transactions}
+\section{Atomic Swaps from timed commitments}
 
 %\todo[inline]{For the current report, put a formal syntax, but maybe informal definitions of correctness and security. Especially, there should be an (informal) definition of commit transaction. }
 
@@ -375,7 +380,7 @@ That is after a successful protocol run $P_0$ owns $\mathsf{sk_{swp(\mathbb{B})}
 %\todo[inline]{Set things up (e.g. let ... be a signature scheme, ... be a ... scheme. We construct a ... in Figure ...)}
 
 
-\subsection{Version 0}
+\subsection{Using timelock puzzles}
 
 Let $T_0$, $T_1$, $T_2$ be three timeouts where  $T_0 > 2\cdot T_2$, $T_1 =  \mathbb{B}.\mathsf{ctime}$ and $T_2 \geq \mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime}$. 
 
@@ -425,76 +430,72 @@ We denote with $\mathbb{A}$ and $\mathbb{B}$ two different blockchains, where $P
 
 \begin{figure}[H]
 \hspace{-2cm}
-\begin{minipage}[t]{0.65\textwidth}
+\begin{minipage}[t]{0.6\textwidth}
 \begin{pchstack}[boxed]
 \pseudocode{
     \text{Global input} \:\: (T_0, T_1, T_2, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
     (\mathsf{sk_{frz0}}, \mathsf{pk_{frz}})_{(\mathbb{A})} \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}_{(\mathbb{A})}} \\
     (\mathsf{sk_{frz1}}, \mathsf{pk_{frz}})_{(\mathbb{B})} \gets \mathsf{\textbf{wait}} \:\: \Gamma_{\mathsf{KeyGen}_{(\mathbb{B})}} \\
-    \mathsf{hsig} \gets \mathsf{\textbf{wait}} \:\:  \Gamma_{\mathsf{Refund}}(\mathsf{sk_{frz1(\mathbb{B})}}, \mathsf{tx_{rfnd(\mathbb{B})}}) \\
-    (C_0, \pi_0, \pi_1, \pi_2, \mathsf{lk_0} ) \gets \mathsf{\textbf{wait}} \:\: \mathsf{receive}(P_1) \\
+    \mathsf{hsig} \gets \mathsf{\textbf{wait}} \:\:  \Gamma_{\mathsf{Refund}}(\mathsf{sk_{frz0(\mathbb{B})}}) \\
+    (\pi_1, \pi_{\mathsf{lk_0}}, \mathsf{lk_0} ) \gets \mathsf{\textbf{wait}} \:\: \mathsf{receive}(P_1) \\
     {[\mathsf{sk_{frz1(\mathbb{A})}}]} := \mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz0(\mathbb{A})}}] \\
     \mathsf{stmnt_0} := (\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1) \\
-    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{VTD}}.\mathsf{Verify}({[\mathsf{sk_{frz1(\mathbb{A})}}]}, C_0, \pi) \neq 1 \\
+    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}(\mathsf{stmnt_0}, \pi_{\mathsf{lk_0}}) \neq 1 \\
         \quad \mathsf{\textbf{return}} \perp \\
-    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}(\mathsf{stmnt_0}, \pi_2) \neq 1 \\
+    (\mathsf{pk_{swp}}, \mathsf{sk_{swp}})_{(\mathbb{B})} \gets \Pi_{\mathsf{DS}}.\mathsf{KeyGen_{(\mathbb{B})}} \\
+    \mathsf{tx_{swp(\mathbb{B})}} \gets \mathsf{InitTx}_{(\mathbb{B})}(\mathsf{pk_{frz}}, \mathsf{pk_{swp}}, \mathsf{amnt_b}) \\
+    (C_2, \pi_2) \gets \Pi_\mathsf{VTD}.\mathsf{Commit}(\mathsf{sk_{frz0}}, T_2) \\
+    \mathsf{lk_1} := \mathsf{pk_{swp(\mathbb{B})}} \oplus C_2 \\
+    \mathsf{hpk} \gets \mathcal{H}(\mathsf{pk_{swp(\mathbb{B})}}) \\
+    \mathsf{stmnt_1} := (\mathsf{lk_1}, [\mathsf{sk_{frz0}}], \mathsf{hpk}, \pi_2, T_2) \\
+    \pi_{\mathsf{lk_1}} \gets \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Pr}(\mathsf{stmnt_1}, \mathsf{pk_{swp(\mathbb{B})}}) \\
+    \mathsf{send}(P_1, \pi_2, \pi_{\mathsf{lk_1}}, \mathsf{hpk}, \mathsf{lk_1}) \\
+    (C_0, \pi_0) \gets \mathsf{\textbf{wait}} \:\: \mathsf{receive}(P_1) \\
+    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{VTD}}.\mathsf{Verify}({[\mathsf{sk_{frz1(\mathbb{A})}}]}, C_0, \pi_0) \neq 1 \\
         \quad \mathsf{\textbf{return}} \perp \\
     \mathsf{\textbf{select}} \:\: \{ \\
         \quad \mathsf{\textbf{wait}} \:\: \{ \\
             \qquad \mathsf{sk_{frz1}} \gets \Pi_{\mathsf{VTD}}.\mathsf{ForceOp}(C_0) \\
             \qquad \mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}} \\
-            \qquad \mathsf{tx_{rfnd(\mathbb{A})}} \gets \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{init}}, \mathsf{amnt_a}) \\
-            \qquad \sigma_{\mathsf{rfnd(\mathbb{A})}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{frz}}, \mathsf{tx_{rfnd}}) \\
-            \qquad \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{rfnd}}, \mathsf{tx_{rfnd}}) \\
+            \qquad \mathsf{FullTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{init}}, \mathsf{amnt_a}, \mathsf{sk_{frz}}) \\
         \quad \} \\
         \quad \mathsf{\textbf{wait}} \:\: \{ \\
-            \qquad \mathsf{\textbf{do}} \:\: (\sigma_{\mathsf{tx_{rfnd}}}, \_) \gets \mathsf{GetLatestTx}_{(\mathbb{B})}(\mathsf{pk_{frz}}) \\
-            \qquad \mathsf{\textbf{while}} \:\: \mathcal{H}(\sigma_{\mathsf{tx_{rfnd}}}) \neq {\mathsf{hsig}} \\
-            \qquad C_1 := \mathsf{lk_0} \oplus \sigma_{\mathsf{tx_{rfnd}}} \\
+            \qquad \mathsf{\textbf{do}} \:\: (\sigma_{\mathsf{tx_{last}}}, \_) \gets \mathsf{GetLatestTx}_{(\mathbb{B})}(\mathsf{pk_{frz}}) \\
+            \qquad \mathsf{\textbf{while}} \:\: \mathcal{H}(\sigma_{\mathsf{tx_{last}}}) \neq {\mathsf{hsig}} \\
+            \qquad C_1 := \mathsf{lk_0} \oplus \sigma_{\mathsf{tx_{last}}} \\
             \qquad \mathsf{sk_{frz1(\mathbb{A})}} \gets \Pi_\mathsf{VTD}.\mathsf{ForceOp}(C_1) \\
-            \qquad \mathsf{sk_{frz(\mathbb{A}b}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}} \\
-            \qquad \mathsf{tx_{rfnd(\mathbb{A})}} \gets \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{init}}, \mathsf{amnt_a}) \\
-            \qquad \sigma_{\mathsf{rfnd(\mathbb{A})}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{frz}}, \mathsf{tx_{rfnd}}) \\
-            \qquad \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{rfnd}}, \mathsf{tx_{rfnd}}) \\
+            \qquad \mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}} \\
+            \qquad \mathsf{FullTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{init}}, \mathsf{amnt_a}, \mathsf{sk_{frz}}) \\
         \quad \} \\
         \quad \mathsf{\textbf{wait}} \:\: \{ \\
-            \qquad \mathsf{tx_{frz(\mathbb{A})}} \gets \:\: \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{init}}, \mathsf{pk_{frz}}, \mathsf{amnt_a}) \\
-            \qquad \sigma_{\mathsf{frz(\mathbb{A})}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{init}}, \mathsf{tx_{frz}}) \\
-            \qquad \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{frz}}, \mathsf{tx_{frz}}) \\
+        \qquad \mathsf{FullTx}_{(\mathbb{A})}(\mathsf{pk_{init}}, \mathsf{pk_{frz}}, \mathsf{amnt_a}, \mathsf{sk_{init}}) \\
             \qquad \mathsf{\textbf{do}} \:\: \mathsf{bal_b} \gets \mathbf{wait} \:\: \mathsf{GetBal}_{(\mathbb{B})}(\mathsf{pk_{frz}}) \\
             \qquad \mathsf{\textbf{while}} \:\: \mathsf{bal_b} \neq {\mathsf{amnt_b}} \\
-            \qquad  (\mathsf{pk_{swp}}, \mathsf{sk_{swp}})_{(\mathbb{B})} \gets \Pi_{\mathsf{DS}}.\mathsf{KeyGen_{(\mathbb{B})}} \\
-            \qquad \mathsf{pk_{init(\mathbb{B})}} \gets  \mathsf{receive}(P_1) \\
-            \qquad \mathsf{tx_{swp(\mathbb{B})}} \gets \mathsf{InitTx}_{(\mathbb{B})}(\mathsf{pk_{frz}}, \mathsf{pk_{swp}}, \mathsf{amnt_b}) \\
-            \qquad (C_2, \pi_3) \gets \Pi_\mathsf{VTD}.\mathsf{Commit}(\mathsf{sk_{frz0}}, T_2) \\
-            \qquad \mathsf{lk_1} := \mathsf{pk_{swp(\mathbb{B})}} \oplus C_2 \\
-            \qquad \mathsf{hpk} \gets \mathcal{H}(\mathsf{pk_{swp(\mathbb{B})}}) \\
-            \qquad \mathsf{stmnt_1} := (\mathsf{lk_1}, [\mathsf{sk_{frz0}}], \mathsf{hpk}, \pi_3, T_2) \\
-            \qquad \pi_4 \gets \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Pr}(\mathsf{stmnt_1}, \mathsf{pk_{swp(\mathbb{B})}}) \\
-            \qquad \mathsf{send}(P_1, \pi_3, \pi_4, \mathsf{hpk}, \mathsf{lk_1}) \\
+\
             \qquad \sigma_{\mathsf{swp(\mathbb{B})}} \gets \Gamma_{\mathsf{Swap}}(\mathsf{sk_{frz0(\mathbb{B})}}, \mathsf{tx_{swp(\mathbb{B})}}) \\
             \qquad \textbf{if} \:\: \mathsf{VerifyTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \neq 1 \\
             \qquad \quad \mathsf{\textbf{return}} \perp \\
             \qquad \mathsf{PubTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
-            \qquad \mathsf{send}(P_1) \\
+            \qquad \mathsf{WatchTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
+            \qquad \mathsf{send}(P_1, \mathsf{sk_{frz0(\mathbb{A})}}) \\
         \quad \} \\
-    \} \\
+    \}
 }
-\hspace{1cm}
 
-\blockcomment{-1.4,-5}{-1.4,-1}{}
-\commentline{-1.5,-3.5}{Setup}
-\blockcomment{-0.93,-9.5}{-0.93,-6}{}
-\commentline{-1.1,-7.5}{Timeout}
-\blockcomment{-1.4,-14}{-1.4,-10}{}
-\commentline{-1.5,-12}{Refund}
-\blockcomment{-1.865,-24.5}{-1.865,-14.5}{}
+\blockcomment{-0.26,-9.8}{-0.26,-0.5}{cblue}
+\commentline{-0.55,-3}{Setup}
+\blockcomment{-0.73,-12.5}{-0.73,-10.2}{cyellow}
+\commentline{-1.1,-11}{Timeout}
+\blockcomment{-1.2,-17}{-1.2,-13}{cred}
+\commentline{-1.6,-15}{EarlyRefund}
+\blockcomment{-1.665,-22}{-1.665,-17.5}{cgreen}
 \commentline{-2,-19}{Swap}
+\hspace{0.2cm}
 
 \end{pchstack}
 \end{minipage}%
 \hspace{0.04\textwidth} 
-\begin{minipage}[t]{0.65\textwidth}
+\begin{minipage}[t]{0.5\textwidth}
 \begin{pchstack}[boxed]
 \pseudocode{
     \text{Global input} \:\: (T_0, T_1, T_2, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
@@ -504,48 +505,53 @@ We denote with $\mathbb{A}$ and $\mathbb{B}$ two different blockchains, where $P
     \sigma_{\mathsf{rfnd(\mathbb{B})}} \gets \Gamma_{\mathsf{Refund}}(\mathsf{sk_{frz1(\mathbb{B})}}, \mathsf{tx_{rfnd(\mathbb{B})}}) \\
     \mathsf{\textbf{if}} \:\: \mathsf{VerifyTx}_{(\mathbb{B})}(\sigma_{\mathsf{rfnd}}, \mathsf{tx_{rfnd}}) \neq 1 \\
     \quad \mathsf{\textbf{return}} \perp \\
-    \mathsf{tx_{frz(\mathbb{B})}} \gets \:\: \mathsf{InitTx}_{(\mathbb{B})}(\mathsf{pk_{init}}, \mathsf{pk_{frz}}, \mathsf{amnt_b}) \\
-    \sigma_{\mathsf{frz(\mathbb{B})}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{B})}(\mathsf{sk_{init}}, \mathsf{tx_{frz}}) \\
-    \mathsf{PubTx}_{(\mathbb{B})}(\sigma_{\mathsf{frz}}, \mathsf{tx_{frz}}) \\
-    (C_0, \pi_0) \gets \Pi_{\mathsf{VTD}}.\mathsf{Commit}(\mathsf{sk_{frz1(\mathbb{A})}}, T_0) \\
     (C_1, \pi_1) \gets \Pi_\mathsf{VTD}.\mathsf{Commit}(\mathsf{sk_{frz1(\mathbb{A})}}, T_1) \\
     \mathsf{lk_0} := \sigma_{\mathsf{rfnd(\mathbb{B})}} \oplus C_1 \\
     \mathsf{hsig} := \mathcal{H}(\sigma_{\mathsf{rfnd(\mathbb{B})}}) \\
     \mathsf{stmnt_0} := (\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1) \\
-    \pi_2 \gets \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Pr}(\mathsf{stmnt_0}, \sigma_{\mathsf{rfnd(\mathbb{B})}}) \\
-    \mathsf{\textbf{wait}} \:\: \mathsf{send}(P_0,\: (C_0, \pi_0, \pi_1, \pi_2, \mathsf{lk_0})) \\
+    \pi_{\mathsf{lk_0}} \gets \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Pr}(\mathsf{stmnt_0}, \sigma_{\mathsf{rfnd(\mathbb{B})}}) \\
+    \mathsf{\textbf{wait}} \:\: \mathsf{send}(P_0,\: (\pi_1, \pi_{\mathsf{lk_0}}, \mathsf{lk_0})) \\
+    (\pi_2, \pi_{\mathsf{lk_1}}, \mathsf{hpk}, \mathsf{lk_1}) \gets \mathsf{receive}(P_0) \\
+    {[\mathsf{sk_{frz0(\mathbb{A})}}]} := \mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz1(\mathbb{A})}}] \\
+    \mathsf{stmnt_1} := (\mathsf{lk_1}, {[\mathsf{sk_{frz0(\mathbb{A})}}]}, \mathsf{hpk}, \pi_2, T_2) \\
+    \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}(\mathsf{stmnt_1}, \pi_{\mathsf{lk_1}}) \neq 1 \\
+        \quad \mathsf{\textbf{return}} \perp \\
+    (C_0, \pi_0) \gets \Pi_{\mathsf{VTD}}.\mathsf{Commit}(\mathsf{sk_{frz1(\mathbb{A})}}, T_0) \\
+    \mathsf{\textbf{wait}} \:\: \mathsf{send}(P_0,\: (C_0, \pi_0) \\
     \mathsf{\textbf{select}} \:\: \{ \\
         \quad \mathsf{\textbf{wait}} \:\: \{ \\
             \qquad \mathsf{timeout}(T_0/2) \\
             \qquad \mathsf{PubTx}_{(\mathbb{B})}(\sigma_{\mathsf{rfnd}}, \mathsf{tx_{rfnd}}) \\
         \quad \} \\
         \quad \mathsf{\textbf{wait}} \:\: \{ \\
+            \qquad \mathsf{\textbf{do}} \:\: (\_, \mathsf{tx_{last}}) \gets \mathsf{GetLatestTx}_{(\mathbb{B})}(\mathsf{pk_{frz}}) \\
+            \qquad \mathsf{\textbf{while}} \:\: \mathcal{H}(\mathsf{tx_{last}}.\mathsf{pk_{rx}}) \neq {\mathsf{hpk}} \\
+	    \qquad C_2 := \mathsf{lk_1} \oplus \mathsf{tx_{last(\mathbb{B})}}.\mathsf{pk_{rx}} \\
+            \qquad \mathsf{sk_{frz0}} \gets \Pi_\mathsf{VTD}.\mathsf{ForceOp}(C_2) \\
+            \qquad \mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}} \\
+            \qquad \mathsf{FullTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{swp}}, \mathsf{amnt_a}, \mathsf{sk_{frz}}) \\
+        \quad \} \\
+        \quad \mathsf{\textbf{wait}} \:\: \{ \\
+            \qquad \mathbf{wait} \:\: \mathsf{FullTx}_{(\mathbb{B})}(\mathsf{pk_{init}}, \mathsf{pk_{frz}}, \mathsf{amnt_b}, \mathsf{sk_{init}}) \\
             \qquad \mathsf{\textbf{do}} \:\: \mathsf{bal_a} \gets \mathsf{GetBal}_{(\mathbb{A})}(\mathsf{pk_{frz}}) \\
             \qquad \mathsf{\textbf{while}} \:\: \mathsf{bal_a} \neq {\mathsf{amnt_a}} \\
-            \qquad \mathsf{send}(P_0,\: \mathsf{pk_{init}}) \\
-	    \qquad (\pi_3, \pi_4, \mathsf{hpk}, \mathsf{lk_1}) \gets \mathsf{receive}(P_0) \\
-            \qquad {[\mathsf{sk_{frz0(\mathbb{A})}}]} := \mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz1(\mathbb{A})}}] \\
-            \qquad \mathsf{stmnt_1} := (\mathsf{lk_1}, {[\mathsf{sk_{frz0(\mathbb{A})}}]}, \mathsf{hpk}, \pi_3, T_2) \\
-            \qquad \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}(\mathsf{stmnt_1}, \pi_4) \neq 1 \\
-                \qquad \quad \mathsf{\textbf{return}} \perp \\
             \qquad \Gamma_{\mathsf{Swap}}(\mathsf{sk_{frz1(\mathbb{B})}}, \mathsf{hpk}) \\
-            \qquad \mathsf{receive}(P_0) \\
-            \qquad (\_, \mathsf{tx_{swp(\mathbb{B})}}) \gets \mathsf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk}) \\
-	    \qquad C_2 := \mathsf{lk_1} \oplus \mathsf{tx_{swp(\mathbb{B})}}.\mathsf{pk_{rx}} \\
-            \qquad \mathsf{sk_{frz0}} \gets \Pi_\mathsf{VTD}.\mathsf{ForceOp}(C_2) \\
-            \qquad \mathsf{tx_{swp(\mathbb{A})}} \gets \mathsf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{swp}}, \mathsf{amnt_a}) \\
+            \qquad \mathsf{sk_{frz0(\mathbb{A})}} \gets \mathsf{receive}(P_0) \\
             \qquad \mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}} \\
-            \qquad \sigma_{\mathsf{swp(\mathbb{A})}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{frz}}, \mathsf{tx_{rfnd}}) \\
-            \qquad \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
+            \qquad \mathsf{FullTx}_{(\mathbb{A})}(\mathsf{pk_{frz}}, \mathsf{pk_{swp}}, \mathsf{amnt_a}, \mathsf{sk_{frz}}) \\
         \quad \} \\
     \} \\
 }
-\blockcomment{-0.7,-8.5}{-0.7,-0.5}{}
-\commentline{-1,-3.5}{Setup}
-\blockcomment{-0.75,-11}{-0.75,-9}{}
-\commentline{-1.2,-10}{Timeout}
-\blockcomment{-1.2,-20}{-1.2,-11.5}{}
-\commentline{-1.4,-15}{Swap}
+\blockcomment{-0.278,-9.8}{-0.278,-0.5}{cblue}
+\commentline{-0.65,-3.5}{Setup}
+\blockcomment{-0.75,-12.4}{-0.75,-10.4}{cyellow}
+\commentline{-1.2,-11.2}{Timeout}
+\blockcomment{-1.2,-16.2}{-1.2,-12.6}{cred}
+\commentline{-1.62,-15}{ForceSwap}
+\blockcomment{-1.2,-21}{-1.2,-16.5}{cgreen}
+\commentline{-1.62,-19}{Swap}
+
+\hspace{0.5cm}
 
 \end{pchstack}
 \end{minipage}%
@@ -554,7 +560,7 @@ We denote with $\mathbb{A}$ and $\mathbb{B}$ two different blockchains, where $P
 
 
 
-\subsection{Version 1} 
+\subsection{Using commit transactions} 
 Protocol version using commitment transaction with arbitrary value replacing VTD as defined by the following oracles in the blockchain interface. \\
 \begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
 \item $\mathbf{ctx}_{\mathbb{A}} := (\mathsf{tx_{\mathbb{A}}}, C) \gets \mathbf{CommitTx}_{(\mathbb{A})}(C, \mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{t})$: creates an unsigned commit transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ valid until block $\mathsf{t}$. The transaction can be later completed by opening and broadcasting $C$ through $\mathsf{RevTx}$
@@ -614,6 +620,7 @@ Protocol version using commitment transaction with arbitrary value replacing VTD
 \caption{Full protocol execution for $P_0$ and $P_1$, respectively left and right}
 \end{figure}
 
+\newpage
 
 \section{Proof sketch}
 
@@ -626,21 +633,67 @@ We further assume that a party cannot deny the counter-party from transacting on
 \subsection{Party $P_0$}
 We want to prove that $P_0$ at the end of a protocol run either holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ with exclusive knowledge of $\mathsf{sk_{init(\mathbb{A})}}$ or they hold $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$. \\
 
-$P_0$ signs and publishes a transaction transferring $\mathsf{amnt_a}$ from $\mathsf{pk_{init(\mathbb{A})}}$ to the freeze wallet $\mathsf{pk_{frz(\mathbb{A})}}$ and publishes only if both the following conditions are satisfied: \\
+\subsubsection*{Setup phase}
+The parties first run the following 2PC protocols 
 \begin{itemize}
-\item $\Pi_{\mathsf{VTD}}.\mathsf{Verify}(\mathsf{pk_{frz}} - [\mathsf{sk_{frz0}}], C_0, \pi_0) = 1$, thus by the soundess property of the VTD scheme $P_0$ is guaranteed of retrieving the commited discrete log value $x$ in $C_0$ that satisfies $[x] =  \mathsf{pk_{frz}} - [\mathsf{sk_{frz0}}]$ after $T$ steps.  
-Note that $\mathsf{pk_{frz}}$ has been generated in the 2PC protocol $\Gamma_{\mathsf{KeyGen}}$ with $\mathsf{pk_{frz}} := [\mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}]$, hence we have $[x] = [\mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}] - [\mathsf{sk_{frz0}}] = [\mathsf{sk_{frz1}}]$. \\
-\item $\Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}((\mathsf{lk_0}, \mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz0(\mathbb{A})}}], \mathsf{hsig}, \pi_1, T_1), \pi_2) = 1$, thus we have that 
-    $\exists y \:\: \text{s.t} \:\: \mathcal{H}(y) = \mathsf{hsig} \land \Pi_\mathsf{VTD}.\mathsf{Verify}(\mathsf{pk_{frz}} - [\mathsf{sk_{frz1}}], (\mathsf{lk_0} \oplus y), \pi, T_1)$, veryifing that $\sigma_\mathsf{rfnd(\mathbb{B})}$ is a valid witness for $\mathcal{L}_{\mathsf{lock}}$ and thus can be used to retrieve $C_1 := \sigma_\mathsf{rfnd(\mathbb{B})} \oplus \mathsf{lk_0}$, a commitment to a discrete log $[x]$ the same condition as above and thus we have again $[x] =  [\mathsf{sk_{frz1}}]$
+    \item  $\Gamma_{\mathsf{KeyGen(\mathbb{A}}}$, generating $\mathsf{pk_{frz(\mathbb{A})}}$ outputing one share of the secret key $\mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}$ to each respective party 
+    \item  $\Gamma_{\mathsf{KeyGen(\mathbb{B}}}$, generating $\mathsf{pk_{frz(\mathbb{B})}}$ outputing one share of the secret key $\mathsf{sk_{frz(\mathbb{B})}} := \mathsf{sk_{frz0(\mathbb{B})}} + \mathsf{sk_{frz1(\mathbb{B})}}$ to each respective party
+    \item  $\Gamma_{\mathsf{Refund}}$, jointly computing a signature of the refund transaction $\sigma_{\mathsf{rfnd(\mathbb{B})}}$, sets as output for $P_1$ and the relative hash $\mathsf{hsig}$ as output for $P_0$
 \end{itemize}
 
-The party proceeds to concurrently runs three execution paths denoted by $\textbf{wait}$, with two being refunds branch and one performing the swap. We note that from this point onwards, if any routine in the swapping branch timeouts or faults, $P_0$ will keep executing the refund branch. \\
-$P_0$ generates a new keypair $(\mathsf{pk_{swp}}, \mathsf{sk_{swp}})$ on $\mathbb{B}$, retrieves $\mathsf{pk_{init(\mathbb{B})}}$ from $P_1$ and  initialize the transaction $\mathsf{tx_{swp(\mathbb{B})}}$ transferring $\mathsf{amnt_b}$ from $\mathsf{pk_{init(\mathbb{B})}}$ to $\mathsf{pk_{swp(\mathbb{B})}}$.
-They now proceed to commit their own secret share of $\mathsf{sk_{frz}}$ to $C_1$ with $\Pi_\mathsf{VTD}.\mathsf{Commit}(\mathsf{sk_{frz0}}, T_1)$ and generate a lock for the commitment $lk := C_1 \oplus \mathsf{pk_{swp(\mathbb{B})}}$, where $\mathsf{pk_{swp(\mathbb{B})}}$ is secret to $P_1$. \\
-% They send the lock together with a proof of 
-Note that $P_1$ gains no information about $\mathsf{pk_{swp(\mathbb{B})}}$ and thus can retrieve $C_1$ from $lk$ and force opening it only after $\mathsf{tx_{swp}}$ has been published by $P_0$. The privacy provery of the VTD scheme ensures that $P_1$ will retrieve $\mathsf{sk_{frz0}}$ only after time $T_1$, and since $T_1 \geq \mathbb{B}.\mathsf{ctime}$ $P_1$ will gain knowledge of $\mathsf{sk_{frz}}$ only after $P_0$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$.
+$P_1$ then proceeds to
+\begin{itemize}
+\item Prepare two $\mathsf{VTD}$ commitments on $\mathsf{sk_{frz1(\mathbb{A})}}$ with respective time parameters $T_0, T_1$, generating $(C_0, \pi_0)$ and $(C_1, \pi_1)$
+\item Mask $C_1$ with  $\mathsf{lk_0} := C_1 \oplus \sigma_{\mathsf{rfnd(\mathbb{B})}}$, sets the statement $\mathsf{stmnt_0} := (\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1)$ for $\mathcal{L}_{\mathsf{lock}}$ and generate a proof $\pi_{\mathsf{lk_0}}$ using $\sigma_{\mathsf{rfnd(\mathbb{B})}}$ as the witness.
+\item Send $(C_0, \pi_0, \pi_1, \pi_{\mathsf{lk_0}}, \mathsf{lk_0})$ to $P_0$ 
+\end{itemize}
+\vspace{0.1cm}
 
-Now assume instead that some routine in the swapping execution branch timed out or faulted, resulting in $\Pi_{\mathsf{VTD}}.\mathsf{ForceOp}(C_0)$ being solved: the party retrieves $\mathsf{sk_{frz}}$ to sign and publish $\mathsf{tx_{rfnd(\mathbb{A})}}$ transferring back $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{init(\mathbb{A})}}$, thus resulting in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$.
+$P_0$ then completes the setup phase and continues execution of the protocol only if both the following conditions are satisfied: 
+\begin{itemize}
+\item $\Pi_{\mathsf{VTD}}.\mathsf{Verify}([\mathsf{sk_{frz1(\mathbb{A})}}], C_0, \pi_0) = 1$, thus by the soundess property of the VTD scheme $P_0$ is guaranteed of retrieving the commited discrete log value $x$ in $C_0$ that satisfies $[x] = [\mathsf{sk_{frz1(\mathbb{A})}}]$ after $T_0$ steps. \\
+Note that $P_0$ sets ${[\mathsf{sk_{frz1(\mathbb{A})}}]}$ with $\mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz0(\mathbb{A})}}]$, since $\mathsf{pk_{frz(\mathbb{A})}} := [\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}]$ and thus $[\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}] - [\mathsf{sk_{frz0(\mathbb{A})}}] = [\mathsf{sk_{frz1(\mathbb{A})}}]$
+\item $\Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}((\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1), \pi_2) = 1$, thus verifying that 
+    $\exists y \:\: \text{s.t} \:\: \mathcal{H}(y) = \mathsf{hsig} \land \Pi_\mathsf{VTD}.\mathsf{Verify}(\mathsf{pk_{frz}} - [\mathsf{sk_{frz1}}], (\mathsf{lk_0} \oplus y), \pi, T_1)$ \\
+    This checkes that $\sigma_\mathsf{rfnd(\mathbb{B})}$ is a valid witness for $\mathcal{L}_{\mathsf{lock}}$ and thus can be used to retrieve $C_1 := \sigma_\mathsf{rfnd(\mathbb{B})} \oplus \mathsf{lk_0}$, a commitment to a discrete log $[x] = [\mathsf{sk_{frz1}}]$ as above
+\end{itemize}
+
+The party now proceeds to concurrently run the following three execution branches. \\
+
+\subsubsection*{Timeout branch}
+\begin{itemize}
+    \item Force opens the commitment $C_0$, retrieving  $\mathsf{sk_{frz1(\mathbb{A})}}$
+    \item Computes $\mathsf{sk_{frz(\mathbb{A})}}$ and signs and publishes $\mathsf{tx_{rfnd(\mathbb{A})}}$ transferring back $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{init(\mathbb{A})}}$ \\
+\end{itemize}
+\subsubsection*{Refund branch}
+\begin{itemize}
+    \item Continuosly queries the signature $\sigma_{\mathsf{tx_{last}}}$ of the latest transaction from $\mathsf{pk_{frz(\mathbb{B})}}$ until it finds the refund signature by checking $\mathcal{H}(\sigma_{\mathsf{tx_{last}}}) = \mathsf{hsig}$, thus $\sigma_{\mathsf{tx_{last}}}$ is a valid witness for $\mathcal{L}_{\mathsf{lock}}$
+    \item Retrieves $C_1 := \mathsf{lk_0} \oplus \sigma_{\mathsf{tx_{last}}}$ and proceeds to force open it in time $T_1$, retrieving $\mathsf{sk_{frz1(\mathbb{A})}}$
+    \item Computes $\mathsf{sk_{frz(\mathbb{A})}}$ and signs and publishes $\mathsf{tx_{rfnd(\mathbb{A})}}$ transferring back $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{init(\mathbb{A})}}$
+\end{itemize}
+
+\subsubsection*{Swapping branch}
+\begin{itemize}
+    \item Initializes, signs and publishes the transaction $\mathsf{tx_{frz(\mathbb{A})}}$ transferring $\mathsf{amnt_a}$ from $\mathsf{pk_{init(\mathbb{A})}}$ to $\mathsf{pk_{frz(\mathbb{A})}}$
+    \item Waits until $\mathsf{pk_{frz(\mathbb{B})}}$ holds $\mathsf{amnt_b}$ assets
+    \item Generates a new keypair $(\mathsf{pk_{swp}}, \mathsf{sk_{swp}})_{(\mathbb{B})}$ and initializes the transaction $\mathsf{tx_{swp(\mathbb{B})}}$ transferring $\mathsf{amnt_b}$ from $\mathsf{pk_{init(\mathbb{B})}}$ to $\mathsf{pk_{swp(\mathbb{B})}}$
+    \item Prepares a $\mathsf{VTD}$ commitment on $\mathsf{sk_{frz0(\mathbb{A})}}$ with time parameter $T_2$ , generating $(C_2, \pi_2)$.
+    \item Masks $C_2$ with $lk_1 := C_2 \oplus \mathsf{pk_{swp(\mathbb{B})}}$, sets the statement $\mathsf{stmnt_1} := (\mathsf{lk_1}, {[\mathsf{sk_{frz0(\mathbb{A})}}]}, \mathsf{hpk} := \mathcal{H}(\mathsf{pk_{swp(\mathbb{B})}}), \pi_2, T_2)$ for $\mathcal{L}_{\mathsf{lock}}$ and generates a proof $\pi_{\mathcal{lk_1}}$ using $\mathsf{pk_{swp(\mathbb{B})}}$ as the witness.
+    \item Sends  $(\pi_2, \pi_{\mathsf{lk_1}}, \mathsf{hpk}, \mathsf{lk_1})$ to $P_)0$
+    \item Runs the 2PC protocol $\Gamma_{\mathsf{Swap}}$ where the parties jointly sign a signature $\sigma_{\mathsf{swp}}$ on $\mathsf{tx_{swp(\mathbb{B})}}$
+    \item If it successfully verifies that $\sigma_{\mathsf{swp}}$ is valid on $\mathsf{tx_{swp(\mathbb{B})}}$, it publishes $\mathsf{tx_{swp(\mathbb{B})}}$
+\end{itemize}
+
+Note that $P_1$ gains no information on $\mathsf{pk_{swp(\mathbb{B})}}$ and thus can retrieve $C_1$ from $\mathsf{lk_1}$ and force open it only after $\mathsf{tx_{swp}}$ has been published by $P_0$. Thus if the protocol faults or timeouts before $P_0$ publishes $\mathsf{tx_{swp(\mathbb{B})}}$, $P_1$ cannot retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$, resulting in the succesful execution of the timeout branch at $T_0$ and thus in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$. 
+
+Now assume $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$, resulting in $P_1$ obtaining $C_2$: the VTD scheme's privacy property guarantees that $P_1$ will retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$ only after time $T_2 > 2\mathbb{B}.\mathsf{ctime}  + \mathbb{A}.\mathsf{ctime}$. Now there are two possible outcomes: \\
+1) The swap transaction gets confirmed after $\mathbb{B}.\mathsf{ctime}$  \\
+2) $P_1$ tries to publish $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathsf{tx_{swp(\mathbb{B})}}$ is confirmed, resulting in a double spend attempt and in only one of $(\mathsf{tx_{rfnd(\mathbb{B})}}, \mathsf{tx_{swp(\mathbb{B})}}$ being accepted with roughly probability 1/2 for each
+
+If (1) occurs, $P_0$ owns $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$ and thus we are done. \\
+If (2) occurs, note that when $P_1$ posts the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$ $P_0$ will obtain the signature $\sigma_{\mathsf{tx_{rfnd}}}$ that hashes to $\mathcal{H}(\sigma_{\mathsf{tx_{rfnd}}}) = \mathsf{hsig}$  and thus successfully execute the refund branch.
+
+Since $P_1$ needs to post $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathbb{B}.\mathsf{ctime}$ and $T_1 = \mathbb{B}.\mathsf{ctime}$, the refund branch will complete before $2\mathbb{B}.\mathsf{ctime} + \mathbb{A}.\mathsf{ctime}$ after $P_1$ obtains $C_2$, so $P_0$ is guaranteed to publish and confirm $\mathsf{tx_{rfnd(\mathbb{A})}}$, resulting in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$.
 
 
 \subsection{Party $P_1$}
