@@ -178,8 +178,6 @@ The word \textit{atomic} implies that the protocol execution can result in only 
 1) the asset swap is successful, resulting in Bob owning $a$ in $\mathbb{A}$ and Alice owning $b$ in $\mathbb{B}$ \\
 2) the swap aborts, leading to a refund of the assets and thus in Alice retaining $a$ in $\mathbb{A}$ and Bob $b$ in $\mathbb{B}$ \\
 
-A common approach to implement atomic swap protocols is to use Hash Time Lock Contracts (HTLCs), which functions as a timed escrow.
-
 \subsection{Existing solutions}
 
 %\begin{table}[H]
@@ -203,7 +201,7 @@ A common approach to implement atomic swap protocols is to use Hash Time Lock Co
 
 \subsubsection{Hash Time Lock Contracts}
 
-By utilizing a blockchain's scripting language and timelock functionalities it is possible to create a script that acts as a timed escrow, which can be claimed if certain condition are met or refunded upon expired. 
+By utilizing a blockchain's scripting language and timelock functionalities it is possible to create a script that acts as a timed escrow, which can be claimed if certain condition are met or refunded upon expiration.
 Specifically, a Hash Time Lock Contract (HTLC) is defined by a tuple $(\mathsf{amnt_a}, h, T, \mathsf{pk_0}, \mathsf{pk_1})$ where 
 \begin{itemize}
 	\item $\mathsf{amnt_a}$ denotes the amount of $\mathsf{a}$ assets to be exchanged
@@ -321,13 +319,13 @@ Note that parties must also take into account potential differences in the compu
 Parties are incentivized to make worst-case estimates for the counterparty's computational power which can be orders of magnitude faster when accounting for novel algorithms \cite{squaring_algo} and application-specific integrated circuits (ASIC) \cite{squaring_asic}. \\
 This results in a potentially impractical protocol, as parties may need to uninterruptedly compute a force opening for a significant amount of time.
 
-\subsection{Contribution}
+\subsection{Our contribution}
 
 We propose a new atomic swap protocol leveraging timed cryptographic commitments, using  Verifiable Timed Discretelog (VTD) as core building block. This protocol addresses potential differences in computation power when setting timelocks by taking advantage of an asymmetric design. \\
 
 \subsubsection*{Asymmetric design}
 \textbf{Exchange server}: one party, acting as an exchange server, is responsible for force opening a refund timed commitment with timelock $T_0$ in case of a protocol timeout. This centralizes the computation burden and reduces the requirments on the client side. \\
-\textbf{Client}: the other party, acting as the client , is only required to compute a timed commitment $T_2$ to enforce a swap if the server becomes uncooperative at the end of protocol. This division minimizes their computing power requirements and computations performed in a protocol run.
+\textbf{Client}: the other party, acting as the client , is only required to compute a timed commitment $T_2$ to enforce a swap if the server becomes uncooperative at the end of protocol. This division minimizes computing power requirements and computations performed in a protocol run.
 
 \subsubsection*{Improved abort}
 The client has the flexibility to safely abort from the protocol by posting the refund transaction at any time before $T_0 - \mathbb{B}.\mathsf{ctime}$, without having to force open any timed commitment. This ensures that a client can safely reclaim their assets in case of a protocol timeout without having to force open a timed commitment.
@@ -337,7 +335,7 @@ The client has the flexibility to safely abort from the protocol by posting the 
 The time parameter $T_0$ can be extended independently of the client's fixed timed commitment $T_2$, allowing for better adaptability to network conditions and computational capabilities. \\
 The client is required to compute, at worst, a timed commitment for $T_2 = 2\mathbb{B}.\mathsf{ctime} + \mathbb{A}.\mathsf{ctime}$.
 
-\subsubsection*{Scriptless and fungible}
+\subsubsection*{Scriptless and fungibility}
 The protocol is scriptless, resulting in lower transaction fees and faster processing times compared to traditional HTLC-based swaps. \\
 Furthermore, the protocol is \textit{fungible}, as it does not add any additional on-chain data on the transaction, improving the privacy of the swap protocol.
 
@@ -346,7 +344,7 @@ Furthermore, the protocol is \textit{fungible}, as it does not add any additiona
 \todo[inline]{
 Put the basic definitions here, e.g. signatures, hash functions, commitment, blockchains (maybe for this report just do it informally), etc.}
 
-\subsection{Syntax definition}
+\subsection{Notation}
 
 \begin{itemize}[nosep, noitemsep]
     \item $\mathbf{wait} \: \mathsf{fn}()$ - waits until the function $\mathsf{fn}()$ execution is complete. If $\mathsf{fn}()$ returns $\perp$, then it causes to abort the execution block returning $\perp$. \\
@@ -356,10 +354,9 @@ Put the basic definitions here, e.g. signatures, hash functions, commitment, blo
 
 In the protocol definition, variables and functions that are blockchain-specific (unless clear from context) are denoted with a subscript, example for a publick key on chain $\mathbb{B}$ we denote $\mathsf{pk_{(\mathbb{B})}}$. \\
 
-
 \subsection{Blockchain interface}
 
-We define the following oracles to interact with the blockchains. The subscript $\mathbb{A}$ indicates that we are interacting with chain $\mathbb{A}$.
+We define the following routines to interact with the blockchains. The subscript $\mathbb{A}$ indicates that we are interacting with chain $\mathbb{A}$.
 
 \begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
     \item $\mathbf{0/1} \gets \mathbf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$: publish the transaction $\mathsf{tx}$ with signature $\sigma_{\mathsf{tx}}$. Outputs 1 if the transaction is accepted, 0 otherwise.
@@ -368,12 +365,25 @@ We define the following oracles to interact with the blockchains. The subscript 
     \item $\mathbf{0/1} \gets \mathbf{WatchTx}_{(\mathbb{A})}(\mathsf{tx})$: wait for the transaction $\mathsf{tx}$ to be confirmed.
     \item $\mathbf{amnt} \gets \mathbf{GetBal}_{(\mathbb{A})}(\mathsf{pk})$: get the balance of assets held by $\mathsf{pk}$
     \item $(\sigma_{\mathsf{tx}}, \mathsf{tx}) \gets \mathbf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk})$: get the the latest confirmed transaction and its signature from $\mathsf{pk}$'s record on the chain.
-    \item $(\mathbf{tx}_{\mathbb{A}}, \mathbf{0/1})  \gets \mathbf{FullTx}_{(\mathbb{A})}(\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{sk_{tx}})$: an helper function that initializes a transaction, signs it with the given secret key and publishes it to the chain. Returns the transaction $\mathbf{tx}_{\mathbb{A}}$ and 1 if the transaction is accepted, 0 otherise.
+    \item $(\mathbf{tx}_{\mathbb{A}}, \mathbf{0/1})  \gets \mathbf{FullTx}_{(\mathbb{A})}(\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{sk_{tx}})$: an helper routine that initializes a transaction, signs it with the given secret key and publishes it to the chain. Returns the transaction $\mathbf{tx}_{\mathbb{A}}$ and 1 if the transaction is accepted, 0 otherise.
+\end{itemize}
+
+\subsection{Verifiable Timed Dlog}
+A $\mathsf{VTD}$ for the group $\mathbb{G}$ with generator $G$ and order $q$ is a tuple of four algorithms ($\mathsf{Commit}, \mathsf{Verify}, \mathsf{Open}, \mathsf{ForceOp}$) where:
+\begin{itemize}
+	\item $(C, \pi) \gets \mathsf{Commit}(x, \textbf{T}$ ): the commit algorithm (randomized) takes as input a discrete log value $x \in \mathbb{Z}_q$ generated using $\mathsf{KGen}(1^{\lambda}$ ) and a hiding time $\textbf{T}$ and outputs a commitment $C$ and a proof $\pi$
+	\item $0/1 \gets \mathsf{Verify}(H, C, \pi)$ : the verify algorithm takes as input a group element $H$ , a commitment $C$ of hardness $\textbf{T}$ and a proof $\pi$ and outputs 1 if and only if, the value $x$ embedded in $C$ satisfies $H = G^x$ . Otherwise it outputs 0.
+	\item $(x, r) \gets \mathsf{Open(C)}$ : the open algorithm (run by committer) takes as input a commitment $C$ and outputs the committed value $x$ and the randomness $r$ used in generating $C$ .
+	\item $x \gets \mathsf{ForceOp}(C)$ : the force open algorithm takes as input the commitment $C$ and outputs the committed value $x$ and the randomness $r$ used in generating $C$
 \end{itemize}
 
 
+A valid VTD scheme must adhere to the following security requirements: \\
+\textbf{soundness}: a prover can compute a valid proof for a false statement with negligible probability. Thus a verifier is convinced that, given C, the ForceOp algorithm will produce the committed dlog value $x$ in time \textbf{T} \\
+\textbf{privacy}: all PRAM algorithms whose running time is at most $t$ (where $t < \textbf{T}$ ) succeed in extracting $x$ from the commitment $C$ and $\pi$ with at most negligible probability. \\
 
-\section{Atomic Swaps from timed commitments}
+
+\section{Atomic swaps from timed commitments}
 
 %\todo[inline]{For the current report, put a formal syntax, but maybe informal definitions of correctness and security. Especially, there should be an (informal) definition of commit transaction. }
 
@@ -383,7 +393,6 @@ We define the following oracles to interact with the blockchains. The subscript 
 %\todo[inline]{Set things up (e.g. let ... be a signature scheme, ... be a ... scheme. We construct a ... in Figure ...)}
 
 
-\subsection{Using timelock puzzles}
 
 Let $T_0$, $T_1$, $T_2$ be three timeouts where  $T_0 > 2\cdot T_2$, $T_1 =  \mathbb{B}.\mathsf{ctime}$ and $T_2 \geq \mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime}$. 
 
@@ -563,67 +572,7 @@ We denote with $\mathbb{A}$ and $\mathbb{B}$ two different blockchains, where $P
 
 
 
-\subsection{Using commit transactions} 
-Protocol version using commitment transaction with arbitrary value replacing VTD as defined by the following oracles in the blockchain interface. \\
 
-\begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
-\item $\mathbf{ctx}_{\mathbb{A}} := (\mathsf{tx_{\mathbb{A}}}, C) \gets \mathbf{CommitTx}_{(\mathbb{A})}(C, \mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{t})$: creates an unsigned commit transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ valid until block $\mathsf{t}$. The transaction can be later completed by opening and broadcasting $C$ through $\mathsf{RevTx}$
-\item $ \mathbf{0/1} \gets \mathbf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{tx})$: open the (on-chain) committed transaction $\mathsf{tx}$ by revealing the commited secret $\mathsf{sec}$
-\end{itemize}
-
-
-\begin{figure}[H]
-\begin{minipage}[t]{0.5\textwidth}
-\begin{pchstack}[boxed]
-\pseudocode{
-    \text{Global input} \:\: (T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
-    \mathsf{sec} \gets \mathbb{Z}_q \\
-    (C_0, r) \gets \Pi_{\mathsf{PCom}}.\mathsf{Commit}(\mathsf{sec_0}) \\ % verify that sec_0 has been commited
-    \mathsf{ctx_{(\mathbb{A})}} \gets \mathsf{CommitTx}_{(\mathbb{A})}(C_0, \mathsf{pk_{init}}, \mathsf{pk_{swp}}, \mathsf{amnt_a}, T + \Delta) \\
-    \sigma_{\mathsf{ctx_{(\mathbb{A})}}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{init}}, \mathsf{ctx}) \\
-    \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{ctx}}, \mathsf{ctx}) \\
-    \mathsf{\textbf{select}} \:\: \{ \\
-    \quad \mathsf{\textbf{wait}} \:\: \{ \\
-    \qquad \mathsf{timeout}(T) \\
-    \quad \} \\
-    \quad \mathsf{\textbf{wait}} \:\: \{ \\
-    \qquad \mathsf{send}(\mathsf{ctx_{(\mathbb{A})}}) \\
-    \qquad \mathsf{receive}(\mathsf{ctx_{(\mathbb{B})}}) \\
-    \qquad \mathsf{res_1} \gets \mathsf{\textbf{wait}} \:\: \mathsf{WatchTx}_{(\mathbb{B})}(\mathsf{ctx}) \\
-    \qquad \mathsf{\textbf{if}} \:\: \mathsf{ctx}_{(\mathbb{B})}.C \neq C_0 \lor \mathsf{ctx}_{(\mathbb{B})}.T \neq T \lor \mathsf{res_1} \neq 1 \\ % verify that commit transaction is valid and accepted
-    \qquad \quad \mathsf{\textbf{return}} \perp \\
-    \qquad \mathsf{rtx_{swp(\mathbb{B})}} \gets \mathsf{RevTx}_{(\mathbb{B})}(\mathsf{sec}, \mathsf{ctx}) \\
-    \quad \} \\
-    \} \\
-}
-\end{pchstack}
-\end{minipage}%
-\hspace{0.4cm}
-\begin{minipage}[t]{0.5\textwidth}
-\begin{pchstack}[boxed]
-\pseudocode{
-    \text{Global input} \:\: (T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
-    \mathsf{receive}(\mathsf{ctx_{(\mathbb{A})}}) \\
-    \mathsf{res_0} \gets \mathsf{\textbf{wait}} \:\: \mathsf{WatchTx}_{(\mathbb{A})}(\mathsf{ctx}) \\
-    \mathsf{\textbf{select}} \:\: \{ \\
-    \quad \mathsf{\textbf{wait}} \:\: \{ \\
-    \qquad \mathsf{timeout}(T) \\
-    \quad \} \\
-    \quad \mathsf{\textbf{wait}} \:\: \{ \\
-    \qquad \mathsf{\textbf{if}} \:\: \mathsf{ctx_{(\mathbb{A})}}.T \neq T + \Delta \lor \mathsf{res_0} \neq 1 \\ % verify that commit transaction is valid and accepted
-    \qquad \quad \mathsf{\textbf{return}} \perp \\
-    \qquad \mathsf{ctx}_{(\mathbb{B})} \gets \mathsf{CommitTx}_{(\mathbb{B})}(C_0, \mathsf{pk_{init}}, \mathsf{pk_{swp}}, \mathsf{amnt_b}, T) \\
-    \qquad \mathsf{send}(\mathsf{ctx}_{(\mathbb{B})}) \\
-    \qquad \mathsf{rtx_{swp(\mathbb{B})}} \gets \mathsf{\textbf{wait}} \:\: \mathsf{GetLatestTx}_{(\mathbb{B})}(\mathsf{pk_{swp}}) \\
-    \qquad \mathsf{sec} := \mathsf{rtx_{swp(\mathbb{B})}}.\mathsf{rev} \\
-    \qquad \mathsf{rtx_{swp(\mathbb{A})}} \gets \mathsf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{ctx}) \\
-    \quad \} \\
-    \} \\
-}
-\end{pchstack}
-\end{minipage}%
-\caption{Full protocol execution for $P_0$ and $P_1$, respectively left and right}
-\end{figure}
 
 \newpage
 
@@ -683,7 +632,7 @@ The party now proceeds to concurrently run the following three execution branche
     \item Force opens the commitment $C_0$, retrieving  $\mathsf{sk_{frz1(\mathbb{A})}}$
     \item Computes $\mathsf{sk_{frz(\mathbb{A})}}$ and signs and publishes $\mathsf{tx_{rfnd(\mathbb{A})}}$ transferring back $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{init(\mathbb{A})}}$ \\
 \end{itemize}
-\subsubsection*{Refund branch}
+\subsubsection*{EarlyRefund branch}
 \begin{itemize}
     \item Continuosly queries the signature $\sigma_{\mathsf{tx_{last}}}$ of the latest transaction from $\mathsf{pk_{frz(\mathbb{B})}}$ until it finds the refund signature by checking $\mathcal{H}(\sigma_{\mathsf{tx_{last}}}) = \mathsf{hsig}$, thus $\sigma_{\mathsf{tx_{last}}}$ is a valid witness for $\mathcal{L}_{\mathsf{lock}}$
     \item Retrieves $C_1 := \mathsf{lk_0} \oplus \sigma_{\mathsf{tx_{last}}}$ and proceeds to force open it in time $T_1$, retrieving $\mathsf{sk_{frz1(\mathbb{A})}}$
@@ -709,9 +658,9 @@ Now assume $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$, resulting in $P_1$ obtai
 2) $P_1$ tries to publish $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathsf{tx_{swp(\mathbb{B})}}$ is confirmed, resulting in a double spend attempt and in only one of $(\mathsf{tx_{rfnd(\mathbb{B})}}, \mathsf{tx_{swp(\mathbb{B})}}$ being accepted with roughly probability 1/2 for each
 
 If (1) occurs, $P_0$ owns $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$ and thus we are done. \\
-If (2) occurs, note that when $P_1$ posts the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$ $P_0$ will obtain the signature $\sigma_{\mathsf{tx_{rfnd}}}$ that hashes to $\mathcal{H}(\sigma_{\mathsf{tx_{rfnd}}}) = \mathsf{hsig}$  and thus successfully execute the refund branch.
+If (2) occurs, note that when $P_1$ posts the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$ $P_0$ will obtain the signature $\sigma_{\mathsf{tx_{rfnd}}}$ that hashes to $\mathcal{H}(\sigma_{\mathsf{tx_{rfnd}}}) = \mathsf{hsig}$  and thus successfully execute the EarlyRefund branch.
 
-Since $P_1$ needs to post $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathbb{B}.\mathsf{ctime}$ and $T_1 = \mathbb{B}.\mathsf{ctime}$, the refund branch will complete in time strictly less than $2\mathbb{B}.\mathsf{ctime} + \mathbb{A}.\mathsf{ctime}$ after $P_1$ obtains $C_2$, so $P_0$ is guaranteed to publish and confirm $\mathsf{tx_{rfnd(\mathbb{A})}}$, resulting in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$.
+Since $P_1$ needs to post $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathbb{B}.\mathsf{ctime}$ and $T_1 = \mathbb{B}.\mathsf{ctime}$, the EarlyRefund branch will complete in time strictly less than $2\mathbb{B}.\mathsf{ctime} + \mathbb{A}.\mathsf{ctime}$ after $P_1$ obtains $C_2$, so $P_0$ is guaranteed to publish and confirm $\mathsf{tx_{rfnd(\mathbb{A})}}$, resulting in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$.
 
 
 \subsection{Party $P_1$}
@@ -730,18 +679,78 @@ We have that $T_0 = s(\mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime})$ wi
 
 Now assume instead that some routine in the protocol execution timed out or faulted, resulting in executing the refund branch: $P_1$ will generate a new key pair $(\mathsf{pk_{rfnd}}, \mathsf{sk_{rfnd}})$ on $\mathbb{B}$, and sign and publish
 
-
-\section{Implementation and Evaluation}
-
-\subsection{Implementation}
-
-\todo[inline]{Write down note-worthy implementation details. At the very least, mention how building blocks are mentioned.}
-
-\subsection{Performance Evaluation}
-
-\todo[inline]{self explanatory}
-
 \printbibliography
+
+\newpage
+\appendix
+
+\section*{Appendix}
+\subsection*{Commit transaction}
+
+Commit transactions can be easily realized by a blockchain using a public ledger model by modifying consensus rules, and require no additional scripting capabilities.  \\
+A commit transaction allows to lock assets for a specified transfer until a certain timeout T, commiting to a secret value $x$ in $C$. If $C$ gets opened by broadcasting the revealed $x$ before timeout T, the transfer is completed unconditionally. \\ 
+After timeout T, the commit transaction is considered expired, unfreezing the assets and ignoring openings on $C$.
+
+We further define the following routines for blockchains that support commitment transaction.
+\begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
+	\item $\mathbf{ctx}_{\mathbb{A}} := (\mathsf{tx_{\mathbb{A}}}, C) \gets \mathbf{CommitTx}_{(\mathbb{A})}(C, \mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{T})$: creates an unsigned commit transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ valid until time $\mathsf{T}$, whith  $\mathsf{amnt}$ being locked from being spent on transactions from $\mathsf{pk_{tx}}$ until $\mathsf{T}$. The transaction can be later finalize by opening and broadcasting $C$ through $\mathsf{RevTx}$.
+\item $ \mathbf{0/1} \gets \mathbf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{ctx})$: open the (on-chain) committed transaction $\mathsf{ctx}$ by revealing the commited secret $\mathsf{sec}$. Return 0 if the opening fails or the timeout on $\mathsf{ctx}$ has expired. If the revealing succeeds, return 1 and finalize $\mathsf{ctx}$.
+\end{itemize}
+
+By assuming this functionality on both chains we can now realize the following atomic swap protocol.
+
+\begin{figure}[H]
+\begin{minipage}[t]{0.5\textwidth}
+\begin{pchstack}[boxed]
+\pseudocode{
+    \text{Global input} \:\: (T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
+    \mathsf{sec} \gets \mathbb{Z}_q \\
+    (C_0, r) \gets \Pi_{\mathsf{PCom}}.\mathsf{Commit}(\mathsf{sec_0}) \\ % verify that sec_0 has been commited
+    \mathsf{ctx_{(\mathbb{A})}} \gets \mathsf{CommitTx}_{(\mathbb{A})}(C_0, \mathsf{pk_{init}}, \mathsf{pk_{swp}}, \mathsf{amnt_a}, T + \Delta) \\
+    \sigma_{\mathsf{ctx_{(\mathbb{A})}}} \gets \Pi_{\mathsf{DS}}.\mathsf{Sign}_{(\mathbb{A})}(\mathsf{sk_{init}}, \mathsf{ctx}) \\
+    \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{ctx}}, \mathsf{ctx}) \\
+    \mathsf{\textbf{select}} \:\: \{ \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{timeout}(T) \\
+    \quad \} \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{send}(\mathsf{ctx_{(\mathbb{A})}}) \\
+    \qquad \mathsf{receive}(\mathsf{ctx_{(\mathbb{B})}}) \\
+    \qquad \mathsf{res_1} \gets \mathsf{\textbf{wait}} \:\: \mathsf{WatchTx}_{(\mathbb{B})}(\mathsf{ctx}) \\
+    \qquad \mathsf{\textbf{if}} \:\: \mathsf{ctx}_{(\mathbb{B})}.C \neq C_0 \lor \mathsf{ctx}_{(\mathbb{B})}.T \neq T \lor \mathsf{res_1} \neq 1 \\ % verify that commit transaction is valid and accepted
+    \qquad \quad \mathsf{\textbf{return}} \perp \\
+    \qquad \mathsf{rtx_{swp(\mathbb{B})}} \gets \mathsf{RevTx}_{(\mathbb{B})}(\mathsf{sec}, \mathsf{ctx}) \\
+    \quad \} \\
+    \} \\
+}
+\end{pchstack}
+\end{minipage}%
+\hspace{0.4cm}
+\begin{minipage}[t]{0.5\textwidth}
+\begin{pchstack}[boxed]
+\pseudocode{
+    \text{Global input} \:\: (T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
+    \mathsf{receive}(\mathsf{ctx_{(\mathbb{A})}}) \\
+    \mathsf{res_0} \gets \mathsf{\textbf{wait}} \:\: \mathsf{WatchTx}_{(\mathbb{A})}(\mathsf{ctx}) \\
+    \mathsf{\textbf{select}} \:\: \{ \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{timeout}(T) \\
+    \quad \} \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{\textbf{if}} \:\: \mathsf{ctx_{(\mathbb{A})}}.T \neq T + \Delta \lor \mathsf{res_0} \neq 1 \\ % verify that commit transaction is valid and accepted
+    \qquad \quad \mathsf{\textbf{return}} \perp \\
+    \qquad \mathsf{ctx}_{(\mathbb{B})} \gets \mathsf{CommitTx}_{(\mathbb{B})}(C_0, \mathsf{pk_{init}}, \mathsf{pk_{swp}}, \mathsf{amnt_b}, T) \\
+    \qquad \mathsf{send}(\mathsf{ctx}_{(\mathbb{B})}) \\
+    \qquad \mathsf{rtx_{swp(\mathbb{B})}} \gets \mathsf{\textbf{wait}} \:\: \mathsf{GetLatestTx}_{(\mathbb{B})}(\mathsf{pk_{swp}}) \\
+    \qquad \mathsf{sec} := \mathsf{rtx_{swp(\mathbb{B})}}.\mathsf{rev} \\
+    \qquad \mathsf{rtx_{swp(\mathbb{A})}} \gets \mathsf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{ctx}) \\
+    \quad \} \\
+    \} \\
+}
+\end{pchstack}
+\end{minipage}%
+\caption{Full protocol execution for $P_0$ and $P_1$, respectively left and right}
+\end{figure}
 
 
 \end{document}
