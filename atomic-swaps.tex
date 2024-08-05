@@ -174,9 +174,18 @@ Given the increasing number of blockchain systems, one of the most critical feat
 An atomic cross-chain swap is an exchange of assets acrtoss different blockchains between two users without any additional trust assumption. \\
 Consider two ledgers $\mathbb{A}$ and $\mathbb{B}$, where Alice holds assets $a$ in $\mathbb{A}$ and Bob holds assets beta in $\mathbb{B}$. We want to ensure that Alice transfers her assets $a$ in $\mathbb{B}$ to Bob if and only if Bob transfers his asset $b$ to Alice in $\mathbb{B}$. \\
 
-The word \textit{atomic} implies that the protocol execution can result in only two possible outcomes: \\
-1) the asset swap is successful, resulting in Bob owning $a$ in $\mathbb{A}$ and Alice owning $b$ in $\mathbb{B}$ \\
-2) the swap aborts, leading to a refund of the assets and thus in Alice retaining $a$ in $\mathbb{A}$ and Bob $b$ in $\mathbb{B}$ \\
+
+\todo[inline]{TODO starts}
+\begin{itemize}
+    \item General description of problem (swapping), motivations, etc.
+    \item Introduce Universal Atomic Swaps (UAS) and its building blocks, briefly discuss how the protocol works, and highlight the issue of both parties needing to solve a VTS
+    \item The ``our contribution'' subsection: e.g. ``We propose an alternative construction ... we provide an open source implementation ...''
+    \item (Not so) Related work (subsection or section): Other ways to get atomic swaps, e.g. TEE, relays, HTLC, ...
+    \item \url{https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9797357&tag=1} provides an alternative construction of atomic swap without a trusted setup but requiring special chain verification logic. To capture this, we want to abstract away the time-lock functionality so that it can be implemented in different ways, e.g. with TLP, custom chain logic, or new ways like commit transactions.
+    \item Add comments to pseudocode. Split chunks of the protocol to be run in parallel into subroutines. Give more descriptive variable names (e.g. instead of $P_0, P_1, T_0, T_1$)
+\end{itemize}
+
+\todo[inline]{TODO ends}
 
 \subsection{Existing solutions}
 
