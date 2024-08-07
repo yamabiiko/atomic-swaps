@@ -186,6 +186,18 @@ This results in a potentially impractical protocol, as parties may need to unint
 
 In this work we investigate whether such a computational burden can be minimized on one party, acting as an exchange server, by using a single refund timeout. Furthermore, we evaluate whether existing protocols utake into account different blockchain confirmation time when setting timeouts for cryptographic puzzles to prevent potential racing attacks.
 
+\todo[inline]{TODO starts}
+\begin{itemize}
+    \item General description of problem (swapping), motivations, etc.
+    \item Introduce Universal Atomic Swaps (UAS) and its building blocks, briefly discuss how the protocol works, and highlight the issue of both parties needing to solve a VTS
+    \item The ``our contribution'' subsection: e.g. ``We propose an alternative construction ... we provide an open source implementation ...''
+    \item (Not so) Related work (subsection or section): Other ways to get atomic swaps, e.g. TEE, relays, HTLC, ...
+    \item \url{https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9797357&tag=1} provides an alternative construction of atomic swap without a trusted setup but requiring special chain verification logic. To capture this, we want to abstract away the time-lock functionality so that it can be implemented in different ways, e.g. with TLP, custom chain logic, or new ways like commit transactions.
+    \item Add comments to pseudocode. Split chunks of the protocol to be run in parallel into subroutines. Give more descriptive variable names (e.g. instead of $P_0, P_1, T_0, T_1$)
+\end{itemize}
+
+\todo[inline]{TODO ends}
+
 \subsection{Existing solutions}
 
 %\begin{table}[H]
