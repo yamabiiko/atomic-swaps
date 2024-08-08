@@ -170,7 +170,7 @@
 \newpage
 \section{Introduction}
 
-Blockchains are distributed ledgers managed by peer-to-peer computer networks by nodes, which they collectevely adhere to a consensus protocol to add and validate record of transactions in a decentralized, permissionless and trustless manner. \\
+Blockchains are distributed ledgers managed by peer-to-peer computer networks called $nodes$, which they collectively adhere to a consensus protocol to add and validate record of transactions in a decentralized, permissionless and trustless manner. \\
 Given the increasing number of blockchain systems, one of the most critical features in the cryptocurrency landscape is blockchain interopability, particularly the ability to exchange heterogeneous assets between different ledgers while maintining the trustless and decentralized properties of the individual chains. 
 
 An atomic cross-chain swap is an exchange of assets across different blockchains between two users without any additional trust assumption. 
@@ -180,13 +180,13 @@ The word \textit{atomic} implies that the protocol execution can result in only 
 1) the asset swap is successful, resulting in Bob owning $a$ in $\mathbb{A}$ and Alice owning $b$ in $\mathbb{B}$ \\
 2) the swap aborts, leading to a refund of the assets and thus in Alice retaining $a$ in $\mathbb{A}$ and Bob $b$ in $\mathbb{B}$ 
 
-In order to realize such functionality, protocols follow a standard blueprint where funds from a party are placed in a frozen state, which either will be swapped to the counter-party or refunded after a certain timeout. \\
-Protocols can either rely on the scripting language of the underlying blockchain using timelocks or on cryptographic timed commitments, where secrets are commited under a cryptographic puzzle that can be solved after a certain number of sequential cryptographic operations. 
+In order to realize such functionality, protocols follow a standard blueprint where funds from a party are placed in a frozen state from which the assets either will be swapped to the counter-party or refunded after a certain timeout. \\
+Protocols can either rely on the scripting language of the underlying blockchain using timelocks or on cryptographic timed commitments, where secrets are commited under a cryptographic puzzle that can be solved after a certain number of sequential operations. 
 While timelocks can be an effective building block in order to a realize an atomic swap protocol, the set of blockchains supporting such functionality is restricted, and it excludes privacy chains such as Monero or Zcash. Furthermore, transactions incure in higher execution costs due to scripting, and generate additional on-chain data that can potentially compromise privacy. \\
 On the other hand, cryptographic puzzles impose a computation burden on users, which are incentivized to make worst-case estimates for the counterparty's computational power that can be orders of magnitude faster when accounting for novel algorithms \cite{squaring_algo} and application-specific integrated circuits (ASIC) \cite{squaring_asic}. \\
 This results in a potentially impractical protocol, as parties may need to uninterruptedly compute a force opening for a significant amount of time on conventional hardware.
 
-In this work we investigate whether such a computational burden can be minimized on one party, acting as an exchange server, by using a single refund timeout. Furthermore, we evaluate whether existing protocols utake into account different blockchain confirmation time when setting timeouts for cryptographic puzzles to prevent potential racing attacks.
+In this work we investigate whether such a computational burden can be restricted to one party, acting as an exchange server, by using a single refund timeout. Furthermore, we evaluate whether existing protocols take into account different blockchain confirmation time when setting timeouts for cryptographic timed commitments to prevent potential transaction racing attacks.
 
 %\todo[inline]{TODO starts}
 %\begin{itemize}
@@ -241,12 +241,12 @@ Using HTLCs as a building block, an atomic swap protocol can be constructed as f
 
 Bob cannot claim the HTLC yet as $r$ is only known by Alice, thus there are only two possible outcomes:
 \begin{itemize}
-\item Alice claims the HTLC on $\mathbb{B}$ before $T_0$, effectively revealing $r$ to bob (and anyone observing $\mathbb{B}$), Bob can then proceed to compute $h = \mathcal{H}(r)$ to claim the counterpart HTLC on chain $\mathbb{A}$ 
+\item Alice claims the HTLC on $\mathbb{B}$ before $T_0$, effectively revealing $r$ to Bob (and anyone observing $\mathbb{B}$), Bob can then proceed to compute $h = \mathcal{H}(r)$ to claim the counterpart HTLC on chain $\mathbb{A}$ 
 \item Alice does not claim the HTLC on $\mathbb{B}$ in time and thus Bob cannot claim the HTLC on $\mathbb{A}$. After the respective timeouts they can refund the assets by invoking the contracts.
 \end{itemize}
 
 This functionality can be achieved without requiring complex scripting functionality \cite{h4sh3d} using semi-scriptless scripts. \\
-Additionally, a similar protocol can also be realized even if only one blockchain supports HTLCs or timelocks, as done in \cite{h4sh3d} in the Monero counterpart.
+Additionally, a similar protocol can also be realized even if only one blockchain supports HTLCs or timelocks, as realized in the protocol proposed by Gugger \cite{h4sh3d} in the Monero counterpart.
 
 %\todo[inline]{explain (splitting secret key, BTC party needs to move first)}
 
@@ -311,15 +311,14 @@ Additionally, a similar protocol can also be realized even if only one blockchai
 \subsubsection{Universal Atomic Swaps}
 
 
-Thyagarajan et al. \cite{uas}, introduced one of the first atomic swap protocols substituting blockchain timelocks with a cryptographic primitive, utilizing Verifiable Timed Signatures (VTS) \cite{vts} as the core building block.
-
-A VTS lets a user generate a timed commitment $C$ of a signature $\sigma$ on a message $m$ under a public key $\mathsf{pk}$. The commitment $C $ must hide the signature $\sigma$ for time $\mathsf{T}$ and producing a proof $\pi$ that $C$ contains a valid signature $\sigma$. This ensures that $\sigma$ can be publicly recovered in time $\mathsf{T}$ by anyone who solves the computational puzzle.
+Thyagarajan et al. \cite{uas} introduced one of the first atomic swap protocols substituting blockchain timelocks with a cryptographic primitive. 
+The core building block utilized are Verifiable Timed Signatures (VTS) \cite{vts}, which lets a user generate a timed commitment $C$ of a signature $\sigma$ on a message $m$ under a public key $\mathsf{pk}$. The commitment $C $ must hide the signature $\sigma$ for time $\mathsf{T}$ and producing a proof $\pi$ that $C$ contains a valid signature $\sigma$. This ensures that $\sigma$ can be publicly recovered in time $\mathsf{T}$ by anyone who solves the computational puzzle. We note that a similar construction called Verifiable Timed Discretelog (VTD) allows to commit on a dlog value instead of a signature, and can be alternatevely used in the protocol.
 
 Let $P_0$ and $P_1$ be two parties where $P_0$ wants to exchange $\mathsf{amnt_a}$ on blockchain $\mathbb{A}$ from their address $\mathsf{pk_{init(\mathbb{A})}}$ for $\mathsf{amnt_b}$ on blockchain $\mathbb{B}$ to $\mathsf{pk_{swp(\mathbb{B})}}$ and vice-versa for $P_1$.
 
-In the setup phase of the protocol, the parties run a 2PC protocol to setup two freeze address on the respective chains $\mathsf{pk_{frz(\mathbb{A})}}$ and $\mathsf{pk_{frz(\mathbb{B})}}$, where each party posseses one share of the respective secret keys, e.g. $\mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0}} \oplus  \mathsf{sk_{frz1}}$. \\
+In the setup phase of the protocol, the parties run a 2PC protocol to setup two freeze addresses on the respective chains $\mathsf{pk_{frz(\mathbb{A})}}$ and $\mathsf{pk_{frz(\mathbb{B})}}$, where each party posseses one share of the respective secret keys, e.g. $\mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0}} \oplus  \mathsf{sk_{frz1}}$. \\
 Now the parties create a refund transaction transferring back the assets in case of timeout, for $P_0$ we have $\mathsf{tx_{rfnd(\mathbb{A})}}$ refunding $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{init(\mathbb{A})}}$ and similarly for $P_1$ $\mathsf{tx_{rfnd(\mathbb{B})}}$. \\
-Each party generates a timed commitment on the signature of the counterparty's refund transaction, where $P_0$ receives a $\mathsf{VTS}$ with commitment $C_0$ and timeout $T_0 = T_1 + \Delta$ and $P_1$ receives a $\mathsf{VTS}$ with commitment $C_1$ and timeout $T_1$. Once both $\mathsf{VTS}$ commitment are verified the parties proceed to transfer the assets to the freeze addresses, assured to retrieve the refund transaction signatures after force opening the commitments following the specified timeouts. \\
+Each party generates a timed commitment on the signature of the counterparty's refund transaction, where $P_0$ receives a $\mathsf{VTS}$ with commitment $C_0$ and timeout $T_0 = T_1 + \Delta$ and $P_1$ receives a $\mathsf{VTS}$ with commitment $C_1$ and timeout $T_1$. Once both $\mathsf{VTS}$ commitment are verified the parties proceed to transfer the assets to the freeze addresses, assured to retrieve the refund transaction signatures after force opening the commitments following the specified timeouts.
 
 In the subsequential lock phase, parties first initialize the swap transactions $\mathsf{tx_{swp}}$ transferring $\mathsf{amnt}$ from $\mathsf{pk_{frz}}$ to $\mathsf{pk_{swp}}$ for the respective chains. They then compute via 2PC $\mathsf{lk} := \sigma_{\mathsf{swp}(\mathbb{A})} \oplus \mathcal{H}(\sigma_{\mathsf{swp}(\mathbb{B})})$, where  $P_0$ receives $\sigma_{\mathsf{swp}(\mathbb{B})}$ and $P_1$ receives $\mathsf{lk}$.  When $P_0$ publishes $\mathsf{tx_{swp(\mathbb{B})}}$ together with  $\sigma_{\mathsf{swp}(\mathbb{B})}$, $P_1$ can unmask $\mathsf{lk}$ by computing $\mathcal{H}(\sigma_{\mathsf{swp}(\mathbb{B})})$ to retrieve $\sigma_{\mathsf{swp}(\mathbb{A})}$ and publish $\mathsf{tx_{swp(\mathbb{A})}}$.
 
@@ -330,7 +329,7 @@ Note that parties must also take into account potential differences in the compu
 
 \subsection{Results}
 
-We investigated whethere a new atomic swap protocol with an asymmetric design can be realized in order to reduce computational requirements. In the protocol, one party acts as an exchange server, responsible for force opening a refund timed commitment with timelock $T_0$ in case of a protocol timeout. The other party, acting as the client , is only required to compute a timed commitment $T_2$ to enforce a swap if the server becomes uncooperative at the end of protocol. The role division minimizes computing power requirements and computations performed in a protocol run. \\
+We investigated whether a new atomic swap protocol with an asymmetric design can be realized in order to reduce computational requirements. In the proposed protocol, one party acts as an exchange server, responsible for force opening a refund timed commitment with timelock $T_0$ in case of a protocol timeout. The other party, acting as the client, is only required to compute a timed commitment $T_2$ to enforce a swap if the server becomes uncooperative at the end of protocol. The role division minimizes computing power requirements and computations performed in a protocol run. \\
 This approach allows to centralize the computation burden and reduces the requirements on the client side, however we found it to fail to preserve the atomicity property, as the server can deviate from the protocol by trying to race a swapping transaction on chain $\mathbb{B}$ with a client's refund transaction. \\
 We further analyzed whether such racing transactions can occur in the protocol proposed by Thyagarajan et al. \cite{uas}, finding it to fail to take into account two possible racing conditions, which can be fixed by placing additional time constraint on $P_0$ and a force swap refund mechanism for $P_1$.
 
@@ -345,7 +344,7 @@ In order to encode the concurrent execution of routines in an asynchronous setti
     \item $\mathbf{select} \: \{...\}$ - concurrently runs multiple asynchronous $\mathbf{wait}$ routines in the block and returns the value of the first routine that successfully returns a value or $\perp$ if all the $\mathbf{wait}$ routines aborted with $\perp$. When a $\mathbf{wait}$ routine aborts returning $\perp$, it waits until execution of another $\mathbf{wait}$ is successfully completed. \\
 \end{itemize}
 
-All routines that access network channels (for example, when accessing the blockchain interface or running a 2PC with another party) are asynchronous as they take an unknown time to complete.
+All routines that access network channels (for example, when accessing the blockchain interface or running a 2PC with another party) are asynchronous, as they potentailly take an unknown time to complete.
 
 In the protocol definition, variables and routines that are blockchain-specific are denoted with a subscript, unless clear from context. \\
 That is, for a publick key on chain $\mathbb{B}$ is denoted by $\mathsf{pk_{(\mathbb{B})}}$. \\
@@ -719,8 +718,9 @@ As we previosly stated, the protocol fails to guarantee the atomicity and owners
     \includegraphics[width=0.8\textwidth]{timeouts.png}
     \caption{Transaction racing between  $\mathsf{tx_{swp(\mathbb{B})}}$ and $\mathsf{tx_{rfnd(\mathbb{B})}}$}
 \end{figure}
-After the parties run the 2PC $\Gamma_{\mathsf{Swap}}$, $P_0$ receives the signature on the swap transaction $\mathsf{tx_{swp(\mathbb{B})}}$. It can then proceed to wait until $P_1$ posts the refund $\mathsf{tx_{rfnd(\mathbb{B})}}$ and immediately post $\mathsf{tx_{swp(\mathbb{B})}}$ and start force opening $C_1$, which can be retrieved by the refund signature with $C_1 := \mathsf{lk_0} \oplus \sigma_{\mathsf{tx_{rfnd(\mathbb{B})}}}$. On time $T_1$ the force opening completes and $P_0$ procceds to sign and publish $\mathsf{tx_{rfnd(\mathbb{A})}}$. \\
-Now either only $\mathsf{tx_{swp(\mathbb{B})}}$ or  $\mathsf{tx_{rfnd(\mathbb{B})}}$ will be confirmed on $\mathbb{B}$, with roughly probability $\frac{1}{2}$. If $\mathsf{tx_{swp(\mathbb{B})}}$ is confirmed, then $P_0$ breaks the atomicity property as they also obtain $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_1$ before $P_0$ and can thus successfully complete $\mathsf{tx_{rfnd(\mathbb{A})}}$. \\
+After the parties run 2PC $\Gamma_{\mathsf{Swap}}$ $P_0$ receives the signature on the swap transaction $\mathsf{tx_{swp(\mathbb{B})}}$. It can then proceed to wait until $P_1$ posts the refund $\mathsf{tx_{rfnd(\mathbb{B})}}$ and then immediately post $\mathsf{tx_{swp(\mathbb{B})}}$ and start force opening $C_1$, which can be retrieved using the refund signature with $C_1 := \mathsf{lk_0} \oplus \sigma_{\mathsf{tx_{rfnd(\mathbb{B})}}}$. On time $T_1$ the force opening completes and $P_0$ procceds to sign and publish $\mathsf{tx_{rfnd(\mathbb{A})}}$.
+
+Since only $\mathsf{tx_{swp(\mathbb{B})}}$ or $\mathsf{tx_{rfnd(\mathbb{B})}}$ will be confirmed on $\mathbb{B}$, with roughly probability $\frac{1}{2}$, $P_0$ breaks the atomicity property if the former is confirmed as they also obtain $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_1$ before $P_0$ and can thus successfully complete $\mathsf{tx_{rfnd(\mathbb{A})}}$. \\
 Note that $P_1$ can only obtain $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_2$ after $T_2$, which is strictly later than $T_1$. Inversely, if $T_2 < T_1$, $P_1$ can potentially cheat from the protocol in a similar fashion, performing a racing refund on $\mathbb{B}$ and swapping on $\mathsf{A}$ after they force open $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_2$ time. If the time gap between $T_2$ and $T_1$ is smaller than the blockchain's confirmation times, then both sides can potentially try to perfom a racing transaction.
 
 \newpage 
@@ -733,8 +733,8 @@ Note that $P_1$ can only obtain $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_2$ afte
     \caption{Example of a transaction racing condition when $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ after $T_1 - \mathbb{B}.\mathsf{ctime}$}
 \end{figure}
 
-The protocol presented by Thyagarajan et al. \cite{vts}, we found it to fail into account two possible transaction racing conditions: \\
-1) $P_0$ can wait until $T_1$ to post $\mathsf{tx_{swp(\mathbb{B})}}$, concurrently with $P_1$ posting the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$. Since $\mathsf{tx_{rfnd(\mathbb{B})}}$ is not confirmed until $\mathbb{B}.\mathsf{ctime}$, there is an equal probability that $\mathsf{tx_{swp(\mathbb{B})}}$ will succeed, preventing $P_1$ from refunding the assets. \\
+The protocol presented by Thyagarajan et al. \cite{uas} fails to consider two possible transaction racing conditions: \\
+1) $P_0$ can wait until $T_1$ to post $\mathsf{tx_{swp(\mathbb{B})}}$, resulting in a transaction racing with $P_1$ posting the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$. Since $\mathsf{tx_{rfnd(\mathbb{B})}}$ is not confirmed until $\mathbb{B}.\mathsf{ctime}$, there is an equal probability that $\mathsf{tx_{swp(\mathbb{B})}}$ will succeed, preventing $P_1$ from refunding the assets. \\
 2) Similarly, if $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ after $T_1 - \mathbb{B}.\mathsf{ctime}$, $P_1$ can simultaneously post $\mathsf{tx_{rfnd(\mathbb{B})}}$ and $\mathsf{tx_{swp(\mathbb{A})}}$, which can result in $P_1$ obtaining both $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$. \\
 
 In order to preserve the atomicity property, we propose the following changes: \\
@@ -770,7 +770,7 @@ We present the revised protocol in figure 7.
     \mathsf{\textbf{wait}} \:\: \mathsf{send}(P_1,\: (\pi_1, C_1) \\
     \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{VTD}}.\mathsf{Verify}({[\mathsf{sk_{frz1(\mathbb{A})}}]}, C_0, \pi_0) \neq 1 \\
         \quad \mathsf{\textbf{return}} \perp \\
-    \mathsf{\textbf{select}} \:\: \{ \\
+    mathsf{\textbf{select}} \:\: \{ \\
         \quad \mathsf{\textbf{wait}} \:\: \{ \\
             \qquad \mathsf{sk_{frz1}} \gets \Pi_{\mathsf{VTD}}.\mathsf{ForceOp}(C_0) \\
             \qquad \mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}} \\
@@ -846,15 +846,15 @@ By establishing these conditions and systematically evaluating protocols across 
 \subsection*{Further improvements and implementation}
 The $\mathsf{VTS}$ scheme presented  by Thyagarajan et al. \cite{vts} suffers from time unverifiability, that is a proof $\pi$ from $\mathsf{VTD}.\mathsf{Commit}$ does not in fact prove that the resulting commitment $C$ can be opened in $T$ steps. However, improving on the work of \cite{vts}, Zhou et al. \cite{fixed_vts} have proposed an extension to verifiable timed commitment that offers \textit{verifiable timed recovery}, that is, the recipient can verify that the forced open algorithm returns a valid value after time $T$.
 
-Furthermore, $\mathsf{VTS}$ schemes require a trusted setup, and it is unclear how the authors of Universal Atomic Swaps \cite{uas} address this operation in a Peer-2-Peer (P2P) setting. \\
-We note that the version of Universal Atomic Swaps that we presented in this work uses $\mathsf{VTD}$ schemes rather than $\mathsf{VTS}$ in order to be compatible with blockchains that do not support transaction \textit{chaining} and \textit{pre-signatures}, such as Monero \cite{pre_sign}. \\
+Furthermore, $\mathsf{VTS}$ schemes require a trusted setup, and it is unclear how the authors of Universal Atomic Swaps \cite{uas} address this operation in a Peer-to-Peer setting. \\
+We note that the version of Universal Atomic Swaps that we presented in this work uses a $\mathsf{VTD}$ scheme as opposed to $\mathsf{VTS}$ in order to be compatible with blockchains that do not support \textit{transaction chaining} and \textit{pre-signatures}, such as Monero \cite{pre_sign}. \\
 To the best of our knowledge, only the building blocks used in the protocol have been implemented, while a full protocol implementation is missing.
 
 \subsection*{Evaluating computational advantages in solving timelock puzzles}
 In order to guarantee security of the protocol, parties need to set timeouts with worst-case estimates for the available computational power. A precise evaluation of the speedup offered for sequential squaring using ASICs \cite{squaring_asic} over conventional hardware is thus critical in order to argument the practicality of the protocol.
 
 \subsection*{Commit transactions}
-A blockchain functionality equivalent to HTLCs but that does not require general scripting capabilities can be easily realized in \textit{public} ledgers, as defined in the appendix. However, realizing such a construction in private blockchains that use privacy-preserving transaction schemes such as RingCT \cite{ring_signatures} in Monero or zk-SNARKs based shielded addresses in Zcash \cite{zcash} is non-trivial and should an be subject of further research.
+A blockchain functionality equivalent to HTLCs but that does not require general scripting capabilities can be easily realized in \textit{public} ledgers, as defined in the appendix. However, realizing such a construction in private blockchains that use privacy-preserving transaction schemes such as RingCT \cite{ring_signatures} in Monero or zk-SNARKs based shielded addresses in Zcash \cite{zcash} is non-trivial and should be subject of further research.
 
 \newpage
 \printbibliography
