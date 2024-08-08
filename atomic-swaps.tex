@@ -4,6 +4,7 @@
 \usepackage[utf8]{inputenc}	% UTF-8 characters                                               
 \usepackage[T1]{fontenc}    	% Tuki ääkkösille (Finnish names don't cause problems)                                            
 \usepackage{parskip}        		% Linebreak between paragraphs                
+\usepackage{svg}
 \usepackage{graphicx}       		% Graphics package for adding figures                        
 \usepackage{epstopdf}       		% Possibility to add *.eps figures
  \usepackage{ dsfont }            % Symbol for real numbers
@@ -166,6 +167,7 @@
 \maketitle
 
 \tableofcontents
+\newpage
 \section{Introduction}
 
 Blockchains are distributed ledgers managed by peer-to-peer computer networks by nodes, which they collectevely adhere to a consensus protocol to add and validate record of transactions in a decentralized, permissionless and trustless manner. \\
@@ -186,17 +188,17 @@ This results in a potentially impractical protocol, as parties may need to unint
 
 In this work we investigate whether such a computational burden can be minimized on one party, acting as an exchange server, by using a single refund timeout. Furthermore, we evaluate whether existing protocols utake into account different blockchain confirmation time when setting timeouts for cryptographic puzzles to prevent potential racing attacks.
 
-\todo[inline]{TODO starts}
-\begin{itemize}
-    \item General description of problem (swapping), motivations, etc.
-    \item Introduce Universal Atomic Swaps (UAS) and its building blocks, briefly discuss how the protocol works, and highlight the issue of both parties needing to solve a VTS
-    \item The ``our contribution'' subsection: e.g. ``We propose an alternative construction ... we provide an open source implementation ...''
-    \item (Not so) Related work (subsection or section): Other ways to get atomic swaps, e.g. TEE, relays, HTLC, ...
-    \item \url{https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9797357&tag=1} provides an alternative construction of atomic swap without a trusted setup but requiring special chain verification logic. To capture this, we want to abstract away the time-lock functionality so that it can be implemented in different ways, e.g. with TLP, custom chain logic, or new ways like commit transactions.
-    \item Add comments to pseudocode. Split chunks of the protocol to be run in parallel into subroutines. Give more descriptive variable names (e.g. instead of $P_0, P_1, T_0, T_1$)
-\end{itemize}
-
-\todo[inline]{TODO ends}
+%\todo[inline]{TODO starts}
+%\begin{itemize}
+%    \item General description of problem (swapping), motivations, etc.
+%    \item Introduce Universal Atomic Swaps (UAS) and its building blocks, briefly discuss how the protocol works, and highlight the issue of both parties needing to solve a VTS
+%    \item The ``our contribution'' subsection: e.g. ``We propose an alternative construction ... we provide an open source implementation ...''
+%    \item (Not so) Related work (subsection or section): Other ways to get atomic swaps, e.g. TEE, relays, HTLC, ...
+%    \item \url{https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9797357&tag=1} provides an alternative construction of atomic swap without a trusted setup but requiring special chain verification logic. To capture this, we want to abstract away the time-lock functionality so that it can be implemented in different ways, e.g. with TLP, custom chain logic, or new ways like commit transactions.
+%    \item Add comments to pseudocode. Split chunks of the protocol to be run in parallel into subroutines. Give more descriptive variable names (e.g. instead of $P_0, P_1, T_0, T_1$)
+%\end{itemize}
+%
+%\todo[inline]{TODO ends}
 
 \subsection{Existing solutions}
 
@@ -336,7 +338,7 @@ Note that parties must also take into account potential differences in the compu
 
 \subsection{Results}
 
-We investigated a new atomic swap protocol with an asymmetric design can be realized. In the protocol, one party acts as an exchange server, responsible for force opening a refund timed commitment with timelock $T_0$ in case of a protocol timeout. The other party, acting as the client , is only required to compute a timed commitment $T_2$ to enforce a swap if the server becomes uncooperative at the end of protocol. This division minimizes computing power requirements and computations performed in a protocol run. \\
+We investigated whethere a new atomic swap protocol with an asymmetric design can be realized in order to reduce computational requirements. In the protocol, one party acts as an exchange server, responsible for force opening a refund timed commitment with timelock $T_0$ in case of a protocol timeout. The other party, acting as the client , is only required to compute a timed commitment $T_2$ to enforce a swap if the server becomes uncooperative at the end of protocol. The role division minimizes computing power requirements and computations performed in a protocol run. \\
 This approach allows to centralize the computation burden and reduces the requirements on the client side, however we found it to fail to preserve the atomicity property, as the server can deviate from the protocol by trying to race a swapping transaction on chain $\mathbb{B}$ with a client's refund transaction. \\
 We further analyzed whether such racing transactions can occur in the protocol proposed by Thyagarajan et al. \cite{uas}, finding it to fail to take into account two possible racing conditions, which can be fixed by placing additional time constraint on $P_0$ and a force swap refund mechanism for $P_1$.
 
@@ -410,9 +412,9 @@ Let $R: \{0, 1\}^* \times \{0, 1\}^* \rightarrow \{0, 1\}$ be a NP-witness-relat
 
 A non-interactive zero-knowledge proof (NIZK) system for R consist of the following algorithms:
 \begin{itemize}
-    \item $\mathsf{cr} \gets \mathsf{ZK}\mathcal{L}.\mathsf{Setup}(1^\lambda)$ takes on input the security parameter, outputs a common reference string $\mathsf{crs}$
-    \item $\pi \gets \mathsf{ZK}\mathcal{L}.\mathsf{Pr}(\mathsf{crs}, x, w)$ takes on input the reference string $\mathsf{crs}$, a statement $x$ and a witness $w$, outputs a proof $\pi$
-    \item $0/1 \gets \mathsf{ZK}\mathcal{L}.\mathsf{Vr}(\mathsf{crs}, x,\pi)$ takes on input the reference string $\mathsf{crs}$, a statement $x$ and a proof $\pi$. Outputs 1 if $w$ is a witness for the statment $x$, 0 otherwise.
+    \item $\mathsf{cr} \gets \mathsf{ZK}_\mathcal{L}.\mathsf{Setup}(1^\lambda)$ takes on input the security parameter, outputs a common reference string $\mathsf{crs}$
+    \item $\pi \gets \mathsf{ZK}_\mathcal{L}.\mathsf{Pr}(\mathsf{crs}, x, w)$ takes on input the reference string $\mathsf{crs}$, a statement $x$ and a witness $w$, outputs a proof $\pi$
+    \item $0/1 \gets \mathsf{ZK}_\mathcal{L}.\mathsf{Vr}(\mathsf{crs}, x,\pi)$ takes on input the reference string $\mathsf{crs}$, a statement $x$ and a proof $\pi$. Outputs 1 if $w$ is a witness for the statment $x$, 0 otherwise.
 \end{itemize}
 We require a NIZK system to be \textit{zero-knowledge}, where the verifier does not learn more than the validity of the statement $x$, and \textit{simulation sound} where it is hard for any prover
 to convince a verifier of an invalid statement (chosen by the prover) even after having access to polynomially many simulated proofs for statements of his choosing.
@@ -420,32 +422,26 @@ to convince a verifier of an invalid statement (chosen by the prover) even after
 
 \section{Protocol description}
 
-%\todo[inline]{For the current report, put a formal syntax, but maybe informal definitions of correctness and security. Especially, there should be an (informal) definition of commit transaction. }
-
-
-
-
 %\todo[inline]{Set things up (e.g. let ... be a signature scheme, ... be a ... scheme. We construct a ... in Figure ...)}
 
 
-We denote with $\mathbb{A}$ and $\mathbb{B}$ two different blockchains, where $P_0$ wants to swap $\mathsf{amnt_a}$ assets from $\mathsf{pk_{init(\mathbb{A})}}$ for $\mathsf{amnt_b}$ to $\mathsf{pk_{swp(\mathbb{B})}}$ and respectively $P_1$ wants to swap $\mathsf{amnt_b}$ assets from $\mathsf{pk_{init(\mathbb{B})}}$ for $\mathsf{amnt_a}$ to $\mathsf{pk_{swp(\mathbb{A})}}$.
+Let $\mathbb{A}$ and $\mathbb{B}$ two different blockchains, where $P_0$ wants to swap $\mathsf{amnt_a}$ assets from $\mathsf{pk_{init(\mathbb{A})}}$ for $\mathsf{amnt_b}$ to $\mathsf{pk_{swp(\mathbb{B})}}$ and respectively $P_1$ wants to swap $\mathsf{amnt_b}$ assets from $\mathsf{pk_{init(\mathbb{B})}}$ for $\mathsf{amnt_a}$ to $\mathsf{pk_{swp(\mathbb{A})}}$, and let
+$T_0$, $T_1$, $T_2$ be three timeouts where  $T_0 > 2\cdot T_2$, with $T_1 =  \mathbb{B}.\mathsf{ctime}$ and $T_2 \geq \mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime}$. 
 
-
-Let $T_0$, $T_1$, $T_2$ be three timeouts where  $T_0 > 2\cdot T_2$, $T_1 =  \mathbb{B}.\mathsf{ctime}$ and $T_2 \geq \mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime}$. 
-
-Let $\mathcal{L}_{\mathsf{lock}}$
+Let $\Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}$ be a zero-knowledge proof system with the following language  $\mathcal{L}_{\mathsf{lock}}$
 
 \[
     \mathcal{L}_{\mathsf{lock}} := \left\{\begin{array}{lr}  \mathsf{stmt} = (lk, y, h, \pi, T) : \exists (x) \:\: \text{s.t} \\
     (\mathcal{H}(x) = h \land \Pi_\mathsf{VTD}.\mathsf{Verify}(y, (lk \oplus x), \pi, T)) \end{array}\right\}
 \]
 
+Let $\Gamma_{\mathsf{Refund}}$ and  $\Gamma_{\mathsf{Swap}}$ be two general 2PC protocols as defined in figure 1 and 2 respectively.
+
 \begin{figure}[H]
 \begin{pchstack}[center, boxed]
-\vspace{-1cm}
 \pseudocode{
-	P_0(\mathsf{sk_{frz0(\mathbb{B})}}) \< \< P_1(\mathsf{sk_{frz1(\mathbb{B})}}, \mathsf{tx_{rfnd}}) \\[0.1\baselineskip ][\hline] 
-    \<\< \\[-0.5\baselineskip ]
+	P_0(\mathsf{sk_{frz0(\mathbb{B})}}) \qquad \qquad P_1(\mathsf{sk_{frz1(\mathbb{B})}}, \mathsf{tx_{rfnd}}) \\[0.1\baselineskip ][\hline] 
+    \<\< \\[-0.4\baselineskip ]
     \mathsf{sk_{frz}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}} \\
     \sigma_\mathsf{rfnd(\mathbb{B})} \gets \Pi_{\mathsf{DS(\mathbb{B})}}.\mathsf{Sign}(\mathsf{sk_{frz}}, \mathsf{tx_{rfnd}}) \\
     \mathsf{hsig} := \mathcal{H}(\sigma_\mathsf{rfnd(\mathbb{B})})
@@ -453,12 +449,11 @@ Let $\mathcal{L}_{\mathsf{lock}}$
 \end{pchstack}
 \caption{Protocol definition of 2PC $\Gamma_{\mathsf{Refund}}$}
 \end{figure}
-
 \begin{figure}[H]
 \begin{pchstack}[center, boxed]
 \pseudocode{
-    P_0(\mathsf{sk_{frz0(\mathbb{B})}}, \mathsf{tx_{swp}}) \< \< P_1(\mathsf{sk_{frz1(\mathbb{B})}}, \mathsf{hpk}) \\[0.1\baselineskip ][\hline] 
-    \<\< \\[-0.5\baselineskip ]
+    P_0(\mathsf{sk_{frz0(\mathbb{B})}}, \mathsf{tx_{swp}}) \qquad \qquad  P_1(\mathsf{sk_{frz1(\mathbb{B})}}, \mathsf{hpk}) \\[0.1\baselineskip ][\hline] 
+    \< \\[-0.4\baselineskip ]
     \mathsf{\textbf{if}} \:\: \mathcal{H}(\mathsf{tx_{swp}}.\mathsf{pk_{rx}}) \neq \mathsf{hpk} \lor \mathsf{tx_{swp}}.\mathsf{amnt} \neq \mathsf{amnt_b} \\
     \qquad \mathsf{\textbf{return}} \perp \\
     \mathsf{sk_{frz}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}} \\
@@ -468,71 +463,89 @@ Let $\mathcal{L}_{\mathsf{lock}}$
 \caption{Protocol definition of 2PC $\Gamma_{\mathsf{Swap}}$}
 \end{figure}
 
+On global input $T_0, T_1, T_2, \mathsf{amnt_a}, \mathsf{amnt_b}, \mathbb{A}, \mathbb{B}$, the parties proceed to run the following protocol.
 \subsubsection*{Setup phase}
 The parties first run the following 2PC protocols 
 \begin{itemize}
-    \item  $\Gamma_{\mathsf{KeyGen(\mathbb{A}}}$, generating $\mathsf{pk_{frz(\mathbb{A})}}$ outputing one share of the secret key $\mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}$ to each respective party 
-    \item  $\Gamma_{\mathsf{KeyGen(\mathbb{B}}}$, generating $\mathsf{pk_{frz(\mathbb{B})}}$ outputing one share of the secret key $\mathsf{sk_{frz(\mathbb{B})}} := \mathsf{sk_{frz0(\mathbb{B})}} + \mathsf{sk_{frz1(\mathbb{B})}}$ to each respective party
+    \item  $\Gamma_{\mathsf{KeyGen(\mathbb{A})}}$, generating $\mathsf{pk_{frz(\mathbb{A})}}$ outputing one share of the secret key $\mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}$ to each respective party 
+    \item  $\Gamma_{\mathsf{KeyGen(\mathbb{B})}}$, generating $\mathsf{pk_{frz(\mathbb{B})}}$ outputing one share of the secret key $\mathsf{sk_{frz(\mathbb{B})}} := \mathsf{sk_{frz0(\mathbb{B})}} + \mathsf{sk_{frz1(\mathbb{B})}}$ to each respective party
     \item  $\Gamma_{\mathsf{Refund}}$, jointly computing a signature of the refund transaction $\sigma_{\mathsf{rfnd(\mathbb{B})}}$, sets as output for $P_1$ and the relative hash $\mathsf{hsig}$ as output for $P_0$
 \end{itemize}
 
 $P_1$ then proceeds to
 \begin{itemize}
-\item Prepare two $\mathsf{VTD}$ commitments on $\mathsf{sk_{frz1(\mathbb{A})}}$ with respective time parameters $T_0, T_1$, generating $(C_0, \pi_0)$ and $(C_1, \pi_1)$
+\item Make a $\mathsf{VTD}$ commitment on $\mathsf{sk_{frz1(\mathbb{A})}}$ with time parameters $T_1$, generating $(C_1, \pi_1)$
 \item Mask $C_1$ with  $\mathsf{lk_0} := C_1 \oplus \sigma_{\mathsf{rfnd(\mathbb{B})}}$, sets the statement $\mathsf{stmnt_0} := (\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1)$ for $\mathcal{L}_{\mathsf{lock}}$ and generate a proof $\pi_{\mathsf{lk_0}}$ using $\sigma_{\mathsf{rfnd(\mathbb{B})}}$ as the witness.
-\item Send $(C_0, \pi_0, \pi_1, \pi_{\mathsf{lk_0}}, \mathsf{lk_0})$ to $P_0$ 
+\item Send $(\pi_1, \pi_{\mathsf{lk_0}}, \mathsf{lk_0})$ to $P_0$ 
 \end{itemize}
 \vspace{0.1cm}
-
-$P_0$ then completes the setup phase and continues execution of the protocol only if both the following conditions are satisfied: 
+$P_0$ after receiving $(\pi_0, \pi_1, \pi_{\mathsf{lk_0}}, \mathsf{lk_0})$ from $P_1$ then
 \begin{itemize}
-\item $\Pi_{\mathsf{VTD}}.\mathsf{Verify}([\mathsf{sk_{frz1(\mathbb{A})}}], C_0, \pi_0) = 1$, thus by the soundess property of the VTD scheme $P_0$ is guaranteed of retrieving the commited discrete log value $x$ in $C_0$ that satisfies $[x] = [\mathsf{sk_{frz1(\mathbb{A})}}]$ after $T_0$ steps. \\
-Note that $P_0$ sets ${[\mathsf{sk_{frz1(\mathbb{A})}}]}$ with $\mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz0(\mathbb{A})}}]$, since $\mathsf{pk_{frz(\mathbb{A})}} := [\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}]$ and thus $[\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}] - [\mathsf{sk_{frz0(\mathbb{A})}}] = [\mathsf{sk_{frz1(\mathbb{A})}}]$
-\item $\Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}((\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1), \pi_2) = 1$, thus verifying that 
-    $\exists y \:\: \text{s.t} \:\: \mathcal{H}(y) = \mathsf{hsig} \land \Pi_\mathsf{VTD}.\mathsf{Verify}(\mathsf{pk_{frz}} - [\mathsf{sk_{frz1}}], (\mathsf{lk_0} \oplus y), \pi, T_1)$ \\
-    This checkes that $\sigma_\mathsf{rfnd(\mathbb{B})}$ is a valid witness for $\mathcal{L}_{\mathsf{lock}}$ and thus can be used to retrieve $C_1 := \sigma_\mathsf{rfnd(\mathbb{B})} \oplus \mathsf{lk_0}$, a commitment to a discrete log $[x] = [\mathsf{sk_{frz1}}]$ as above
+    \item Sets the statement $\mathsf{stmnt_0} := (\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1)$
+    \item Checks that $\Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}(\mathsf{stmnt_0}, \pi_2) = 1$
+    \item Generates a new keypair $(\mathsf{pk_{swp}}, \mathsf{sk_{swp}})_{(\mathbb{B})}$ and initializes the transaction $\mathsf{tx_{swp(\mathbb{B})}}$ transferring $\mathsf{amnt_b}$ from $\mathsf{pk_{init(\mathbb{B})}}$ to $\mathsf{pk_{swp(\mathbb{B})}}$
+    \item Makes a $\mathsf{VTD}$ commitment on $\mathsf{sk_{frz0(\mathbb{A})}}$ with time parameters $T_2$, generating $(C_2, \pi_2)$
+    \item Mask $C_2$ with  $\mathsf{lk_1} := C_2 \oplus \mathsf{pk_{swp(\mathbb{B})}})$, sets the statement $\mathsf{stmnt_1} := (\mathsf{lk_1}, {[\mathsf{sk_{frz0(\mathbb{A})}}]}, \mathsf{hpk} := \mathcal{H}(\mathsf{pk_{swp(\mathbb{B})}}), \pi_2, T_2)$ for $\mathcal{L}_{\mathsf{lock}}$ and generate a proof $\pi_{\mathsf{lk_1}}$ using $\mathsf{pk_{swp(\mathbb{B})}}$ as the witness.
+    \item Send $(\pi_2, \pi_{\mathsf{lk_1}}, \mathsf{hpk}, \mathsf{lk_1})$ to $P_1$ 
+\end{itemize}
+$P_1$ in turn
+\begin{itemize}
+    \item Receives $(\pi_2, \pi_{\mathsf{lk_1}}, \mathsf{lk_1})$ and sets the statement $\mathsf{stmnt_1} := (\mathsf{lk_1}, {[\mathsf{sk_{frz0(\mathbb{A})}}]}, \mathsf{hpk}, \pi_2, T_2)$
+    \item Checks that $\Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}(\mathsf{stmnt_1}, \pi_2) = 1$. 
+    \item Makes a $\mathsf{VTD}$ commitment on $\mathsf{sk_{frz1(\mathbb{A})}}$ with time parameters $T_0$, generating $(C_0, \pi_0)$
+    \item Sends $(C_0, \pi_0)$ to $P_1$
 \end{itemize}
 
-The party now proceeds to concurrently run the following three execution branches. \\
+Thus the setup phase is now completed for $P_1$, and similarly for $P_0$ after checking $\Pi_{\mathsf{VTD}}.\mathsf{Verify}([\mathsf{sk_{frz1(\mathbb{A})}}], C_0, \pi_0) = 1$. \\
+The parties now proceeds to concurrently run the following three execution branches. \\
 
 \subsubsection*{Timeout branch}
+\: $\mathbf{P_0:}$
 \begin{itemize}
     \item Force opens the commitment $C_0$, retrieving  $\mathsf{sk_{frz1(\mathbb{A})}}$
     \item Computes $\mathsf{sk_{frz(\mathbb{A})}}$ and signs and publishes $\mathsf{tx_{rfnd(\mathbb{A})}}$ transferring back $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{init(\mathbb{A})}}$ \\
 \end{itemize}
-\subsubsection*{EarlyRefund branch}
+\: $\mathbf{P_1:}$
 \begin{itemize}
-    \item Continuosly queries the signature $\sigma_{\mathsf{tx_{last}}}$ of the latest transaction from $\mathsf{pk_{frz(\mathbb{B})}}$ until it finds the refund signature by checking $\mathcal{H}(\sigma_{\mathsf{tx_{last}}}) = \mathsf{hsig}$, thus $\sigma_{\mathsf{tx_{last}}}$ is a valid witness for $\mathcal{L}_{\mathsf{lock}}$
+    \item Counts a timeout down to $T_0/2$
+    \item Publishes $\mathsf{tx_{rfnd(\mathbb{B})}}$ after the timeout, transferring back $\mathsf{amnt_b}$ from $\mathsf{pk_{frz(\mathbb{B})}}$ to $\mathsf{pk_{init(\mathbb{B})}}$ \\
+\end{itemize}
+\subsubsection*{Force Swap/Refund branch}
+\: $\mathbf{P_0:}$
+\begin{itemize}
+    \item Continuosly queries the signature $\sigma_{\mathsf{tx_{last}}}$ of the latest transaction from $\mathsf{pk_{frz(\mathbb{B})}}$ until it finds the refund signature by checking $\mathcal{H}(\sigma_{\mathsf{tx_{last}}}) = \mathsf{hsig}$, that is until a valid witness $\sigma_{\mathsf{tx_{last}}}$ for $\mathcal{L}_{\mathsf{lock}}$
     \item Retrieves $C_1 := \mathsf{lk_0} \oplus \sigma_{\mathsf{tx_{last}}}$ and proceeds to force open it in time $T_1$, retrieving $\mathsf{sk_{frz1(\mathbb{A})}}$
     \item Computes $\mathsf{sk_{frz(\mathbb{A})}}$ and signs and publishes $\mathsf{tx_{rfnd(\mathbb{A})}}$ transferring back $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{init(\mathbb{A})}}$
 \end{itemize}
+\: $\mathbf{P_1:}$
+\begin{itemize}
+    \item Continuosly queries the signature $\sigma_{\mathsf{tx_{last}}}$ of the latest transaction from $\mathsf{pk_{frz(\mathbb{B})}}$ until it finds the refund signature by checking $\mathcal{H}{\mathsf{tx_{last}}.\mathsf{pk_{rx}}}) = \mathsf{hpk}$, that is until it find a valid witness $\mathsf{tx_{last}}.\mathsf{pk_{rx}}$ for $\mathcal{L}_{\mathsf{lock}}$
+    \item Retrieves $C_2 := \mathsf{lk_1} \oplus \mathsf{tx_{last}}.\mathsf{pk_{rx}}$ and proceeds to force open it in time $T_2$, retrieving $\mathsf{sk_{frz0(\mathbb{A})}}$
+    \item Computes $\mathsf{sk_{frz(\mathbb{A})}}$ and signs and publishes $\mathsf{tx_{swp(\mathbb{A})}}$ swapping $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{swp(\mathbb{A})}}$
+\end{itemize}
 
 \subsubsection*{Swapping branch}
+\: $\mathbf{P_0:}$
 \begin{itemize}
     \item Initializes, signs and publishes the transaction $\mathsf{tx_{frz(\mathbb{A})}}$ transferring $\mathsf{amnt_a}$ from $\mathsf{pk_{init(\mathbb{A})}}$ to $\mathsf{pk_{frz(\mathbb{A})}}$
     \item Waits until $\mathsf{pk_{frz(\mathbb{B})}}$ holds $\mathsf{amnt_b}$ assets
-    \item Generates a new keypair $(\mathsf{pk_{swp}}, \mathsf{sk_{swp}})_{(\mathbb{B})}$ and initializes the transaction $\mathsf{tx_{swp(\mathbb{B})}}$ transferring $\mathsf{amnt_b}$ from $\mathsf{pk_{init(\mathbb{B})}}$ to $\mathsf{pk_{swp(\mathbb{B})}}$
-    \item Prepares a $\mathsf{VTD}$ commitment on $\mathsf{sk_{frz0(\mathbb{A})}}$ with time parameter $T_2$ , generating $(C_2, \pi_2)$.
-    \item Masks $C_2$ with $lk_1 := C_2 \oplus \mathsf{pk_{swp(\mathbb{B})}}$, sets the statement $\mathsf{stmnt_1} := (\mathsf{lk_1}, {[\mathsf{sk_{frz0(\mathbb{A})}}]}, \mathsf{hpk} := \mathcal{H}(\mathsf{pk_{swp(\mathbb{B})}}), \pi_2, T_2)$ for $\mathcal{L}_{\mathsf{lock}}$ and generates a proof $\pi_{\mathcal{lk_1}}$ using $\mathsf{pk_{swp(\mathbb{B})}}$ as the witness.
-    \item Sends  $(\pi_2, \pi_{\mathsf{lk_1}}, \mathsf{hpk}, \mathsf{lk_1})$ to $P_)0$
-    \item Runs the 2PC protocol $\Gamma_{\mathsf{Swap}}$ where the parties jointly sign a signature $\sigma_{\mathsf{swp}}$ on $\mathsf{tx_{swp(\mathbb{B})}}$
+    \item Runs the 2PC protocol $\Gamma_{\mathsf{Swap}}$ where the parties jointly sign a signature $\sigma_{\mathsf{swp}}$ on $\mathsf{tx_{swp(\mathbb{B})}}$, receiving $\sigma_{\mathsf{swp}}$
     \item If it successfully verifies that $\sigma_{\mathsf{swp}}$ is valid on $\mathsf{tx_{swp(\mathbb{B})}}$, it publishes $\mathsf{tx_{swp(\mathbb{B})}}$
+    \item Waits until $\sigma_{\mathsf{swp}}$ is confirmed and then sends $\mathsf{sk_{frz0(\mathbb{A})}}$ to $P_1$
+\end{itemize}
+\: $\mathbf{P_1:}$
+\begin{itemize}
+    \item Initializes, signs and publishes the transaction $\mathsf{tx_{frz(\mathbb{B})}}$ transferring $\mathsf{amnt_b}$ from $\mathsf{pk_{init(\mathbb{B})}}$ to $\mathsf{pk_{frz(\mathbb{B})}}$
+    \item Waits until $\mathsf{pk_{frz(\mathbb{A})}}$ holds $\mathsf{amnt_a}$ assets
+    \item Runs the 2PC protocol $\Gamma_{\mathsf{Swap}}$ where the parties jointly sign a signature $\sigma_{\mathsf{swp}}$ on $\mathsf{tx_{swp(\mathbb{B})}}$
+    \item Receives $\mathsf{sk_{frz0(\mathbb{A})}}$ from $P_0$, computes $\mathsf{sk_{frz(\mathbb{A})}}$ and signs and publishes $\mathsf{tx_{swp(\mathbb{A})}}$ swapping $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{swp(\mathbb{A})}}$
 \end{itemize}
 
-Note that $P_1$ gains no information on $\mathsf{pk_{swp(\mathbb{B})}}$ and thus can retrieve $C_1$ from $\mathsf{lk_1}$ and force open it only after $\mathsf{tx_{swp}}$ has been published by $P_0$. Thus if the protocol faults or timeouts before $P_0$ publishes $\mathsf{tx_{swp(\mathbb{B})}}$, $P_1$ cannot retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$, resulting in the succesful execution of the timeout branch at $T_0$ and thus in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$. 
 
-Now assume $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$, resulting in $P_1$ obtaining $C_2$: the VTD scheme's privacy property guarantees that $P_1$ will retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$ only after time $T_2 > 2\mathbb{B}.\mathsf{ctime}  + \mathbb{A}.\mathsf{ctime}$. Now there are two possible outcomes: \\
-1) The swap transaction gets confirmed after $\mathbb{B}.\mathsf{ctime}$  \\
-2) $P_1$ tries to publish $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathsf{tx_{swp(\mathbb{B})}}$ is confirmed, resulting in a double spend attempt and in only one of $(\mathsf{tx_{rfnd(\mathbb{B})}}, \mathsf{tx_{swp(\mathbb{B})}}$ being accepted with roughly probability 1/2 for each
-
-If (1) occurs, $P_0$ owns $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$ and thus we are done. \\
-If (2) occurs, note that when $P_1$ posts the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$ $P_0$ will obtain the signature $\sigma_{\mathsf{tx_{rfnd}}}$ that hashes to $\mathcal{H}(\sigma_{\mathsf{tx_{rfnd}}}) = \mathsf{hsig}$  and thus successfully execute the EarlyRefund branch.
-
-Since $P_1$ needs to post $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathbb{B}.\mathsf{ctime}$ and $T_1 = \mathbb{B}.\mathsf{ctime}$, the EarlyRefund branch will complete in time strictly less than $2\mathbb{B}.\mathsf{ctime} + \mathbb{A}.\mathsf{ctime}$ after $P_1$ obtains $C_2$, so $P_0$ is guaranteed to publish and confirm $\mathsf{tx_{rfnd(\mathbb{A})}}$, resulting in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$.
-
+We give the full protocol definition in figure 3.
 
 \begin{figure}[H]
-\hspace{-2cm}
+\hspace{-0.5cm}
 \begin{minipage}[t]{0.6\textwidth}
 \begin{pchstack}[boxed]
 \pseudocode{
@@ -585,19 +598,19 @@ Since $P_1$ needs to post $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathbb{B}.\m
     \}
 }
 
-\blockcomment{-0.26,-9.8}{-0.26,-0.5}{cblue}
-\commentline{-0.55,-3}{Setup}
-\blockcomment{-0.73,-12.5}{-0.73,-10.2}{cyellow}
-\commentline{-1.1,-11}{Timeout}
-\blockcomment{-1.2,-17}{-1.2,-13}{cred}
-\commentline{-1.6,-15}{EarlyRefund}
-\blockcomment{-1.665,-22}{-1.665,-17.5}{cgreen}
-\commentline{-2,-19}{Swap}
-\hspace{0.2cm}
+%\blockcomment{-0.26,-9.8}{-0.26,-0.5}{cblue}
+%\commentline{-0.55,-3}{Setup}
+%\blockcomment{-0.73,-12.5}{-0.73,-10.2}{cyellow}
+%\commentline{-1.1,-11}{Timeout}
+%\blockcomment{-1.2,-17}{-1.2,-13}{cred}
+%\commentline{-1.6,-15}{EarlyRefund}
+%\blockcomment{-1.665,-22}{-1.665,-17.5}{cgreen}
+%\commentline{-2,-19}{Swap}
+%\hspace{0.2cm}
 
 \end{pchstack}
 \end{minipage}%
-\hspace{0.04\textwidth} 
+%\hspace{0.04\textwidth} 
 \begin{minipage}[t]{0.5\textwidth}
 \begin{pchstack}[boxed]
 \pseudocode{
@@ -613,14 +626,14 @@ Since $P_1$ needs to post $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathbb{B}.\m
     \mathsf{hsig} := \mathcal{H}(\sigma_{\mathsf{rfnd(\mathbb{B})}}) \\
     \mathsf{stmnt_0} := (\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1) \\
     \pi_{\mathsf{lk_0}} \gets \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Pr}(\mathsf{stmnt_0}, \sigma_{\mathsf{rfnd(\mathbb{B})}}) \\
-    \mathsf{\textbf{wait}} \:\: \mathsf{send}(P_0,\: (\pi_1, \pi_{\mathsf{lk_0}}, \mathsf{lk_0})) \\
+    \mathsf{\textbf{wait}} \:\: \mathsf{send}(P_0,\: \pi_1, \pi_{\mathsf{lk_0}}, \mathsf{lk_0}) \\
     (\pi_2, \pi_{\mathsf{lk_1}}, \mathsf{hpk}, \mathsf{lk_1}) \gets \mathsf{receive}(P_0) \\
     {[\mathsf{sk_{frz0(\mathbb{A})}}]} := \mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz1(\mathbb{A})}}] \\
     \mathsf{stmnt_1} := (\mathsf{lk_1}, {[\mathsf{sk_{frz0(\mathbb{A})}}]}, \mathsf{hpk}, \pi_2, T_2) \\
     \mathsf{\textbf{if}} \:\: \Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}(\mathsf{stmnt_1}, \pi_{\mathsf{lk_1}}) \neq 1 \\
         \quad \mathsf{\textbf{return}} \perp \\
     (C_0, \pi_0) \gets \Pi_{\mathsf{VTD}}.\mathsf{Commit}(\mathsf{sk_{frz1(\mathbb{A})}}, T_0) \\
-    \mathsf{\textbf{wait}} \:\: \mathsf{send}(P_0,\: (C_0, \pi_0) \\
+    \mathsf{\textbf{wait}} \:\: \mathsf{send}(P_0,\: C_0, \pi_0) \\
     \mathsf{\textbf{select}} \:\: \{ \\
         \quad \mathsf{\textbf{wait}} \:\: \{ \\
             \qquad \mathsf{timeout}(T_0/2) \\
@@ -645,16 +658,17 @@ Since $P_1$ needs to post $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathbb{B}.\m
         \quad \} \\
     \} \\
 }
-\blockcomment{0.224,-9.8}{0.224,-0.5}{cblue}
-\commentline{-0.15,-3.5}{Setup}
-\blockcomment{-0.26,-12.4}{-0.26,-10.4}{cyellow}
-\commentline{-0.7,-11.2}{Timeout}
-\blockcomment{-0.73,-16.2}{-0.73,-12.6}{cred}
-\commentline{-1.12,-15}{ForceSwap}
-\blockcomment{-1.2,-21}{-1.2,-16.5}{cgreen}
-\commentline{-1.62,-19}{Swap}
 
-\hspace{0.5cm}
+%\blockcomment{0.224,-9.8}{0.224,-0.5}{cblue}
+%\commentline{-0.15,-3.5}{Setup}
+%\blockcomment{-0.26,-12.4}{-0.26,-10.4}{cyellow}
+%\commentline{-0.7,-11.2}{Timeout}
+%\blockcomment{-0.73,-16.2}{-0.73,-12.6}{cred}
+%\commentline{-1.12,-15}{ForceSwap}
+%\blockcomment{-1.2,-21}{-1.2,-16.5}{cgreen}
+%\commentline{-1.62,-19}{Swap}
+
+%\hspace{0.5cm}
 
 \end{pchstack}
 \end{minipage}%
@@ -770,11 +784,40 @@ We model the interaction in a zero trust setting: both parties are mutually dist
 We further assume that a party cannot deny the counter-party from transacting on the blockchain or performing local computations.
 
 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{timeouts.png}
+    \caption{Transaction racing between  $\mathsf{tx_{swp(\mathbb{B})}}$ and $\mathsf{tx_{rfnd(\mathbb{B})}}$}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{timeouts-uas.png}
+    \caption{Example of a transaction racing condition when $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ after $T_1 - \mathbb{B}.\mathsf{ctime}$}
+\end{figure}
+
 \subsection{Party $P_0$}
 We want to prove that $P_0$ at the end of a protocol run either holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ with exclusive knowledge of $\mathsf{sk_{init(\mathbb{A})}}$ or they hold $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$. \\
 
+$P_0$ then completes the setup phase and continues execution of the protocol only if both the following conditions are satisfied: 
+\begin{itemize}
+\item $\Pi_{\mathsf{VTD}}.\mathsf{Verify}([\mathsf{sk_{frz1(\mathbb{A})}}], C_0, \pi_0) = 1$, thus by the soundess property of the VTD scheme $P_0$ is guaranteed of retrieving the commited discrete log value $x$ in $C_0$ that satisfies $[x] = [\mathsf{sk_{frz1(\mathbb{A})}}]$ after $T_0$ steps. \\
+Note that $P_0$ sets ${[\mathsf{sk_{frz1(\mathbb{A})}}]}$ with $\mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz0(\mathbb{A})}}]$, since $\mathsf{pk_{frz(\mathbb{A})}} := [\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}]$ and thus $[\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}] - [\mathsf{sk_{frz0(\mathbb{A})}}] = [\mathsf{sk_{frz1(\mathbb{A})}}]$
+\item $\Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}((\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1), \pi_2) = 1$, thus verifying that 
+    $\exists y \:\: \text{s.t} \:\: \mathcal{H}(y) = \mathsf{hsig} \land \Pi_\mathsf{VTD}.\mathsf{Verify}(\mathsf{pk_{frz}} - [\mathsf{sk_{frz1}}], (\mathsf{lk_0} \oplus y), \pi, T_1)$ \\
+    This checkes that $\sigma_\mathsf{rfnd(\mathbb{B})}$ is a valid witness for $\mathcal{L}_{\mathsf{lock}}$ and thus can be used to retrieve $C_1 := \sigma_\mathsf{rfnd(\mathbb{B})} \oplus \mathsf{lk_0}$, a commitment to a discrete log $[x] = [\mathsf{sk_{frz1}}]$ as above
+\end{itemize}
 
+Note that $P_1$ gains no information on $\mathsf{pk_{swp(\mathbb{B})}}$ and thus can retrieve $C_1$ from $\mathsf{lk_1}$ and force open it only after $\mathsf{tx_{swp}}$ has been published by $P_0$. Thus if the protocol faults or timeouts before $P_0$ publishes $\mathsf{tx_{swp(\mathbb{B})}}$, $P_1$ cannot retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$, resulting in the succesful execution of the timeout branch at $T_0$ and thus in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$. 
 
+Now assume $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$, resulting in $P_1$ obtaining $C_2$: the VTD scheme's privacy property guarantees that $P_1$ will retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$ only after time $T_2 > 2\mathbb{B}.\mathsf{ctime}  + \mathbb{A}.\mathsf{ctime}$. Now there are two possible outcomes: \\
+1) The swap transaction gets confirmed after $\mathbb{B}.\mathsf{ctime}$  \\
+2) $P_1$ tries to publish $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathsf{tx_{swp(\mathbb{B})}}$ is confirmed, resulting in a double spend attempt and in only one of $(\mathsf{tx_{rfnd(\mathbb{B})}}, \mathsf{tx_{swp(\mathbb{B})}}$ being accepted with roughly probability 1/2 for each
+
+If (1) occurs, $P_0$ owns $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$ and thus we are done. \\
+If (2) occurs, note that when $P_1$ posts the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$ $P_0$ will obtain the signature $\sigma_{\mathsf{tx_{rfnd}}}$ that hashes to $\mathcal{H}(\sigma_{\mathsf{tx_{rfnd}}}) = \mathsf{hsig}$  and thus successfully execute the EarlyRefund branch.
+
+Since $P_1$ needs to post $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathbb{B}.\mathsf{ctime}$ and $T_1 = \mathbb{B}.\mathsf{ctime}$, the EarlyRefund branch will complete in time strictly less than $2\mathbb{B}.\mathsf{ctime} + \mathbb{A}.\mathsf{ctime}$ after $P_1$ obtains $C_2$, so $P_0$ is guaranteed to publish and confirm $\mathsf{tx_{rfnd(\mathbb{A})}}$, resulting in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$.
 
 \subsection{Party $P_1$}
 We want to prove that $P_1$ at the end of a protocol run either holds $\mathsf{amnt_b}$ on $\mathsf{pk_{init(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{init(\mathbb{B})}}$ or they hold $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{A})}}$. \\
@@ -788,12 +831,34 @@ It then proceeds to wait until $\mathsf{amnt_a}$ has been transferred to $\maths
 The parties then run the 2PC protocol $\Gamma_{\mathsf{Swap}}$ where $P_1$ signs $\mathsf{tx_{swp(\mathbb{B})}}$ (which is unknown by the 2PC input privacy property) unless $\mathcal{H}(\mathsf{tx_{swp}}.\mathsf{pk_{rx}}) \neq \mathsf{hpk} \lor  \mathsf{tx_{swp}}.\mathsf{amnt} \neq \mathsf{amnt_b}$, in which case it aborts from the protocol. \\
 
 Since $\mathcal{H}(\mathsf{tx_{swp(\mathbb{B})}}.\mathsf{pk_{rx}}) = \mathsf{hpk}$,  $\mathsf{pk_{rx}}$ is a valid witness for $\pi_2$ and can be retrieved as soon as $P_0$ publishes $\mathsf{tx_{swp(\mathbb{B})}}$, allowing $P_1$ to start force opening $C_1$. \\
-We have that $T_0 = s(\mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime})$ with $s$ being a scaling factor $s > 2$, assume $P_0$ waits until exactly $T_0/2$ before publishing $\mathsf{tx_{swp(\mathbb{B})}}$: $P_1$ force opens $C_1$ in $T_1 = \mathbb{B}.\mathsf{ctime})$ time, retrieves $\mathsf{sk_{frz0}}$ to sign and publish $\mathsf{tx_{swp(\mathbb{A})}}$ transferring $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{swp(\mathbb{A})}}$. The transaction will be confirmed in $\mathbb{A}.\mathsf{ctime}$ and the whole swapping process from $P_1$ completes in $\mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime} < \frac{T_0}{2}$, thus if $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ $P_1$ is guaranteed to successfly swap their assets resulting in $P_1$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$. \\
+We have that $T_0 = s(\mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime})$ with $s$ being a scaling factor $s > 2$, assume $P_0$ waits until exactly $T_0/2$ before publishing $\mathsf{tx_{swp(\mathbb{B})}}$: $P_1$ force opens $C_1$ in $T_1 = \mathbb{B}.\mathsf{ctime})$ time, retrieves $\mathsf{sk_{frz0}}$ to sign and publish $\mathsf{tx_{swp(\mathbb{A})}}$ transferring $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{swp(\mathbb{A})}}$. The transaction will be confirmed in $\mathbb{A}.\mathsf{ctime}$ and the whole swapping process from $P_1$ completes in $\mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime} < \frac{T_0}{2}$, thus if $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ $P_1$ is guaranteed to successfly swap their assets resulting in $P_1$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$.
 
 Now assume instead that some routine in the protocol execution timed out or faulted, resulting in executing the refund branch: $P_1$ will generate a new key pair $(\mathsf{pk_{rfnd}}, \mathsf{sk_{rfnd}})$ on $\mathbb{B}$, and sign and publish
 
 \section{Open directions}
 
+In this section, we outline several avenues for future research and development that build upon the work presented in this report. These open directions address both theoretical and practical aspects of the topic, suggesting pathways for further exploration and improvement.
+\subsection*{One-sided commitments protocols}
+The protocol we proposed is susceptible to a potential racing transaction condition, as described in Figure 5. An open question is whether it is possible to construct an atomic swap protocol that employs a one-sided refund commitment while avoiding this issue. 
+To explore this, future research could focus on algorithmically identifying alternative protocols by:
+\begin{itemize}
+        \item Constructing transaction "locks" by masking commitments or secret key shares with transaction signatures or other data
+        \item Defining mutual exclusion conditions on the swap transaction ($\mathsf{tx_{swp}}$) and the refund transaction ($\mathsf{tx_{rfnd}}$) happening on the same blockchain
+\end{itemize}
+By establishing these conditions and systematically evaluating protocols across all possible combinations of transaction locks, it may be possible to verify whether such a protocol can be successfully realized, or alternatively, to prove the infeasibility of such.
+
+\subsection*{Further improvements and implementation}
+The $\mathsf{VTS}$ scheme presented  by Thyagarajan et al. \cite{vts} suffers from time unverifiability, that is a proof $\pi$ from $\mathsf{VTD}.\mathsf{Commit}$ does not in fact prove that the resulting commitment $C$ can be opened in $T$ steps. However, improving on the work of \cite{vts}, Zhou et al. \cite{fixed_vts} have proposed an extension to verifiable timed commitment that offers \textit{verifiable timed recovery}, that is, the recipient can verify that the forced open algorithm returns a valid value after time $T$.
+
+Furthermore, $\mathsf{VTS}$ schemes require a trusted setup, and it is unclear how the authors of Universal Atomic Swaps \cite{uas} address this operation in a Peer-2-Peer (P2P) setting. \\
+We note that the version of Universal Atomic Swaps that we presented in this work uses $\mathsf{VTD}$ schemes rather than $\mathsf{VTS}$ in order to be compatible with blockchains that do not support transaction \textit{chaining} and \textit{pre-signatures}, such as Monero \cite{pre_sign}. \\
+To the best of our knowledge, only the building blocks used in the protocol have been implemented, while a full protocol implementation is missing.
+
+\subsection*{Evaluating computational advantages in solving timelock puzzles}
+In order to guarantee security of the protocol, parties need to set timeouts with worst-case estimates for the available computational power. A precise evaluation of the speedup offered for sequential squaring using ASICs \cite{squaring_asic} over conventional hardware is thus critical in order to argument the practicality of the protocol.
+
+\subsection*{Commit transactions}
+A blockchain functionality equivalent to HTLCs but that does not require general scripting capabilities can be easily realized in \textit{public} ledgers, as defined in the appendix. However, realizing such a construction in private blockchains that use privacy-preserving transaction schemes such as RingCT \cite{ring_signatures} in Monero or zk-SNARKs based shielded addresses in Zcash \cite{zcash} is non-trivial and should an be subject of further research.
 
 \printbibliography
 
