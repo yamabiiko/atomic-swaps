@@ -325,14 +325,6 @@ In the subsequential lock phase, parties first initialize the swap transactions 
 
  If $P_0$ fails to publish $\mathsf{tx_{swp(\mathbb{B})}}$ before $T_1$, $P_1$ will publish the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$ and similarly for $P_0$ if $P_1$ timeouts during the protocol execution.
 
-However that the protocol fails to take into account two possible racing conditions: \\
-1) $P_0$ can wait until $T_1$ to post $\mathsf{tx_{swp(\mathbb{B})}}$, concurrently with $P_1$ posting the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$. Since $\mathsf{tx_{rfnd(\mathbb{B})}}$ is not confirmed until $\mathbb{B}.\mathsf{ctime}$, there is an equal probability that $\mathsf{tx_{swp(\mathbb{B})}}$ will succeed, preventing $P_1$ from refunding the assets. \\ 
-2) Similarly, if $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ after $T_1 - \mathbb{B}.\mathsf{ctime}$, $P_1$ can simultaneously post $\mathsf{tx_{rfnd(\mathbb{B})}}$ and $\mathsf{tx_{swp(\mathbb{A})}}$, which can result in $P_1$ obtaining both $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$. \\
-
-To preserve the atomicity property, we propose the following changes: \\
-1) When $P_1$ timeouts at $T_1$, the party should check if $P_0$ is publishing $\mathsf{tx_{swp(\mathbb{B})}}$ while $\mathsf{tx_{rfnd(\mathbb{B})}}$ is unconfirmed. If so, retrieve $\sigma_{swp(\mathbb{A})}$ and publish $\mathsf{tx_{swp(\mathbb{A})}}$. It is also required that $\Delta > \mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime}$ \\
-2) Require $P_0$ to post $\mathsf{tx_{swp(\mathbb{B})}}$ no later than $T_1 - \mathbb{B}.\mathsf{ctime}$, and abort otherwise 
-
 Note that parties must also take into account potential differences in the computational power available for force opening the VTS commitments. This prevent scenarios where one party force opens its VTS commitments earlier than expected, potentially stealing 
  the other party's assets during the swap lock or complete phase. Therefore,  $\Delta$ (such that T0 = T1 + $\Delta$) must be large enough to tolerate time differences in opening the VTS commitments. \\
 
@@ -675,7 +667,96 @@ We give the full protocol definition in figure 3.
 \caption{Full protocol execution for $P_0$ and $P_1$, respectively left and right (alternative syntax)}
 \end{figure}
 
-\section{Fixing Universal Atomic Swap}
+\newpage
+
+\section{Security analysis}
+
+\subsubsection*{Security definitions}
+
+\textbf{Definition 1} (Atomicity): \textit{Either both parties successfully exchange each other's assets or neither party performs a successful swap.}
+\vspace{0.5em}
+\\
+That is, after the protocol run there can be only two outcomes: \\
+1) $P_0$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ and $P_1$ holds $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$ (successful swap) \\
+2) $P_0$ holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ and $P_1$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{init(\mathbb{B})}}$ or $\mathsf{pk_{rfnd(\mathbb{B})}}$ (swap aborted) \\
+
+\textbf{Definition 2} (Ownership): \textit{All parties gain exclusive knowledge of the secret keys of their respective wallets holding the exchanged or refunded assets upon completion of the protocol.} 
+\vspace{0.5em}
+\\
+That is after a successful protocol run $P_0$ owns $\mathsf{sk_{swp(\mathbb{B})}}$ and $P_1$ owns $\mathsf{sk_{swp(\mathbb{A})}}$, and respectively for the aborted swap  $\mathsf{sk_{init(\mathbb{A})}}$ and $\mathsf{sk_{init(\mathbb{B})}}$ or $\mathsf{sk_{rfnd(\mathbb{B})}}$. \\
+
+We model the interaction in a zero trust setting: both parties are mutually distrusting and potentially malicious as they have an incentive to deceive the counter-party. \\
+We further assume that a party cannot deny the counter-party from transacting on the blockchain or performing local computations.
+
+\subsection{Party $P_0$}
+We want to prove that $P_0$ at the end of a protocol run either holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ with exclusive knowledge of $\mathsf{sk_{init(\mathbb{A})}}$ or they hold $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$. \\
+
+$P_0$ then completes the setup phase and continues execution of the protocol only if both the following conditions are satisfied: 
+\begin{itemize}
+\item $\Pi_{\mathsf{VTD}}.\mathsf{Verify}([\mathsf{sk_{frz1(\mathbb{A})}}], C_0, \pi_0) = 1$, thus by the soundess property of the VTD scheme $P_0$ is guaranteed of retrieving the commited discrete log value $x$ in $C_0$ that satisfies $[x] = [\mathsf{sk_{frz1(\mathbb{A})}}]$ after $T_0$ steps. \\
+Note that $P_0$ sets ${[\mathsf{sk_{frz1(\mathbb{A})}}]}$ with $\mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz0(\mathbb{A})}}]$, since $\mathsf{pk_{frz(\mathbb{A})}} := [\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}]$ and thus $[\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}] - [\mathsf{sk_{frz0(\mathbb{A})}}] = [\mathsf{sk_{frz1(\mathbb{A})}}]$
+\item $\Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}((\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1), \pi_2) = 1$, thus verifying that 
+    $\exists y \:\: \text{s.t} \:\: \mathcal{H}(y) = \mathsf{hsig} \land \Pi_\mathsf{VTD}.\mathsf{Verify}(\mathsf{pk_{frz}} - [\mathsf{sk_{frz1}}], (\mathsf{lk_0} \oplus y), \pi, T_1)$ \\
+    This checkes that $\sigma_\mathsf{rfnd(\mathbb{B})}$ is a valid witness for $\mathcal{L}_{\mathsf{lock}}$ and thus can be used to retrieve $C_1 := \sigma_\mathsf{rfnd(\mathbb{B})} \oplus \mathsf{lk_0}$, a commitment to a discrete log $[x] = [\mathsf{sk_{frz1}}]$ as above
+\end{itemize}
+
+Note that $P_1$ gains no information on $\mathsf{pk_{swp(\mathbb{B})}}$ and thus can retrieve $C_1$ from $\mathsf{lk_1}$ and force open it only after $\mathsf{tx_{swp}}$ has been published by $P_0$. Thus if the protocol faults or timeouts before $P_0$ publishes $\mathsf{tx_{swp(\mathbb{B})}}$, $P_1$ cannot retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$, resulting in the succesful execution of the timeout branch at $T_0$ and thus in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$. 
+
+Now assume $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$, resulting in $P_1$ obtaining $C_2$: the VTD scheme's privacy property guarantees that $P_1$ will retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$ only after time $T_2 > 2\mathbb{B}.\mathsf{ctime}  + \mathbb{A}.\mathsf{ctime}$. Now there are two possible outcomes: \\
+1) The swap transaction gets confirmed after $\mathbb{B}.\mathsf{ctime}$  \\
+2) $P_1$ tries to publish $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathsf{tx_{swp(\mathbb{B})}}$ is confirmed, resulting in a double spend attempt and in only one of $(\mathsf{tx_{rfnd(\mathbb{B})}}, \mathsf{tx_{swp(\mathbb{B})}}$ being accepted with roughly probability 1/2 for each
+
+If (1) occurs, $P_0$ owns $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$ and thus we are done. \\
+If (2) occurs, note that when $P_1$ posts the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$ $P_0$ will obtain the signature $\sigma_{\mathsf{tx_{rfnd}}}$ that hashes to $\mathcal{H}(\sigma_{\mathsf{tx_{rfnd}}}) = \mathsf{hsig}$  and thus successfully execute the Force Refund branch.
+
+Since $P_1$ needs to post $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathbb{B}.\mathsf{ctime}$ and $T_1 = \mathbb{B}.\mathsf{ctime}$, the Force Refund branch will complete in time strictly less than $2\mathbb{B}.\mathsf{ctime} + \mathbb{A}.\mathsf{ctime}$ after $P_1$ obtains $C_2$, so $P_0$ is guaranteed to publish and confirm $\mathsf{tx_{rfnd(\mathbb{A})}}$, resulting in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$.
+
+\subsection{Party $P_1$}
+%We want to prove that $P_1$ at the end of a protocol run either holds $\mathsf{amnt_b}$ on $\mathsf{pk_{init(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{init(\mathbb{B})}}$ or they hold $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{A})}}$. \\
+As we previosly stated, the protocol fails to guarantee the atomicity and ownership properties for $P_1$, as party $P_0$ can deviate from the protocol performing the following attack. \\
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{timeouts.png}
+    \caption{Transaction racing between  $\mathsf{tx_{swp(\mathbb{B})}}$ and $\mathsf{tx_{rfnd(\mathbb{B})}}$}
+\end{figure}
+After the parties run the 2PC $\Gamma_{\mathsf{Swap}}$, $P_0$ receives the signature on the swap transaction $\mathsf{tx_{swp(\mathbb{B})}}$. It can then proceed to wait until $P_1$ posts the refund $\mathsf{tx_{rfnd(\mathbb{B})}}$ and immediately post $\mathsf{tx_{swp(\mathbb{B})}}$ and start force opening $C_1$, which can be retrieved by the refund signature with $C_1 := \mathsf{lk_0} \oplus \sigma_{\mathsf{tx_{rfnd(\mathbb{B})}}}$. On time $T_1$ the force opening completes and $P_0$ procceds to sign and publish $\mathsf{tx_{rfnd(\mathbb{A})}}$. \\
+Now either only $\mathsf{tx_{swp(\mathbb{B})}}$ or  $\mathsf{tx_{rfnd(\mathbb{B})}}$ will be confirmed on $\mathbb{B}$, with roughly probability $\frac{1}{2}$. If $\mathsf{tx_{swp(\mathbb{B})}}$ is confirmed, then $P_0$ breaks the atomicity property as they also obtain $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_1$ before $P_0$ and can thus successfully complete $\mathsf{tx_{rfnd(\mathbb{A})}}$. \\
+Note that $P_1$ can only obtain $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_2$ after $T_2$, which is strictly later than $T_1$. Inversely, if $T_2 < T_1$, $P_1$ can potentially cheat from the protocol in a similar fashion, performing a racing refund on $\mathbb{B}$ and swapping on $\mathsf{A}$ after they force open $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_2$ time. If the time gap between $T_2$ and $T_1$ is smaller than the blockchain's confirmation times, then both sides can potentially try to perfom a racing transaction.
+
+\newpage 
+\subsection{Racing transactions in Universal Atomic Swaps}
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{timeouts-uas.png}
+    \caption{Example of a transaction racing condition when $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ after $T_1 - \mathbb{B}.\mathsf{ctime}$}
+\end{figure}
+
+The protocol presented by Thyagarajan et al. \cite{vts}, we found it to fail into account two possible transaction racing conditions: \\
+1) $P_0$ can wait until $T_1$ to post $\mathsf{tx_{swp(\mathbb{B})}}$, concurrently with $P_1$ posting the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$. Since $\mathsf{tx_{rfnd(\mathbb{B})}}$ is not confirmed until $\mathbb{B}.\mathsf{ctime}$, there is an equal probability that $\mathsf{tx_{swp(\mathbb{B})}}$ will succeed, preventing $P_1$ from refunding the assets. \\
+2) Similarly, if $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ after $T_1 - \mathbb{B}.\mathsf{ctime}$, $P_1$ can simultaneously post $\mathsf{tx_{rfnd(\mathbb{B})}}$ and $\mathsf{tx_{swp(\mathbb{A})}}$, which can result in $P_1$ obtaining both $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$. \\
+
+In order to preserve the atomicity property, we propose the following changes: \\
+1) When $P_1$ timeouts at $T_1$, the party should check if $P_0$ is publishing $\mathsf{tx_{swp(\mathbb{B})}}$ while $\mathsf{tx_{rfnd(\mathbb{B})}}$ is unconfirmed. If so, retrieve $\sigma_{swp(\mathbb{A})}$ and publish $\mathsf{tx_{swp(\mathbb{A})}}$. It is also required that $\Delta > \mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime}$ \\
+2) Require $P_0$ to post $\mathsf{tx_{swp(\mathbb{B})}}$ no later than $T_1 - \mathbb{B}.\mathsf{ctime}$, and abort otherwise 
+
+We present the revised protocol in figure 7.
+
+\begin{figure}[H]
+\begin{pchstack}[center, boxed]
+\pseudocode{
+    P_0(\mathsf{sk_{frz0(\mathbb{B})}}, \mathsf{tx_{swp}}) \< \< P_1(\mathsf{sk_{frz1(\mathbb{B})}}) \\[0.1\baselineskip ][\hline] 
+    \<\< \\[-0.5\baselineskip ]
+    \mathsf{\textbf{if}} \:\: \mathsf{tx_{swp}}.\mathsf{amnt} \neq \mathsf{amnt_b} \\
+    \qquad \mathsf{\textbf{return}} \perp \\
+    \mathsf{sk_{frz}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}} \\
+    \sigma_\mathsf{swp(\mathbb{B})} \gets \Pi_{\mathsf{DS(\mathbb{B})}}.\mathsf{Sign}(\mathsf{sk_{frz}}, \mathsf{tx_{swp}}) \\
+    \mathsf{lk} := \mathsf{sk_{frz0}} \oplus \mathsf{\sigma_\mathsf{swp(\mathbb{B})}}  \\
+}
+\end{pchstack}
+\caption{Protocol definition of 2PC $\Gamma_{\mathsf{Swap}}$}
+\end{figure}
 
 \begin{figure}[H]
 \begin{minipage}[t]{0.5\textwidth}
@@ -702,6 +783,8 @@ We give the full protocol definition in figure 3.
 \
             \qquad \sigma_{\mathsf{swp(\mathbb{B})}} \gets \Gamma_{\mathsf{Swap}}(\mathsf{sk_{frz0(\mathbb{B})}}, \mathsf{tx_{swp(\mathbb{B})}}) \\
             \qquad \textbf{if} \:\: \mathsf{VerifyTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \neq 1 \\
+            \qquad \quad \mathsf{\textbf{return}} \perp \\
+            \qquad \textbf{if} \:\: \mathsf{GetTime}() > T_1 - \mathbb{B}.\mathsf{ctime} \\
             \qquad \quad \mathsf{\textbf{return}} \perp \\
             \qquad \mathsf{PubTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
             \qquad \mathsf{WatchTx}_{(\mathbb{B})}(\sigma_{\mathsf{swp}}, \mathsf{tx_{swp}}) \\
@@ -743,97 +826,10 @@ We give the full protocol definition in figure 3.
 
 \end{pchstack}
 \end{minipage}%
-\end{figure}
-
-\begin{figure}[H]
-\begin{pchstack}[center, boxed]
-\pseudocode{
-    P_0(\mathsf{sk_{frz0(\mathbb{B})}}, \mathsf{tx_{swp}}) \< \< P_1(\mathsf{sk_{frz1(\mathbb{B})}}) \\[0.1\baselineskip ][\hline] 
-    \<\< \\[-0.5\baselineskip ]
-    \mathsf{\textbf{if}} \:\: \mathsf{tx_{swp}}.\mathsf{amnt} \neq \mathsf{amnt_b} \\
-    \qquad \mathsf{\textbf{return}} \perp \\
-    \mathsf{sk_{frz}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}} \\
-    \sigma_\mathsf{swp(\mathbb{B})} \gets \Pi_{\mathsf{DS(\mathbb{B})}}.\mathsf{Sign}(\mathsf{sk_{frz}}, \mathsf{tx_{swp}}) \\
-    \mathsf{lk} := \mathsf{sk_{frz0}} \oplus \mathsf{\sigma_\mathsf{swp(\mathbb{B})}}  \\
-}
-\end{pchstack}
-\caption{Protocol definition of 2PC $\Gamma_{\mathsf{Swap}}$}
+\caption{Universal Atomic Swap protocol for parties $P_0$ and $P_1$, revised version}
 \end{figure}
 
 
-\newpage
-
-\section{Security analysis}
-
-\subsubsection*{Security definitions}
-
-\textbf{Definition 1} (Atomicity): \textit{Either both parties successfully exchange each other's assets or neither party performs a successful swap.}
-\vspace{0.5em}
-\\
-That is, after the protocol run there can be only two outcomes: \\
-1) $P_0$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ and $P_1$ holds $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$ (successful swap) \\
-2) $P_0$ holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ and $P_1$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{init(\mathbb{B})}}$ or $\mathsf{pk_{rfnd(\mathbb{B})}}$ (swap aborted) \\
-
-\textbf{Definition 2} (Ownership): \textit{All parties gain exclusive knowledge of the secret keys of their respective wallets holding the exchanged or refunded assets upon completion of the protocol.} 
-\vspace{0.5em}
-\\
-That is after a successful protocol run $P_0$ owns $\mathsf{sk_{swp(\mathbb{B})}}$ and $P_1$ owns $\mathsf{sk_{swp(\mathbb{A})}}$, and respectively for the aborted swap  $\mathsf{sk_{init(\mathbb{A})}}$ and $\mathsf{sk_{init(\mathbb{B})}}$ or $\mathsf{sk_{rfnd(\mathbb{B})}}$. \\
-
-
-We model the interaction in a zero trust setting: both parties are mutually distrusting and potentially malicious as they have an incentive to deceive the counter-party. \\
-We further assume that a party cannot deny the counter-party from transacting on the blockchain or performing local computations.
-
-
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{timeouts.png}
-    \caption{Transaction racing between  $\mathsf{tx_{swp(\mathbb{B})}}$ and $\mathsf{tx_{rfnd(\mathbb{B})}}$}
-\end{figure}
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{timeouts-uas.png}
-    \caption{Example of a transaction racing condition when $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ after $T_1 - \mathbb{B}.\mathsf{ctime}$}
-\end{figure}
-
-\subsection{Party $P_0$}
-We want to prove that $P_0$ at the end of a protocol run either holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ with exclusive knowledge of $\mathsf{sk_{init(\mathbb{A})}}$ or they hold $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$. \\
-
-$P_0$ then completes the setup phase and continues execution of the protocol only if both the following conditions are satisfied: 
-\begin{itemize}
-\item $\Pi_{\mathsf{VTD}}.\mathsf{Verify}([\mathsf{sk_{frz1(\mathbb{A})}}], C_0, \pi_0) = 1$, thus by the soundess property of the VTD scheme $P_0$ is guaranteed of retrieving the commited discrete log value $x$ in $C_0$ that satisfies $[x] = [\mathsf{sk_{frz1(\mathbb{A})}}]$ after $T_0$ steps. \\
-Note that $P_0$ sets ${[\mathsf{sk_{frz1(\mathbb{A})}}]}$ with $\mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz0(\mathbb{A})}}]$, since $\mathsf{pk_{frz(\mathbb{A})}} := [\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}]$ and thus $[\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}] - [\mathsf{sk_{frz0(\mathbb{A})}}] = [\mathsf{sk_{frz1(\mathbb{A})}}]$
-\item $\Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}((\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1), \pi_2) = 1$, thus verifying that 
-    $\exists y \:\: \text{s.t} \:\: \mathcal{H}(y) = \mathsf{hsig} \land \Pi_\mathsf{VTD}.\mathsf{Verify}(\mathsf{pk_{frz}} - [\mathsf{sk_{frz1}}], (\mathsf{lk_0} \oplus y), \pi, T_1)$ \\
-    This checkes that $\sigma_\mathsf{rfnd(\mathbb{B})}$ is a valid witness for $\mathcal{L}_{\mathsf{lock}}$ and thus can be used to retrieve $C_1 := \sigma_\mathsf{rfnd(\mathbb{B})} \oplus \mathsf{lk_0}$, a commitment to a discrete log $[x] = [\mathsf{sk_{frz1}}]$ as above
-\end{itemize}
-
-Note that $P_1$ gains no information on $\mathsf{pk_{swp(\mathbb{B})}}$ and thus can retrieve $C_1$ from $\mathsf{lk_1}$ and force open it only after $\mathsf{tx_{swp}}$ has been published by $P_0$. Thus if the protocol faults or timeouts before $P_0$ publishes $\mathsf{tx_{swp(\mathbb{B})}}$, $P_1$ cannot retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$, resulting in the succesful execution of the timeout branch at $T_0$ and thus in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$. 
-
-Now assume $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$, resulting in $P_1$ obtaining $C_2$: the VTD scheme's privacy property guarantees that $P_1$ will retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$ only after time $T_2 > 2\mathbb{B}.\mathsf{ctime}  + \mathbb{A}.\mathsf{ctime}$. Now there are two possible outcomes: \\
-1) The swap transaction gets confirmed after $\mathbb{B}.\mathsf{ctime}$  \\
-2) $P_1$ tries to publish $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathsf{tx_{swp(\mathbb{B})}}$ is confirmed, resulting in a double spend attempt and in only one of $(\mathsf{tx_{rfnd(\mathbb{B})}}, \mathsf{tx_{swp(\mathbb{B})}}$ being accepted with roughly probability 1/2 for each
-
-If (1) occurs, $P_0$ owns $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$ and thus we are done. \\
-If (2) occurs, note that when $P_1$ posts the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$ $P_0$ will obtain the signature $\sigma_{\mathsf{tx_{rfnd}}}$ that hashes to $\mathcal{H}(\sigma_{\mathsf{tx_{rfnd}}}) = \mathsf{hsig}$  and thus successfully execute the EarlyRefund branch.
-
-Since $P_1$ needs to post $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathbb{B}.\mathsf{ctime}$ and $T_1 = \mathbb{B}.\mathsf{ctime}$, the EarlyRefund branch will complete in time strictly less than $2\mathbb{B}.\mathsf{ctime} + \mathbb{A}.\mathsf{ctime}$ after $P_1$ obtains $C_2$, so $P_0$ is guaranteed to publish and confirm $\mathsf{tx_{rfnd(\mathbb{A})}}$, resulting in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$.
-
-\subsection{Party $P_1$}
-We want to prove that $P_1$ at the end of a protocol run either holds $\mathsf{amnt_b}$ on $\mathsf{pk_{init(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{init(\mathbb{B})}}$ or they hold $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{A})}}$. \\
-
-After jointly generating $\mathsf{pk_{frz(\mathbb{A})}}$ with the 2PC protocol $\Gamma_{\mathsf{KeyGen}}$, $P_1$ commits $\mathsf{sk_{frz1}}$ with $\Pi_{\mathsf{VTD}}.\mathsf{Commit}(\mathsf{sk_{frz1}}, T_0)$. 
-The party proceeds to concurrently runs two execution paths denoted by $\textbf{wait}$, with one being the refund branch and the other performing the swap. We note that from this point onwards, if any routine in the swapping branch timeouts or faults, $P_1$ will keep executing the refund branch. \\
-
-The refund branch has a timeout 
-It then proceeds to wait until $\mathsf{amnt_a}$ has been transferred to $\mathsf{pk_{frz(\mathbb{A})}}$ and retrieves a tuple $(\pi_1, \pi_2, \mathsf{hpk}, lk)$ from $P_0$ and proceeds to run $\Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}((lk, \mathsf{pk_{frz}} - [\mathsf{sk_{frz1}}], \mathsf{hpk}, \pi_1, T_1), \pi_2)$, verifying that $\exists(pk) \:\: \text{s.t} \:\: \mathcal{H}(pk) = h \land \Pi_\mathsf{VTD}.\mathsf{Verify}(\mathsf{pk_{frz}} - [\mathsf{sk_{frz1}}], (lk \oplus pk), \pi, T_1)$. Thus $P_1$ now knows the hash value $hpk$ of a public key $pk$ that can unlock a timed commitment from $lk$ which holds a discrete log value $x$ that satisfies  $[x] = \mathsf{pk_{frz}} - [\mathsf{sk_{frz1}}] = [\mathsf{sk_{frz0}} + \mathsf{sk_{frz1}}] - [\mathsf{sk_{frz1}}] = [\mathsf{sk_{frz0}}]$, hence $x = \mathsf{sk_{frz0}}$.
-
-The parties then run the 2PC protocol $\Gamma_{\mathsf{Swap}}$ where $P_1$ signs $\mathsf{tx_{swp(\mathbb{B})}}$ (which is unknown by the 2PC input privacy property) unless $\mathcal{H}(\mathsf{tx_{swp}}.\mathsf{pk_{rx}}) \neq \mathsf{hpk} \lor  \mathsf{tx_{swp}}.\mathsf{amnt} \neq \mathsf{amnt_b}$, in which case it aborts from the protocol. \\
-
-Since $\mathcal{H}(\mathsf{tx_{swp(\mathbb{B})}}.\mathsf{pk_{rx}}) = \mathsf{hpk}$,  $\mathsf{pk_{rx}}$ is a valid witness for $\pi_2$ and can be retrieved as soon as $P_0$ publishes $\mathsf{tx_{swp(\mathbb{B})}}$, allowing $P_1$ to start force opening $C_1$. \\
-We have that $T_0 = s(\mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime})$ with $s$ being a scaling factor $s > 2$, assume $P_0$ waits until exactly $T_0/2$ before publishing $\mathsf{tx_{swp(\mathbb{B})}}$: $P_1$ force opens $C_1$ in $T_1 = \mathbb{B}.\mathsf{ctime})$ time, retrieves $\mathsf{sk_{frz0}}$ to sign and publish $\mathsf{tx_{swp(\mathbb{A})}}$ transferring $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{swp(\mathbb{A})}}$. The transaction will be confirmed in $\mathbb{A}.\mathsf{ctime}$ and the whole swapping process from $P_1$ completes in $\mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime} < \frac{T_0}{2}$, thus if $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ $P_1$ is guaranteed to successfly swap their assets resulting in $P_1$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$.
-
-Now assume instead that some routine in the protocol execution timed out or faulted, resulting in executing the refund branch: $P_1$ will generate a new key pair $(\mathsf{pk_{rfnd}}, \mathsf{sk_{rfnd}})$ on $\mathbb{B}$, and sign and publish
 
 \section{Open directions}
 
