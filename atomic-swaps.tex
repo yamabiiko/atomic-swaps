@@ -682,7 +682,7 @@ That is, after the protocol run there can be only two outcomes: \\
 \textbf{Definition 2} (Ownership): \textit{All parties gain exclusive knowledge of the secret keys of their respective wallets holding the exchanged or refunded assets upon completion of the protocol.} 
 \vspace{0.5em}
 \\
-That is after a successful protocol run $P_0$ owns $\mathsf{sk_{swp(\mathbb{B})}}$ and $P_1$ owns $\mathsf{sk_{swp(\mathbb{A})}}$, and respectively for the aborted swap  $\mathsf{sk_{init(\mathbb{A})}}$ and $\mathsf{sk_{init(\mathbb{B})}}$ or $\mathsf{sk_{rfnd(\mathbb{B})}}$. \\
+After a successful protocol run $P_0$ owns $\mathsf{sk_{swp(\mathbb{B})}}$ and $P_1$ owns $\mathsf{sk_{swp(\mathbb{A})}}$, and respectively for the aborted swap  $\mathsf{sk_{init(\mathbb{A})}}$ and $\mathsf{sk_{init(\mathbb{B})}}$ or $\mathsf{sk_{rfnd(\mathbb{B})}}$. \\
 
 We model the interaction in a zero trust setting: both parties are mutually distrusting and potentially malicious as they have an incentive to deceive the counter-party. \\
 We further assume that a party cannot deny the counter-party from transacting on the blockchain or performing local computations.
@@ -703,7 +703,7 @@ Note that $P_1$ gains no information on $\mathsf{pk_{swp(\mathbb{B})}}$ and thus
 
 Now assume $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$, resulting in $P_1$ obtaining $C_2$: the VTD scheme's privacy property guarantees that $P_1$ will retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$ only after time $T_2 > 2\mathbb{B}.\mathsf{ctime}  + \mathbb{A}.\mathsf{ctime}$. Now there are two possible outcomes: \\
 1) The swap transaction gets confirmed after $\mathbb{B}.\mathsf{ctime}$  \\
-2) $P_1$ tries to publish $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathsf{tx_{swp(\mathbb{B})}}$ is confirmed, resulting in a double spend attempt and in only one of $(\mathsf{tx_{rfnd(\mathbb{B})}}, \mathsf{tx_{swp(\mathbb{B})}}$ being accepted with roughly probability 1/2 for each
+2) $P_1$ tries to publish $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathsf{tx_{swp(\mathbb{B})}}$ is confirmed, resulting in a double spend attempt and in only one of $(\mathsf{tx_{rfnd(\mathbb{B})}}), \mathsf{tx_{swp(\mathbb{B})}}$ being accepted with roughly probability 1/2 for each
 
 If (1) occurs, $P_0$ owns $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$ and thus we are done. \\
 If (2) occurs, note that when $P_1$ posts the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$ $P_0$ will obtain the signature $\sigma_{\mathsf{tx_{rfnd}}}$ that hashes to $\mathcal{H}(\sigma_{\mathsf{tx_{rfnd}}}) = \mathsf{hsig}$  and thus successfully execute the Force Refund branch.
@@ -718,10 +718,10 @@ As we previosly stated, the protocol fails to guarantee the atomicity and owners
     \includegraphics[width=0.8\textwidth]{timeouts.png}
     \caption{Transaction racing between  $\mathsf{tx_{swp(\mathbb{B})}}$ and $\mathsf{tx_{rfnd(\mathbb{B})}}$}
 \end{figure}
-After the parties run 2PC $\Gamma_{\mathsf{Swap}}$ $P_0$ receives the signature on the swap transaction $\mathsf{tx_{swp(\mathbb{B})}}$. It can then proceed to wait until $P_1$ posts the refund $\mathsf{tx_{rfnd(\mathbb{B})}}$ and then immediately post $\mathsf{tx_{swp(\mathbb{B})}}$ and start force opening $C_1$, which can be retrieved using the refund signature with $C_1 := \mathsf{lk_0} \oplus \sigma_{\mathsf{tx_{rfnd(\mathbb{B})}}}$. On time $T_1$ the force opening completes and $P_0$ procceds to sign and publish $\mathsf{tx_{rfnd(\mathbb{A})}}$.
+After the parties run 2PC $\Gamma_{\mathsf{Swap}}$ $P_0$ receives the signature on the swap transaction $\mathsf{tx_{swp(\mathbb{B})}}$. It can then proceed to wait until $P_1$ posts the refund $\mathsf{tx_{rfnd(\mathbb{B})}}$ and then immediately post $\mathsf{tx_{swp(\mathbb{B})}}$ and start force opening $C_1$, which can be retrieved using the refund signature with $C_1 := \mathsf{lk_0} \oplus \sigma_{\mathsf{tx_{rfnd(\mathbb{B})}}}$. On time $T_1$ the force opening completes and $P_0$ proceeds to sign and publish $\mathsf{tx_{rfnd(\mathbb{A})}}$.
 
 Since only $\mathsf{tx_{swp(\mathbb{B})}}$ or $\mathsf{tx_{rfnd(\mathbb{B})}}$ will be confirmed on $\mathbb{B}$, with roughly probability $\frac{1}{2}$, $P_0$ breaks the atomicity property if the former is confirmed as they also obtain $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_1$ before $P_0$ and can thus successfully complete $\mathsf{tx_{rfnd(\mathbb{A})}}$. \\
-Note that $P_1$ can only obtain $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_2$ after $T_2$, which is strictly later than $T_1$. Inversely, if $T_2 < T_1$, $P_1$ can potentially cheat from the protocol in a similar fashion, performing a racing refund on $\mathbb{B}$ and swapping on $\mathsf{A}$ after they force open $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_2$ time. If the time gap between $T_2$ and $T_1$ is smaller than the blockchain's confirmation times, then both sides can potentially try to perfom a racing transaction.
+Note that $P_1$ can only obtain $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_2$ after $T_2$, which is strictly later than $T_1$. Inversely, if $T_2 < T_1$, $P_1$ can potentially cheat from the protocol in a similar fashion, performing a racing refund on $\mathbb{B}$ and swapping on $\mathbb{A}$ after they force open $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_2$. If the time gap between $T_2$ and $T_1$ is smaller than the blockchain's confirmation times, then both sides can potentially try to perfom a racing transaction.
 
 \newpage 
 \subsection{Racing transactions in Universal Atomic Swaps}
@@ -873,7 +873,7 @@ After timeout T, the commit transaction is considered expired, unfreezing the as
 
 We further define the following routines for blockchains that support commitment transaction.
 \begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
-	\item $\mathbf{ctx}_{\mathbb{A}} := (\mathsf{tx_{\mathbb{A}}}, C) \gets \mathbf{CommitTx}_{(\mathbb{A})}(C, \mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{T})$: creates an unsigned commit transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ valid until time $\mathsf{T}$, whith  $\mathsf{amnt}$ being locked from being spent on transactions from $\mathsf{pk_{tx}}$ until $\mathsf{T}$. The transaction can be later finalize by opening and broadcasting $C$ through $\mathsf{RevTx}$.
+	\item $\mathbf{ctx}_{\mathbb{A}} := (\mathsf{tx_{\mathbb{A}}}, C) \gets \mathbf{CommitTx}_{(\mathbb{A})}(C, \mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{T})$: creates an unsigned commit transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ valid until time $\mathsf{T}$, whith  $\mathsf{amnt}$ being locked from being spent on transactions from $\mathsf{pk_{tx}}$ until $\mathsf{T}$. The transaction can be later finalized by opening and broadcasting $C$ through $\mathsf{RevTx}$.
 \item $ \mathbf{0/1} \gets \mathbf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{ctx})$: open the (on-chain) committed transaction $\mathsf{ctx}$ by revealing the commited secret $\mathsf{sec}$. Return 0 if the opening fails or the timeout on $\mathsf{ctx}$ has expired. If the revealing succeeds, return 1 and finalize $\mathsf{ctx}$.
 \end{itemize}
 
