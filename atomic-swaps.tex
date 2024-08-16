@@ -8,7 +8,7 @@
 \usepackage{graphicx}       		% Graphics package for adding figures                        
 \usepackage{epstopdf}       		% Possibility to add *.eps figures
  \usepackage{ dsfont }            % Symbol for real numbers
-\usepackage{hyperref}
+\usepackage[hidelinks]{hyperref}
 \usepackage{extarrows}
 \usepackage{float}
 \usepackage{makeidx}
@@ -333,6 +333,15 @@ We investigated whether a new atomic swap protocol with an asymmetric design can
 This approach allows to centralize the computation burden and reduces the requirements on the client side, however we found it to fail to preserve the atomicity property, as the server can deviate from the protocol by trying to race a swapping transaction on chain $\mathbb{B}$ with a client's refund transaction. \\
 We further analyzed whether such racing transactions can occur in the protocol proposed by Thyagarajan et al. \cite{uas}, finding it to fail to take into account two possible racing conditions, which can be fixed by placing additional time constraint on $P_0$ and a force swap refund mechanism for $P_1$.
 
+We also identified several directions for future research:
+\begin{itemize}
+	\item algorithmically evaluating alternative one-sided timed commitment protocols by constructing transaction "locks" and defining mutual exclusion constraints on transactions
+	\item enhancing the Verifiable Timed Discretelog ($\mathsf{VTD}$) scheme to address time unverifiability
+	\item evaluating trusted setup operation for the $\mathsf{VTD}$ scheme in a Peer-to-Peer setting
+	\item precise evaluation of computational advantages in solving timelock puzzles
+	\item realization of atomic swap protocols using the commit transaction blockchain functionality defined in the Appendix, particularly on ledgers using a private transaction scheme 
+\end{itemize}
+A detailed description can be found in  \autoref{open_directions}.
 \section{Preliminaries}
 
 \subsection{Notation}
@@ -409,6 +418,13 @@ A non-interactive zero-knowledge proof (NIZK) system for R consist of the follow
 \end{itemize}
 We require a NIZK system to be \textit{zero-knowledge}, where the verifier does not learn more than the validity of the statement $x$, and \textit{simulation sound} where it is hard for any prover
 to convince a verifier of an invalid statement (chosen by the prover) even after having access to polynomially many simulated proofs for statements of his choosing.
+
+
+\subsection{Secure 2-Party Computation}
+A secure 2-party computa-tion (2PC) protocol allows two participating users $P_0$ and $P_1$ to securely compute some function $f$ over their private inputs $x_0$ and $x_1$ respectively.
+
+We require the standard $privacy$ property, which states that the only information learned by the parties in the computation is that specified by the function output.
+We also require the standard security with aborts, where the adversary can decide whether the honest party will receive the output of the computation or not, and thus there are no assumptions on fairness or guaranteed output delivery.
 
 
 \section{Protocol description}
@@ -670,7 +686,10 @@ We give the full protocol definition in figure 3.
 
 \section{Security analysis}
 
-\subsubsection*{Security definitions}
+We model the interaction in a zero trust setting: both parties are mutually distrusting and potentially malicious as they have an incentive to deceive the counter-party. \\
+We further assume that a party cannot deny the counter-party from transacting on the blockchain or performing local computations.
+
+A secure atomic swap protocol must satisfy the following security properties.
 
 \textbf{Definition 1} (Atomicity): \textit{Either both parties successfully exchange each other's assets or neither party performs a successful swap.}
 \vspace{0.5em}
@@ -682,10 +701,7 @@ That is, after the protocol run there can be only two outcomes: \\
 \textbf{Definition 2} (Ownership): \textit{All parties gain exclusive knowledge of the secret keys of their respective wallets holding the exchanged or refunded assets upon completion of the protocol.} 
 \vspace{0.5em}
 \\
-After a successful protocol run $P_0$ owns $\mathsf{sk_{swp(\mathbb{B})}}$ and $P_1$ owns $\mathsf{sk_{swp(\mathbb{A})}}$, and respectively for the aborted swap  $\mathsf{sk_{init(\mathbb{A})}}$ and $\mathsf{sk_{init(\mathbb{B})}}$ or $\mathsf{sk_{rfnd(\mathbb{B})}}$. \\
-
-We model the interaction in a zero trust setting: both parties are mutually distrusting and potentially malicious as they have an incentive to deceive the counter-party. \\
-We further assume that a party cannot deny the counter-party from transacting on the blockchain or performing local computations.
+After a successful protocol run $P_0$ owns $\mathsf{sk_{swp(\mathbb{B})}}$ and $P_1$ owns $\mathsf{sk_{swp(\mathbb{A})}}$, and respectively for the aborted swap  $\mathsf{sk_{init(\mathbb{A})}}$ and $\mathsf{sk_{init(\mathbb{B})}}$ or $\mathsf{sk_{rfnd(\mathbb{B})}}$.
 
 \subsection{Party $P_0$}
 We want to prove that $P_0$ at the end of a protocol run either holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ with exclusive knowledge of $\mathsf{sk_{init(\mathbb{A})}}$ or they hold $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$. \\
@@ -832,6 +848,7 @@ We present the revised protocol in figure 7.
 
 
 \section{Open directions}
+\label{open_directions}
 
 In this section, we outline several avenues for future research and development that build upon the work presented in this report. These open directions address both theoretical and practical aspects of the topic, suggesting pathways for further exploration and improvement.
 \subsection*{One-sided commitments protocols}
