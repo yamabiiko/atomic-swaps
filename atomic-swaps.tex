@@ -912,10 +912,8 @@ By assuming this functionality on both chains we can now realize the following a
     \quad \} \\
     \quad \mathsf{\textbf{wait}} \:\: \{ \\
     \qquad \mathsf{send}(\mathsf{ctx_{(\mathbb{A})}}) \\
-    \qquad \mathsf{receive}(\mathsf{ctx_{(\mathbb{B})}}) \\
-    \qquad \mathsf{res_1} \gets \mathsf{\textbf{wait}} \:\: \mathsf{WatchTx}_{(\mathbb{B})}(\mathsf{ctx}) \\
-    \qquad \mathsf{\textbf{if}} \:\: \mathsf{ctx}_{(\mathbb{B})}.C \neq C_0 \lor \mathsf{ctx}_{(\mathbb{B})}.T \neq T \lor \mathsf{res_1} \neq 1 \\ % verify that commit transaction is valid and accepted
-    \qquad \quad \mathsf{\textbf{return}} \perp \\
+    \qquad \textbf{do} \:\: \mathsf{ctx_{(\mathbb{B})}} \gets \mathsf{\textbf{wait}} \:\: \mathsf{GetLatestTx}_{(\mathbb{B})}(\mathsf{pk_{init}}) \\
+    \qquad \mathsf{\textbf{while}} \:\: \mathsf{ctx}_{(\mathbb{B})}.C \neq C_0 \lor \mathsf{ctx}_{(\mathbb{B})}.T \neq T \lor \mathsf{res_1} \neq 1 \\ % verify that commit transaction is valid and accepted
     \qquad \mathsf{rtx_{swp(\mathbb{B})}} \gets \mathsf{RevTx}_{(\mathbb{B})}(\mathsf{sec}, \mathsf{ctx}) \\
     \quad \} \\
     \} \\
@@ -937,8 +935,8 @@ By assuming this functionality on both chains we can now realize the following a
     \qquad \mathsf{\textbf{if}} \:\: \mathsf{ctx_{(\mathbb{A})}}.T \neq T + \Delta \lor \mathsf{res_0} \neq 1 \\ % verify that commit transaction is valid and accepted
     \qquad \quad \mathsf{\textbf{return}} \perp \\
     \qquad \mathsf{ctx}_{(\mathbb{B})} \gets \mathsf{CommitTx}_{(\mathbb{B})}(C_0, \mathsf{pk_{init}}, \mathsf{pk_{swp}}, \mathsf{amnt_b}, T) \\
-    \qquad \mathsf{send}(\mathsf{ctx}_{(\mathbb{B})}) \\
-    \qquad \mathsf{rtx_{swp(\mathbb{B})}} \gets \mathsf{\textbf{wait}} \:\: \mathsf{GetLatestTx}_{(\mathbb{B})}(\mathsf{pk_{swp}}) \\
+    \qquad \textbf{do} \:\: \mathsf{rtx_{swp(\mathbb{B})}} \gets \mathsf{\textbf{wait}} \:\: \mathsf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk_{swp}}) \\
+    \qquad \textbf{while} \:\: \mathsf{rtx_{swp(\mathbb{B})}}.\mathsf{rev} = \perp \\
     \qquad \mathsf{sec} := \mathsf{rtx_{swp(\mathbb{B})}}.\mathsf{rev} \\
     \qquad \mathsf{rtx_{swp(\mathbb{A})}} \gets \mathsf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{ctx}) \\
     \quad \} \\
