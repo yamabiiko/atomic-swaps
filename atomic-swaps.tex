@@ -1,6 +1,7 @@
 \documentclass{article}      	% Style of the document                     
 \usepackage{fullpage}
-\usepackage{amsmath}     	   	% Maths                                          
+\usepackage{amsmath,amsthm}     	   	% Maths    
+\newtheorem{definition}{Definition}                                      
 \usepackage[utf8]{inputenc}	% UTF-8 characters                                               
 \usepackage[T1]{fontenc}    	% Tuki ääkkösille (Finnish names don't cause problems)                                            
 \usepackage{parskip}        		% Linebreak between paragraphs                
@@ -8,7 +9,6 @@
 \usepackage{graphicx}       		% Graphics package for adding figures                        
 \usepackage{epstopdf}       		% Possibility to add *.eps figures
  \usepackage{ dsfont }            % Symbol for real numbers
-\usepackage[hidelinks]{hyperref}
 \usepackage{extarrows}
 \usepackage{float}
 \usepackage{makeidx}
@@ -36,6 +36,12 @@
 \usepackage{todonotes}
 
  \usepackage{amsmath,amsfonts,graphicx,amssymb,amsthm}
+
+
+\usepackage[bookmarksdepth=2,draft=false]{hyperref}
+\hypersetup{colorlinks=true,linkcolor={red!50!black},citecolor=darkgray,linkcolor=darkgray}
+\usepackage[capitalize]{cleveref}
+
 \mathchardef\mhyphen="2D
 
  %% general
@@ -174,16 +180,18 @@ Blockchains are distributed ledgers managed by peer-to-peer computer networks ca
 Given the increasing number of blockchain systems, one of the most critical features in the cryptocurrency landscape is blockchain interopability, particularly the ability to exchange heterogeneous assets between different ledgers while maintining the trustless and decentralized properties of the individual chains. 
 
 An atomic cross-chain swap is an exchange of assets across different blockchains between two users without any additional trust assumption. 
-Consider two ledgers $\mathbb{A}$ and $\mathbb{B}$, where Alice holds assets $a$ in $\mathbb{A}$ and Bob holds assets $b$ in $\mathbb{B}$. We want to ensure that Alice transfers her assets $a$ in $\mathbb{B}$ to Bob if and only if Bob transfers his asset $b$ to Alice in $\mathbb{B}$.
+Consider two ledgers $\mathbb{A}$ and $\mathbb{B}$, where Alice holds assets $a$ in $\mathbb{A}$ and Bob holds assets $b$ in $\mathbb{B}$. We want to ensure that Alice transfers her assets $a$ in $\mathbb{A}$ to Bob if and only if Bob transfers his asset $b$ to Alice in $\mathbb{B}$.
 
 The word \textit{atomic} implies that the protocol execution can result in only two possible outcomes: \\
 1) the asset swap is successful, resulting in Bob owning $a$ in $\mathbb{A}$ and Alice owning $b$ in $\mathbb{B}$ \\
 2) the swap aborts, leading to a refund of the assets and thus in Alice retaining $a$ in $\mathbb{A}$ and Bob $b$ in $\mathbb{B}$ 
 
-In order to realize such functionality, protocols follow a standard blueprint where funds from a party are placed in a frozen state from which the assets either will be swapped to the counter-party or refunded after a certain timeout. \\
+In order to realize such functionality, protocols follow a standard blueprint where funds from a party are placed in a frozen state from which the assets either will be swapped to the counter-party or refunded after a certain timeout. 
 Protocols can either rely on the scripting language of the underlying blockchain using timelocks or on cryptographic timed commitments, where secrets are commited under a cryptographic puzzle that can be solved after a certain number of sequential operations. 
-While timelocks can be an effective building block in order to a realize an atomic swap protocol, the set of blockchains supporting such functionality is restricted, and it excludes privacy chains such as Monero or Zcash. Furthermore, transactions incure in higher execution costs due to scripting, and generate additional on-chain data that can potentially compromise privacy. \\
-On the other hand, cryptographic puzzles impose a computation burden on users, which are incentivized to make worst-case estimates for the counterparty's computational power that can be orders of magnitude faster when accounting for novel algorithms \cite{squaring_algo} and application-specific integrated circuits (ASIC) \cite{squaring_asic}. \\
+
+While timelocks can be an effective building block in order to a realize an atomic swap protocol, the set of blockchains supporting such functionality is restricted, and it excludes privacy chains such as Monero or Zcash. Furthermore, transactions incure in higher execution costs due to scripting, and generate additional on-chain data that can potentially compromise privacy. 
+
+On the other hand, cryptographic puzzles impose a computation burden on users, which are incentivized to make worst-case estimates for the counterparty's computational power that can be orders of magnitude faster when accounting for novel algorithms \cite{squaring_algo} and application-specific integrated circuits (ASIC) \cite{squaring_asic}. 
 This results in a potentially impractical protocol, as parties may need to uninterruptedly compute a force opening for a significant amount of time on conventional hardware.
 
 In this work we investigate whether such a computational burden can be restricted to one party, acting as an exchange server, by using a single refund timeout. Furthermore, we evaluate whether existing protocols take into account different blockchain confirmation time when setting timeouts for cryptographic timed commitments to prevent potential transaction racing attacks.
@@ -235,9 +243,11 @@ Specifically, a Hash Time Lock Contract (HTLC) is defined by a tuple $(\mathsf{a
 The HTLC transfers $\mathsf{amnt_a}$ to $\mathsf{pk_1}$ if invoked before timeout $T$ with input value $r$ such that $\mathcal{H}(r) = h$. 
 If the contract is invoked after timeout $T$, it refunds the assets $\mathsf{amnt_a}$ to $\mathsf{pk_0}$ unconditionally.
 
-Using HTLCs as a building block, an atomic swap protocol can be constructed as follows: \\
-1) Alice chooses $r$, computes $h = \mathcal{H}(r)$, transfers $\mathsf{amnt_a}$ into an $(\mathsf{amnt_a}, h, T_0, \mathsf{pk_0}, \mathsf{pk_1})$ on blockchain $\mathbb{A}$ and sends $h,T$ to Bob. \\
-2) Bob finishes the setup of the exchange by choosing a time $T_1 < T_0$ and transferring his $\mathsf{amnt_b}$ assets into an HTLC$(\mathsf{amnt_b}, h, T_1, \mathsf{pk_{tx}}, \mathsf{pk_{rx}})$ on blockchain $\mathbb{B}$. 
+Using HTLCs as a building block, an atomic swap protocol can be constructed as follows: 
+\begin{enumerate}
+    \item Alice chooses $r$, computes $h = \mathcal{H}(r)$, transfers $\mathsf{amnt_a}$ into an $(\mathsf{amnt_a}, h, T_0, \mathsf{pk_0}, \mathsf{pk_1})$ on blockchain $\mathbb{A}$ and sends $h,T$ to Bob.
+    \item Bob finishes the setup of the exchange by choosing a time $T_1 < T_0$ and transferring his $\mathsf{amnt_b}$ assets into an HTLC$(\mathsf{amnt_b}, h, T_1, \mathsf{pk_{tx}}, \mathsf{pk_{rx}})$ on blockchain $\mathbb{B}$. 
+\end{enumerate}
 
 Bob cannot claim the HTLC yet as $r$ is only known by Alice, thus there are only two possible outcomes:
 \begin{itemize}
@@ -245,7 +255,7 @@ Bob cannot claim the HTLC yet as $r$ is only known by Alice, thus there are only
 \item Alice does not claim the HTLC on $\mathbb{B}$ in time and thus Bob cannot claim the HTLC on $\mathbb{A}$. After the respective timeouts they can refund the assets by invoking the contracts.
 \end{itemize}
 
-This functionality can be achieved without requiring complex scripting functionality \cite{h4sh3d} using semi-scriptless scripts. \\
+This functionality can be achieved without requiring complex scripting functionality \cite{h4sh3d} using semi-scriptless scripts. 
 Additionally, a similar protocol can also be realized even if only one blockchain supports HTLCs or timelocks, as realized in the protocol proposed by Gugger \cite{h4sh3d} in the Monero counterpart.
 
 %\todo[inline]{explain (splitting secret key, BTC party needs to move first)}
@@ -316,8 +326,8 @@ The core building block utilized are Verifiable Timed Signatures (VTS) \cite{vts
 
 Let $P_0$ and $P_1$ be two parties where $P_0$ wants to exchange $\mathsf{amnt_a}$ on blockchain $\mathbb{A}$ from their address $\mathsf{pk_{init(\mathbb{A})}}$ for $\mathsf{amnt_b}$ on blockchain $\mathbb{B}$ to $\mathsf{pk_{swp(\mathbb{B})}}$ and vice-versa for $P_1$.
 
-In the setup phase of the protocol, the parties run a 2PC protocol to setup two freeze addresses on the respective chains $\mathsf{pk_{frz(\mathbb{A})}}$ and $\mathsf{pk_{frz(\mathbb{B})}}$, where each party posseses one share of the respective secret keys, e.g. $\mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0}} \oplus  \mathsf{sk_{frz1}}$. \\
-Now the parties create a refund transaction transferring back the assets in case of timeout, for $P_0$ we have $\mathsf{tx_{rfnd(\mathbb{A})}}$ refunding $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{init(\mathbb{A})}}$ and similarly for $P_1$ $\mathsf{tx_{rfnd(\mathbb{B})}}$. \\
+In the setup phase of the protocol, the parties run a 2PC protocol to setup two freeze addresses on the respective chains $\mathsf{pk_{frz(\mathbb{A})}}$ and $\mathsf{pk_{frz(\mathbb{B})}}$, where each party posseses one share of the respective secret keys, e.g. $\mathsf{sk_{frz(\mathbb{A})}} := \mathsf{sk_{frz0}} \oplus  \mathsf{sk_{frz1}}$. 
+Now the parties create a refund transaction transferring back the assets in case of timeout, for $P_0$ we have $\mathsf{tx_{rfnd(\mathbb{A})}}$ refunding $\mathsf{amnt_a}$ from $\mathsf{pk_{frz(\mathbb{A})}}$ to $\mathsf{pk_{init(\mathbb{A})}}$ and similarly for $P_1$ $\mathsf{tx_{rfnd(\mathbb{B})}}$. 
 Each party generates a timed commitment on the signature of the counterparty's refund transaction, where $P_0$ receives a $\mathsf{VTS}$ with commitment $C_0$ and timeout $T_0 = T_1 + \Delta$ and $P_1$ receives a $\mathsf{VTS}$ with commitment $C_1$ and timeout $T_1$. Once both $\mathsf{VTS}$ commitment are verified the parties proceed to transfer the assets to the freeze addresses, assured to retrieve the refund transaction signatures after force opening the commitments with timeouts $T_0$ and $T_1$.
 
 In the subsequential lock phase, parties first initialize the swap transactions $\mathsf{tx_{swp}}$ transferring $\mathsf{amnt}$ from $\mathsf{pk_{frz}}$ to $\mathsf{pk_{swp}}$ for the respective chains. They then compute via 2PC $\mathsf{lk} := \sigma_{\mathsf{swp}(\mathbb{A})} \oplus \mathcal{H}(\sigma_{\mathsf{swp}(\mathbb{B})})$, where  $P_0$ receives $\sigma_{\mathsf{swp}(\mathbb{B})}$ and $P_1$ receives $\mathsf{lk}$.  When $P_0$ publishes $\mathsf{tx_{swp(\mathbb{B})}}$ together with  $\sigma_{\mathsf{swp}(\mathbb{B})}$, $P_1$ can unmask $\mathsf{lk}$ by computing $\mathcal{H}(\sigma_{\mathsf{swp}(\mathbb{B})})$ to retrieve $\sigma_{\mathsf{swp}(\mathbb{A})}$ and publish $\mathsf{tx_{swp(\mathbb{A})}}$.
@@ -329,8 +339,11 @@ Note that parties must also take into account potential differences in the compu
 
 \subsection{Results}
 
-We investigated whether a new atomic swap protocol with an asymmetric design can be realized in order to reduce computational requirements. In the proposed protocol, one party acts as an exchange server, responsible for force opening a refund timed commitment with timelock $T_0$ in case of a protocol timeout. The other party, acting as the client, is only required to compute a timed commitment $T_2$ to enforce a swap if the server becomes uncooperative at the end of protocol. The role division minimizes computing power requirements and computations performed in a protocol run. \\
-This approach allows to centralize the computation burden and reduces the requirements on the client side, however we found it to fail to preserve the atomicity property, as the server can deviate from the protocol by trying to race a swapping transaction on chain $\mathbb{B}$ with a client's refund transaction. \\
+We investigated whether a new atomic swap protocol with an asymmetric design can be realized in order to reduce computational requirements. In the proposed protocol, one party acts as an exchange server, responsible for force opening a refund timed commitment with timelock $T_0$ in case of a protocol timeout. The other party, acting as the client, is only required to compute a timed commitment $T_2$ to enforce a swap if the server becomes uncooperative at the end of protocol. The role division minimizes computing power requirements and computations performed in a protocol run. 
+
+
+This approach allows to centralize the computation burden and reduces the requirements on the client side, however we found it to fail to preserve the atomicity property, as the server can deviate from the protocol by trying to race a swapping transaction on chain $\mathbb{B}$ with a client's refund transaction. 
+
 We further analyzed whether such racing transactions can occur in the protocol proposed by Thyagarajan et al. \cite{uas}, finding it to fail to take into account two possible racing conditions, which can be fixed by placing additional time constraint on $P_0$ and a force swap refund mechanism for $P_1$.
 
 We also identified several directions for future research:
@@ -348,15 +361,15 @@ A detailed description can be found in  \autoref{open_directions}.
 
 In order to encode the concurrent execution of routines in an asynchronous setting, we use the following notation in the protocol's pseudocode definition.
 \begin{itemize}[nosep, noitemsep]
-    \item $\mathbf{wait} \: \mathsf{fn}()$ - waits until the routine $\mathsf{fn}()$ execution is complete. If the routine $\mathsf{fn}()$ returns $\perp$, immediately abort from the execution block returning $\perp$. \\
-    \item $\mathbf{wait} \: \{...\}$ - enforces $\mathbf{wait}$ to all asynchonous routines inside the execution block. \\
-    \item $\mathbf{select} \: \{...\}$ - concurrently runs multiple asynchronous $\mathbf{wait}$ routines in the block and returns the value of the first routine that successfully returns a value or $\perp$ if all the $\mathbf{wait}$ routines aborted with $\perp$. When a $\mathbf{wait}$ routine aborts returning $\perp$, it waits until execution of another $\mathbf{wait}$ is successfully completed. \\
+    \item $\mathbf{wait} \: \mathsf{fn}()$ - waits until the routine $\mathsf{fn}()$ execution is complete. If the routine $\mathsf{fn}()$ returns $\perp$, immediately abort from the execution block returning $\perp$. 
+    \item $\mathbf{wait} \: \{...\}$ - enforces $\mathbf{wait}$ to all asynchonous routines inside the execution block. 
+    \item $\mathbf{select} \: \{...\}$ - concurrently runs multiple asynchronous $\mathbf{wait}$ routines in the block and returns the value of the first routine that successfully returns a value or $\perp$ if all the $\mathbf{wait}$ routines aborted with $\perp$. When a $\mathbf{wait}$ routine aborts returning $\perp$, it waits until execution of another $\mathbf{wait}$ is successfully completed. 
 \end{itemize}
 
 All routines that access network channels (for example, when accessing the blockchain interface or running a 2PC with another party) are asynchronous, as they potentailly take an unknown time to complete.
 
-In the protocol definition, variables and routines that are blockchain-specific are denoted with a subscript, unless clear from context. \\
-That is, a public key on chain $\mathbb{B}$ is denoted by $\mathsf{pk_{(\mathbb{B})}}$. \\
+In the protocol definition, variables and routines that are blockchain-specific are denoted with a subscript, unless clear from context. 
+That is, a public key on chain $\mathbb{B}$ is denoted by $\mathsf{pk_{(\mathbb{B})}}$. 
 
 \subsection{Blockchains}
 
@@ -366,7 +379,7 @@ We define the following routines to interact with the blockchains. The subscript
     \item $\mathbf{0/1} \gets \mathbf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$: publish the transaction $\mathsf{tx}$ with signature $\sigma_{\mathsf{tx}}$. Outputs 1 if the transaction is accepted, 0 otherwise.
     \item $\mathbf{tx}_{\mathbb{A}} := (\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{id})  \gets \mathbf{InitTx}_{(\mathbb{A})}(\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt})$: creates an unsigned transaction with the unique identifier $\mathsf{id}$ paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$.
     \item $\mathbf{0/1} \gets \mathbf{VerifyTx}_{(\mathbb{A})}(\sigma_{\mathsf{tx}}, \mathsf{tx})$: verifies the signature of the transaction and the validity of the transaction based on consensus rules. Outputs 1 if the verification succeeds, 0 otherwise.
-    \item $\mathbf{0/1} \gets \mathbf{WatchTx}_{(\mathbb{A})}(\mathsf{tx})$ Returns 0 if the transaction $\mathsf{tx}$ is not on the chain or rejected, 1 if the transaction is unconfirmed. If a transaction is on the chain record but still unconfirmed, wait until the transaction is finalized.
+    \item $\mathbf{0/1} \gets \mathbf{WatchTx}_{(\mathbb{A})}(\mathsf{tx})$: Returns 0 if the transaction $\mathsf{tx}$ is not on the chain or rejected, 1 if the transaction is unconfirmed. If a transaction is on the chain record but still unconfirmed, wait until the transaction is finalized.
     \item $\mathbf{amnt} \gets \mathbf{GetBal}_{(\mathbb{A})}(\mathsf{pk})$: get the balance of assets held by $\mathsf{pk}$
     \item $(\sigma_{\mathsf{tx}}, \mathsf{tx}) \gets \mathbf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk})$: get the the latest confirmed transaction and its signature from $\mathsf{pk}$'s record on the chain.
     \item $(\mathbf{tx}_{\mathbb{A}}, \mathbf{0/1})  \gets \mathbf{FullTx}_{(\mathbb{A})}(\mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{sk_{tx}})$: initializes a transaction, signs it with the given secret key and publishes it to the chain. Returns the transaction $\mathbf{tx}_{\mathbb{A}}$ and 1 if the transaction is accepted, 0 otherwise.
@@ -379,10 +392,10 @@ We require the standard safety and liveness security properties for the blockcha
 \subsection{Verifiable Timed Dlog}
 A $\mathsf{VTD}$ for the group $\mathbb{G}$ with generator $G$ and order $q$ is a tuple of four algorithms ($\mathsf{Commit}, \mathsf{Verify}, \mathsf{Open}, \mathsf{ForceOp}$) where:
 \begin{itemize}
-	\item $(C, \pi) \gets \mathsf{Commit}(x, \textbf{T}$ ): the commit algorithm (randomized) takes as input a discrete log value $x \in \mathbb{Z}_q$ generated using $\mathsf{KGen}(1^{\lambda}$ ) and a hiding time $\textbf{T}$ and outputs a commitment $C$ and a proof $\pi$
-	\item $0/1 \gets \mathsf{Verify}(H, C, \pi)$ : the verify algorithm takes as input a group element $H$ , a commitment $C$ of hardness $\textbf{T}$ and a proof $\pi$ and outputs 1 if and only if, the value $x$ embedded in $C$ satisfies $H = G^x$ . Otherwise it outputs 0.
-	\item $(x, r) \gets \mathsf{Open(C)}$ : the open algorithm (run by committer) takes as input a commitment $C$ and outputs the committed value $x$ and the randomness $r$ used in generating $C$ .
-	\item $x \gets \mathsf{ForceOp}(C)$ : the force open algorithm takes as input the commitment $C$ and outputs the committed value $x$ and the randomness $r$ used in generating $C$
+	\item $(C, \pi) \gets \mathsf{Commit}(x, \textbf{T})$: the commit algorithm (randomized) takes as input a discrete log value $x \in \mathbb{Z}_q$ generated using $\mathsf{KGen}(1^{\lambda}$ ) and a hiding time $\textbf{T}$ and outputs a commitment $C$ and a proof $\pi$
+	\item $0/1 \gets \mathsf{Verify}(H, C, \pi)$: the verify algorithm takes as input a group element $H$ , a commitment $C$ of hardness $\textbf{T}$ and a proof $\pi$ and outputs 1 if and only if, the value $x$ embedded in $C$ satisfies $H = G^x$ . Otherwise it outputs 0.
+	\item $(x, r) \gets \mathsf{Open(C)}$: the open algorithm (run by committer) takes as input a commitment $C$ and outputs the committed value $x$ and the randomness $r$ used in generating $C$ .
+	\item $x \gets \mathsf{ForceOp}(C)$: the force open algorithm takes as input the commitment $C$ and outputs the committed value $x$ and the randomness $r$ used in generating $C$
 \end{itemize}
 
 
@@ -686,42 +699,49 @@ We give the full protocol definition in figure 3.
 
 \section{Security analysis}
 
-We model the interaction in a zero trust setting: both parties are mutually distrusting and potentially malicious as they have an incentive to deceive the counter-party. \\
+We model the interaction in a zero trust setting: both parties are mutually distrusting and potentially malicious as they have an incentive to deceive the counter-party. 
 We further assume that a party cannot deny the counter-party from transacting on the blockchain or performing local computations.
 
 A secure atomic swap protocol must satisfy the following security properties.
 
-\textbf{Definition 1} (Atomicity): \textit{Either both parties successfully exchange each other's assets or neither party performs a successful swap.}
-\vspace{0.5em}
-\\
-That is, after the protocol run there can be only two outcomes: \\
-1) $P_0$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ and $P_1$ holds $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$ (successful swap) \\
-2) $P_0$ holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ and $P_1$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{init(\mathbb{B})}}$ or $\mathsf{pk_{rfnd(\mathbb{B})}}$ (swap aborted) \\
+\begin{definition}[Atomicity]
+    Either both parties successfully exchange each other's assets or neither party performs a successful swap.
+\end{definition}
 
-\textbf{Definition 2} (Ownership): \textit{All parties gain exclusive knowledge of the secret keys of their respective wallets holding the exchanged or refunded assets upon completion of the protocol.} 
-\vspace{0.5em}
-\\
+That is, after the protocol run there can be only two outcomes: 
+\begin{enumerate}
+    \item $P_0$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ and $P_1$ holds $\mathsf{amnt_a}$ on $\mathsf{pk_{swp(\mathbb{A})}}$ (successful swap)
+    \item $P_0$ holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ and $P_1$ holds $\mathsf{amnt_b}$ on $\mathsf{pk_{init(\mathbb{B})}}$ or $\mathsf{pk_{rfnd(\mathbb{B})}}$ (swap aborted)
+\end{enumerate}
+
+\begin{definition}[Ownership]
+    All parties gain exclusive knowledge of the secret keys of their respective wallets holding the exchanged or refunded assets upon completion of the protocol.
+\end{definition}
+
 After a successful protocol run $P_0$ owns $\mathsf{sk_{swp(\mathbb{B})}}$ and $P_1$ owns $\mathsf{sk_{swp(\mathbb{A})}}$, and respectively for the aborted swap  $\mathsf{sk_{init(\mathbb{A})}}$ and $\mathsf{sk_{init(\mathbb{B})}}$ or $\mathsf{sk_{rfnd(\mathbb{B})}}$.
 
 \subsection{Party $P_0$}
-We want to prove that $P_0$ at the end of a protocol run either holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ with exclusive knowledge of $\mathsf{sk_{init(\mathbb{A})}}$ or they hold $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$. \\
+We want to prove that $P_0$ at the end of a protocol run either holds $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$ with exclusive knowledge of $\mathsf{sk_{init(\mathbb{A})}}$ or they hold $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$. 
 
 $P_0$ then completes the setup phase and continues execution of the protocol only if both the following conditions are satisfied: 
 \begin{itemize}
-\item $\Pi_{\mathsf{VTD}}.\mathsf{Verify}([\mathsf{sk_{frz1(\mathbb{A})}}], C_0, \pi_0) = 1$, thus by the soundess property of the VTD scheme $P_0$ is guaranteed of retrieving the commited discrete log value $x$ in $C_0$ that satisfies $[x] = [\mathsf{sk_{frz1(\mathbb{A})}}]$ after $T_0$ steps. \\
-Note that $P_0$ sets ${[\mathsf{sk_{frz1(\mathbb{A})}}]}$ with $\mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz0(\mathbb{A})}}]$, since $\mathsf{pk_{frz(\mathbb{A})}} := [\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}]$ and thus $[\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}] - [\mathsf{sk_{frz0(\mathbb{A})}}] = [\mathsf{sk_{frz1(\mathbb{A})}}]$
-\item $\Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}((\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1), \pi_2) = 1$, thus verifying that 
-    $\exists y \:\: \text{s.t} \:\: \mathcal{H}(y) = \mathsf{hsig} \land \Pi_\mathsf{VTD}.\mathsf{Verify}(\mathsf{pk_{frz}} - [\mathsf{sk_{frz1}}], (\mathsf{lk_0} \oplus y), \pi, T_1)$ \\
-    This checkes that $\sigma_\mathsf{rfnd(\mathbb{B})}$ is a valid witness for $\mathcal{L}_{\mathsf{lock}}$ and thus can be used to retrieve $C_1 := \sigma_\mathsf{rfnd(\mathbb{B})} \oplus \mathsf{lk_0}$, a commitment to a discrete log $[x] = [\mathsf{sk_{frz1}}]$ as above
+    \item $\Pi_{\mathsf{VTD}}.\mathsf{Verify}([\mathsf{sk_{frz1(\mathbb{A})}}], C_0, \pi_0) = 1$, thus by the soundess property of the VTD scheme $P_0$ is guaranteed of retrieving the commited discrete log value $x$ in $C_0$ that satisfies $[x] = [\mathsf{sk_{frz1(\mathbb{A})}}]$ after $T_0$ steps. 
+    Note that $P_0$ sets ${[\mathsf{sk_{frz1(\mathbb{A})}}]}$ with $\mathsf{pk_{frz(\mathbb{A})}} - [\mathsf{sk_{frz0(\mathbb{A})}}]$, since $\mathsf{pk_{frz(\mathbb{A})}} := [\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}]$ and thus $[\mathsf{sk_{frz0(\mathbb{A})}} + \mathsf{sk_{frz1(\mathbb{A})}}] - [\mathsf{sk_{frz0(\mathbb{A})}}] = [\mathsf{sk_{frz1(\mathbb{A})}}]$.
+    \item $\Pi_{\mathsf{ZK}\mathcal{L}_{\mathsf{lock}}}.\mathsf{Vr}((\mathsf{lk_0}, {[\mathsf{sk_{frz1(\mathbb{A})}}]}, \mathsf{hsig}, \pi_1, T_1), \pi_2) = 1$, thus verifying that 
+    $\exists y \:\: \text{s.t} \:\: \mathcal{H}(y) = \mathsf{hsig} \land \Pi_\mathsf{VTD}.\mathsf{Verify}(\mathsf{pk_{frz}} - [\mathsf{sk_{frz1}}], (\mathsf{lk_0} \oplus y), \pi, T_1)$.
+    This checkes that $\sigma_\mathsf{rfnd(\mathbb{B})}$ is a valid witness for $\mathcal{L}_{\mathsf{lock}}$ and thus can be used to retrieve $C_1 := \sigma_\mathsf{rfnd(\mathbb{B})} \oplus \mathsf{lk_0}$, a commitment to a discrete log $[x] = [\mathsf{sk_{frz1}}]$ as above.
 \end{itemize}
 
 Note that $P_1$ gains no information on $\mathsf{pk_{swp(\mathbb{B})}}$ and thus can retrieve $C_1$ from $\mathsf{lk_1}$ and force open it only after $\mathsf{tx_{swp}}$ has been published by $P_0$. Thus if the protocol faults or timeouts before $P_0$ publishes $\mathsf{tx_{swp(\mathbb{B})}}$, $P_1$ cannot retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$, resulting in the succesful execution of the timeout branch at $T_0$ and thus in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$. 
 
-Now assume $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$, resulting in $P_1$ obtaining $C_2$: the VTD scheme's privacy property guarantees that $P_1$ will retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$ only after time $T_2 > 2\mathbb{B}.\mathsf{ctime}  + \mathbb{A}.\mathsf{ctime}$. Now there are two possible outcomes: \\
-1) The swap transaction gets confirmed after $\mathbb{B}.\mathsf{ctime}$  \\
-2) $P_1$ tries to publish $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathsf{tx_{swp(\mathbb{B})}}$ is confirmed, resulting in a double spend attempt and in only one of $(\mathsf{tx_{rfnd(\mathbb{B})}}), \mathsf{tx_{swp(\mathbb{B})}}$ being accepted with roughly probability 1/2 for each
+Now assume $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$, resulting in $P_1$ obtaining $C_2$: the VTD scheme's privacy property guarantees that $P_1$ will retrieve $\mathsf{sk_{frz0(\mathbb{A})}}$ only after time $T_2 > 2\mathbb{B}.\mathsf{ctime}  + \mathbb{A}.\mathsf{ctime}$. Now there are two possible outcomes: 
+\begin{enumerate}
+    \item The swap transaction gets confirmed after $\mathbb{B}.\mathsf{ctime}$.
+    \item $P_1$ tries to publish $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathsf{tx_{swp(\mathbb{B})}}$ is confirmed, resulting in a double spend attempt and in only one of $(\mathsf{tx_{rfnd(\mathbb{B})}}), \mathsf{tx_{swp(\mathbb{B})}}$ being accepted with roughly probability 1/2 for each.
+\end{enumerate}
 
-If (1) occurs, $P_0$ owns $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$ and thus we are done. \\
+If (1) occurs, $P_0$ owns $\mathsf{amnt_b}$ on $\mathsf{pk_{swp(\mathbb{B})}}$ with exclusive knowledge of $\mathsf{sk_{swp(\mathbb{B})}}$ and thus we are done. 
+
 If (2) occurs, note that when $P_1$ posts the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$ $P_0$ will obtain the signature $\sigma_{\mathsf{tx_{rfnd}}}$ that hashes to $\mathcal{H}(\sigma_{\mathsf{tx_{rfnd}}}) = \mathsf{hsig}$  and thus successfully execute the Force Refund branch.
 
 Since $P_1$ needs to post $\mathsf{tx_{rfnd(\mathbb{B})}}$ before $\mathbb{B}.\mathsf{ctime}$ and $T_1 = \mathbb{B}.\mathsf{ctime}$, the Force Refund branch will complete in time strictly less than $2\mathbb{B}.\mathsf{ctime} + \mathbb{A}.\mathsf{ctime}$ after $P_1$ obtains $C_2$, so $P_0$ is guaranteed to publish and confirm $\mathsf{tx_{rfnd(\mathbb{A})}}$, resulting in $P_0$ holding $\mathsf{amnt_a}$ on $\mathsf{pk_{init(\mathbb{A})}}$.
@@ -736,7 +756,8 @@ As we previosly stated, the protocol fails to guarantee the atomicity and owners
 \end{figure}
 After the parties run 2PC $\Gamma_{\mathsf{Swap}}$ $P_0$ receives the signature on the swap transaction $\mathsf{tx_{swp(\mathbb{B})}}$. It can then proceed to wait until $P_1$ posts the refund $\mathsf{tx_{rfnd(\mathbb{B})}}$ and then immediately post $\mathsf{tx_{swp(\mathbb{B})}}$ and start force opening $C_1$, which can be retrieved using the refund signature with $C_1 := \mathsf{lk_0} \oplus \sigma_{\mathsf{tx_{rfnd(\mathbb{B})}}}$. On time $T_1$ the force opening completes and $P_0$ proceeds to sign and publish $\mathsf{tx_{rfnd(\mathbb{A})}}$.
 
-Since only $\mathsf{tx_{swp(\mathbb{B})}}$ or $\mathsf{tx_{rfnd(\mathbb{B})}}$ will be confirmed on $\mathbb{B}$, with roughly probability $\frac{1}{2}$, $P_0$ breaks the atomicity property if the former is confirmed as they also obtain $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_1$ before $P_0$ and can thus successfully complete $\mathsf{tx_{rfnd(\mathbb{A})}}$. \\
+Since only $\mathsf{tx_{swp(\mathbb{B})}}$ or $\mathsf{tx_{rfnd(\mathbb{B})}}$ will be confirmed on $\mathbb{B}$, with roughly probability $\frac{1}{2}$, $P_0$ breaks the atomicity property if the former is confirmed as they also obtain $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_1$ before $P_0$ and can thus successfully complete $\mathsf{tx_{rfnd(\mathbb{A})}}$. 
+
 Note that $P_1$ can only obtain $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_2$ after $T_2$, which is strictly later than $T_1$. Inversely, if $T_2 < T_1$, $P_1$ can potentially cheat from the protocol in a similar fashion, performing a racing refund on $\mathbb{B}$ and swapping on $\mathbb{A}$ after they force open $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_2$. If the time gap between $T_2$ and $T_1$ is smaller than the blockchain's confirmation times, then both sides can potentially try to perfom a racing transaction.
 
 \newpage 
@@ -746,18 +767,22 @@ Note that $P_1$ can only obtain $\mathsf{sk_{frz1(\mathbb{A})}}$ from $C_2$ afte
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{timeouts-uas.png}
-    \caption{Example of a transaction racing condition when $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ after $T_1 - \mathbb{B}.\mathsf{ctime}$}
+    \caption{Example of a transaction racing condition when $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ after $T_1 - \mathbb{B}.\mathsf{ctime}$}\label{fig:race}
 \end{figure}
 
-The protocol presented by Thyagarajan et al. \cite{uas} fails to consider two possible transaction racing conditions: \\
-1) $P_0$ can wait until $T_1$ to post $\mathsf{tx_{swp(\mathbb{B})}}$, resulting in a transaction racing with $P_1$ posting the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$. Since $\mathsf{tx_{rfnd(\mathbb{B})}}$ is not confirmed until $\mathbb{B}.\mathsf{ctime}$, there is an equal probability that $\mathsf{tx_{swp(\mathbb{B})}}$ will succeed, preventing $P_1$ from refunding the assets. \\
-2) Similarly, if $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ after $T_1 - \mathbb{B}.\mathsf{ctime}$, $P_1$ can simultaneously post $\mathsf{tx_{rfnd(\mathbb{B})}}$ and $\mathsf{tx_{swp(\mathbb{A})}}$, which can result in $P_1$ obtaining both $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$. \\
+The protocol presented by Thyagarajan et al. \cite{uas} fails to consider two possible transaction racing conditions: 
+\begin{enumerate}
+    \item $P_0$ can wait until $T_1$ to post $\mathsf{tx_{swp(\mathbb{B})}}$, resulting in a transaction racing with $P_1$ posting the refund transaction $\mathsf{tx_{rfnd(\mathbb{B})}}$. Since $\mathsf{tx_{rfnd(\mathbb{B})}}$ is not confirmed until $\mathbb{B}.\mathsf{ctime}$, there is an equal probability that $\mathsf{tx_{swp(\mathbb{B})}}$ will succeed, preventing $P_1$ from refunding the assets.
+    \item Similarly, if $P_0$ posts $\mathsf{tx_{swp(\mathbb{B})}}$ after $T_1 - \mathbb{B}.\mathsf{ctime}$, $P_1$ can simultaneously post $\mathsf{tx_{rfnd(\mathbb{B})}}$ and $\mathsf{tx_{swp(\mathbb{A})}}$, which can result in $P_1$ obtaining both $\mathsf{amnt_a}$ and $\mathsf{amnt_b}$.
+\end{enumerate}
 
-In order to preserve the atomicity property, we propose the following changes: \\
-1) When $P_1$ timeouts at $T_1$, the party should check if $P_0$ is publishing $\mathsf{tx_{swp(\mathbb{B})}}$ while $\mathsf{tx_{rfnd(\mathbb{B})}}$ is unconfirmed. If so, retrieve $\sigma_{swp(\mathbb{A})}$ and publish $\mathsf{tx_{swp(\mathbb{A})}}$. It is also required that $\Delta > \mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime}$ \\
-2) Require $P_0$ to post $\mathsf{tx_{swp(\mathbb{B})}}$ no later than $T_1 - \mathbb{B}.\mathsf{ctime}$, and abort otherwise 
+In order to preserve the atomicity property, we propose the following changes: 
+\begin{enumerate}
+    \item When $P_1$ timeouts at $T_1$, the party should check if $P_0$ is publishing $\mathsf{tx_{swp(\mathbb{B})}}$ while $\mathsf{tx_{rfnd(\mathbb{B})}}$ is unconfirmed. If so, retrieve $\sigma_{swp(\mathbb{A})}$ and publish $\mathsf{tx_{swp(\mathbb{A})}}$. It is also required that $\Delta > \mathbb{A}.\mathsf{ctime} + \mathbb{B}.\mathsf{ctime}$.
+    \item Require $P_0$ to post $\mathsf{tx_{swp(\mathbb{B})}}$ no later than $T_1 - \mathbb{B}.\mathsf{ctime}$, and abort otherwise.
+\end{enumerate}
 
-We present the revised protocol in figure 7.
+We present the revised protocol in \cref{fig:revised_swap}.
 
 \begin{figure}[H]
 \begin{pchstack}[center, boxed]
@@ -768,10 +793,10 @@ We present the revised protocol in figure 7.
     \qquad \mathsf{\textbf{return}} \perp \\
     \mathsf{sk_{frz}} := \mathsf{sk_{frz0}} + \mathsf{sk_{frz1}} \\
     \sigma_\mathsf{swp(\mathbb{B})} \gets \Pi_{\mathsf{DS(\mathbb{B})}}.\mathsf{Sign}(\mathsf{sk_{frz}}, \mathsf{tx_{swp}}) \\
-    \mathsf{lk} := \mathsf{sk_{frz0}} \oplus \mathsf{\sigma_\mathsf{swp(\mathbb{B})}}  \\
+    \mathsf{lk} := \mathsf{sk_{frz0}} \oplus \mathsf{\sigma_\mathsf{swp(\mathbb{B})}} 
 }
 \end{pchstack}
-\caption{Protocol definition of 2PC $\Gamma_{\mathsf{Swap}}$}
+\caption{Protocol definition of 2PC $\Gamma_{\mathsf{Swap}}$}\label{fig:revised_swap}
 \end{figure}
 
 \begin{figure}[H]
@@ -852,19 +877,19 @@ We present the revised protocol in figure 7.
 
 In this section, we outline several avenues for future research and development that build upon the work presented in this report. These open directions address both theoretical and practical aspects of the topic, suggesting pathways for further exploration and improvement.
 \subsection*{One-sided commitments protocols}
-The protocol we proposed is susceptible to a potential racing transaction condition, as described in Figure 5. An open question is whether it is possible to construct an atomic swap protocol that employs a one-sided refund commitment while avoiding this issue. 
+The protocol we proposed is susceptible to a potential racing transaction condition, as described in \cref{fig:race}. An open question is whether it is possible to construct an atomic swap protocol that employs a one-sided refund commitment while avoiding this issue. 
 To explore this, future research could focus on algorithmically identifying alternative protocols by:
 \begin{itemize}
-        \item Constructing transaction "locks" by masking commitments or secret key shares with transaction signatures or other data
-        \item Defining mutual exclusion conditions on the swap transaction ($\mathsf{tx_{swp}}$) and the refund transaction ($\mathsf{tx_{rfnd}}$) happening on the same blockchain
+        \item Constructing transaction "locks" by masking commitments or secret key shares with transaction signatures or other data,
+        \item Defining mutual exclusion conditions on the swap transaction ($\mathsf{tx_{swp}}$) and the refund transaction ($\mathsf{tx_{rfnd}}$) happening on the same blockchain.
 \end{itemize}
 By establishing these conditions and systematically evaluating protocols across all possible combinations of transaction locks, it may be possible to verify whether such a protocol can be successfully realized, or alternatively, to prove the infeasibility of such.
 
 \subsection*{Further improvements and implementation}
 The $\mathsf{VTS}$ scheme presented  by Thyagarajan et al. \cite{vts} suffers from time unverifiability, that is a proof $\pi$ from $\mathsf{VTD}.\mathsf{Commit}$ does not in fact prove that the resulting commitment $C$ can be opened in $T$ steps. However, improving on the work of \cite{vts}, Zhou et al. \cite{fixed_vts} have proposed an extension to verifiable timed commitment that offers \textit{verifiable timed recovery}, that is, the recipient can verify that the forced open algorithm returns a valid value after time $T$.
 
-Furthermore, $\mathsf{VTS}$ schemes require a trusted setup, and it is unclear how the authors of Universal Atomic Swaps \cite{uas} address this operation in a Peer-to-Peer setting. \\
-We note that the version of Universal Atomic Swaps that we presented in this work uses a $\mathsf{VTD}$ scheme as opposed to $\mathsf{VTS}$ in order to be compatible with blockchains that do not support \textit{transaction chaining} and \textit{pre-signatures}, such as Monero \cite{pre_sign}. \\
+Furthermore, $\mathsf{VTS}$ schemes require a trusted setup, and it is unclear how the authors of Universal Atomic Swaps \cite{uas} address this operation in a Peer-to-Peer setting. 
+We note that the version of Universal Atomic Swaps that we presented in this work uses a $\mathsf{VTD}$ scheme as opposed to $\mathsf{VTS}$ in order to be compatible with blockchains that do not support \textit{transaction chaining} and \textit{pre-signatures}, such as Monero \cite{pre_sign}. 
 To the best of our knowledge, only the building blocks used in the protocol have been implemented, while a full protocol implementation is missing.
 
 \subsection*{Evaluating computational advantages in solving timelock puzzles}
@@ -884,14 +909,14 @@ A blockchain functionality equivalent to HTLCs but that does not require general
 \section*{Appendix}
 \subsection*{Commit transaction}
 
-Commit transactions can be easily realized by a blockchain using a public ledger model by modifying consensus rules, and require no additional scripting capabilities.  \\
-A commit transaction allows to lock assets for a specified transfer until a certain timeout T, commiting to a secret value $x$ in $C$. If $C$ gets opened by broadcasting the revealed $x$ before timeout T, the transfer is completed unconditionally. \\ 
+Commit transactions can be easily realized by a blockchain using a public ledger model by modifying consensus rules, and require no additional scripting capabilities. 
+A commit transaction allows to lock assets for a specified transfer until a certain timeout T, commiting to a secret value $x$ in $C$. If $C$ gets opened by broadcasting the revealed $x$ before timeout T, the transfer is completed unconditionally. 
 After timeout T, the commit transaction is considered expired, unfreezing the assets and ignoring openings on $C$.
 
 We further define the following routines for blockchains that support commitment transaction.
 \begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
 	\item $\mathbf{ctx}_{\mathbb{A}} := (\mathsf{tx_{\mathbb{A}}}, C) \gets \mathbf{CommitTx}_{(\mathbb{A})}(C, \mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{T})$: creates an unsigned commit transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ valid until time $\mathsf{T}$, whith  $\mathsf{amnt}$ being locked from being spent on transactions from $\mathsf{pk_{tx}}$ until $\mathsf{T}$. The transaction can be later finalized by opening and broadcasting $C$ through $\mathsf{RevTx}$.
-\item $ \mathbf{0/1} \gets \mathbf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{ctx})$: open the (on-chain) committed transaction $\mathsf{ctx}$ by revealing the commited secret $\mathsf{sec}$. Return 0 if the opening fails or the timeout on $\mathsf{ctx}$ has expired. If the revealing succeeds, return 1 and finalize $\mathsf{ctx}$.
+    \item $ \mathbf{0/1} \gets \mathbf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{ctx})$: open the (on-chain) committed transaction $\mathsf{ctx}$ by revealing the commited secret $\mathsf{sec}$. Return 0 if the opening fails or the timeout on $\mathsf{ctx}$ has expired. If the revealing succeeds, return 1 and finalize $\mathsf{ctx}$.
 \end{itemize}
 
 By assuming this functionality on both chains we can now realize the following atomic swap protocol.
