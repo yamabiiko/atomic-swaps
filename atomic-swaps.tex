@@ -168,12 +168,14 @@
 
 \begin{document}         
 \author{Lorenzo Tucci}
-\title{Atomic swaps from timed commitments}
+\title{RingCCT: confidential commit transactions and atomic swaps}
 
 \maketitle
 
 \tableofcontents
 \newpage
+
+\section{Introduction}
 
 \section{Commit transaction based atomic swaps}
 
@@ -241,7 +243,23 @@ By assuming this functionality on both chains we can now realize the following a
 \end{figure}
 
 \newpage
-\section{RingCT based commit transaction}
+\section{RingCCT: Ring confidential commit transaction}
+
+\textbf{Definition} A RingCCT scheme (Ring Commit Confidential Transactions) scheme consists of the PPT algorithms ($\mathsf{Setup,KGen,Tx,Vf,StExt,TxExt,SrcChk,TgtChk}$) whose interfaces are defined as follows.
+
+\begin{itemize}
+    \item $(\mathsf{pp,st}) \gets \mathsf{Setup}(1^\lambda)$: the setup algorithm generates the public parameters $\mathsf{st}$ and an initial global state $\mathsf{st}$.
+    \item $(\mathsf{mpk},\mathsf{msk}) \gets \mathsf{KGen}(\mathsf{pp})$: the key generation algorithm generates a master public key $\mathsf{mpk}$ and a matching secret key $\mathsf{msk}$.
+    \item $(\mathsf{sk},\mathsf{accd}) \gets \mathsf{KDer}(\mathsf{msk, \tau})$: the key derivation algorithm generates derives the keys-account data tuple given the master key $\mathsf{msk}$ owning the account and the token $\tau$ of the account.
+    \item $(\mathsf{tx,TK}) \gets \mathsf{TxGen}(\mathsf{st},P,R,\mathcal{S},\mathcal{T})$: the transaction algorithm inputs a state $\mathsf{st}$, a predicate $P: \mathbb{Z}^S \times \mathbb{Z}^T \rightarrow \{0,1\}$, an index set R called the ring, a set of source accouts information $\mathcal{S} = \{\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i\}_{i\in S}$ and some targets account information $\mathcal{T} = \{\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i\}_{i\in T}$; where $\mathsf{ssk,tsk,rsk}$ and $\mathsf{spk,tpk,rpk}$ are the source, target and recovery secret and public keys respectively. If source or target account is not commit based, only the source key pair is defined. Each account has some $\mathsf{accd} := (a,\mathsf{time})$ defined, where $a$ represents some amount and $\mathsf{time}$ sets a specific epoch timeout of the ownership of commit account by the target key pair, and empty otherwise. 
+    \item $(b,\mathsf{st}') \gets \mathsf{Vf}(\mathsf{st,tx})$: The verification algorithm outputs a bit b deciding whether to accept or reject that the transaction $\mathsf{tx}$ is a valid relative to the state $\mathsf{st}$, outputting an updated state $\mathsf{st}'$ if the verification is sucessful.
+\item $\mathsf{AC}_U \gets \mathsf{StExt}(\mathsf{st})$: The state extraction algorithm
+extracts the set of universe accounts $\mathsf{AC}_U = \{\mathsf{ac}_i\}_{i \in U}$ encoded in the state $\mathsf{st}$.
+\item $\mathsf{AC}_T \gets \mathsf{TxExt}(\mathsf{tx})$: The transaction extraction algorithm
+extracts the set of universe accounts $\mathsf{AC}_T = \{\mathsf{ac}_i\}_{i \in T}$ encoded in the state $\mathsf{st}$.
+\item $b \gets \mathsf{SrcChk}(\mathsf{ac,r,ssk,tsk,rsk,accd,clock})$: The source checking algorithm outputs a bit $b$ deciding whether to accept or reject that the account $\mathsf{ac}$ is associated to the provided secret keys and that $\mathsf{accd}$ has been commited with randomness $r$. If the account is commit based, it checks validity of $\mathsf{ssk,tsk}$ when $\mathsf{clock} <= \mathsf{time}$ and of $\mathsf{rsk}$ otherwise; if the account is standard only $\mathsf{ssk}$ is required.
+\item $b \gets \mathsf{TgtChk}(\mathsf{ac,accd})$: The target checking algorithms outputs a bit $b$ deciding whether to accept or reject that the $\mathsf{accd}$ has been commited in $\mathsf{ac}$. 
+\end{itemize}
 
 
 \subsection*{Construction}
@@ -250,8 +268,8 @@ By assuming this functionality on both chains we can now realize the following a
 \mathcal{R}(\mathsf{stmnt}, \mathsf{wit}) := \begin{cases} 
     S \subseteq R \\ 
     \xi_{\phi S(i)} = \Delta.\mathsf{Eval}(s_i) \qquad \forall i \in S \\
-    \mathsf{CmtSrcChk}(\mathsf{ac}_i, \mathsf{sk}_i, \mathsf{accd}_i, \mathsf{clock}) = 1 \qquad \forall i \in S \\ 
-    \mathsf{TgtChk}(\mathsf{ac'}_i, \mathsf{mpk}_i, \mathsf{tk}_i, a'_i) = 1 \qquad \forall i \in T \\ 
+    \mathsf{SrcChk}(\mathsf{ac}_i, r, \mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i, \mathsf{clock}) = 1 \qquad \forall i \in S \\ 
+    \mathsf{TgtChk}(\mathsf{ac'}_i, \mathsf{accd}'_i) = 1 \qquad \forall i \in T \\ 
     P(a_S, a'_T) = 1
 \end{cases}
 \end{equation*}
@@ -261,7 +279,7 @@ where
 \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathcal{Z}_{\bar{S}}, \mathsf{AC}_T, \mathsf{clock}) \\
 \end{equation*}
 \begin{equation*}
-\mathsf{wit} := ((\mathsf{ssk}_i,\mathsf{tsk}_i, \mathsf{accd}_i\}_{i\in S}), (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{accd}'_i)_{i\in T}) \\
+\mathsf{wit} := ((r,\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i\}_{i\in S}), (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i)_{i\in T}) \\
 \end{equation*}
 
 
@@ -330,29 +348,35 @@ where
 \pseudocode{
     \mathsf{KDer}(\mathsf{msk},\tau) \\[0.1\baselineskip ][\hline]
     (r, \delta, \mathsf{accd} := (a, \mathsf{time})) := \mathbf{parse} \: \tau \\
-    \mathsf{sk} := (r,s) := (r,\mathsf{msk}+\delta) \\
-    \mathbf{return} \: (\mathsf{sk}, \mathsf{accd})
+    \mathsf{sk} := \mathsf{msk}+\delta \\
+    \mathbf{return} \: (\mathsf{sk}, r, \mathsf{accd})
 }
 \vspace{1em}
 \pseudocode{
-    \mathsf{CmtTx}(\mathsf{st}, P, R, \mathcal{S}, \mathcal{T}) \\[0.1\baselineskip ][\hline]
-    \{\mathsf{ssk}_i := (r_i, s_i),\mathsf{tsk}_i := (r'_i, s'_i), \mathsf{accd}_i\}_{i\in S} := \mathbf{parse} \: \mathcal{S} \\
-    \{\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{accd}'_i\}_{i\in T} := \mathbf{parse} \: \mathcal{T} \\
+    \mathsf{TxGen}(\mathsf{st}, P, R, \mathcal{S}, \mathcal{T}) \\[0.1\baselineskip ][\hline]
+    \{\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i\}_{i\in S} := \mathbf{parse} \: \mathcal{S} \\
+    \{\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i\}_{i\in T} := \mathbf{parse} \: \mathcal{T} \\
     \mathbf{for} \; i \in T \: \mathbf{do} \\
     \:\: r'_i \sample \chi \\
     \:\: \delta'_i \sample \mathcal{K} \\
-    \:\: \delta''_i \sample \mathcal{K} \\
     \:\: \mathsf{co}'_i := \Gamma.\mathsf{Com}(\mathsf{accd}'_i, r'_i) \\
-    \:\: \mathsf{tpk}'_i := \mathsf{tmpk}_i + \Delta.\mathsf{Eval}(\delta'_i) \\
     \:\: \mathsf{spk}'_i := \mathsf{smpk}_i + \Delta.\mathsf{Eval}(\delta''_i) \\
-    \;\: \mathsf{ac}'_i := (\mathsf{tpk}'_i, \mathsf{spk}'_i, \mathsf{co}'_i) \\
-    \;\: \mathsf{tk}_i := (r'_i, \delta'_i, \delta''_i, \mathsf{accd}'_i) \\
+    \:\: \mathbf{if} \: \mathsf{rmpk}_i \neq \: \perp \land \: \mathsf{tmpk}_i \neq \: \perp \\
+    \:\:\:\: \delta''_i \sample \mathcal{K} \\
+    \:\:\:\: \delta'''_i \sample \mathcal{K} \\
+    \:\:\:\: \mathsf{tpk}'_i := \mathsf{tmpk}_i + \Delta.\mathsf{Eval}(\delta'_i) \\
+    \:\:\:\: \mathsf{rpk}'_i := \mathsf{rmpk}_i + \Delta.\mathsf{Eval}(\delta''_i) \\
+    \;\:\:\: \mathsf{ac}'_i := (\mathsf{spk}'_i, \mathsf{tpk}'_i, \mathsf{rpk}'_i, \mathsf{co}'_i) \\
+    \:\:\;\: \mathsf{tk}_i := (r'_i, \delta'_i, \delta''_i, \delta'''_i, \mathsf{accd}'_i) \\
+    \;\: \mathbf{else} \\
+    \;\:\:\: \mathsf{ac}'_i := (\mathsf{spk}'_i, \mathsf{co}'_i) \\
+    \:\:\;\: \mathsf{tk}_i := (r'_i, \delta'_i, \mathsf{accd}'_i) \\
     \{\mathsf{ac}_i\}_{i \in U} := \mathsf{StExt(st)} \\
     \mathsf{AC}_R := \{\mathsf{ac}_i\}_{i \in R} \\
     \mathsf{AC}_T := \{\mathsf{ac}_i\}_{i \in T} \\
     \mathcal{Z}_{\bar{S}} := \{\Delta.\mathsf{Eval}(s_i)\}_{\phi S(i)\in \bar{S}} \\
     \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \mathsf{clock}) \\
-    \mathsf{wit} := ((\mathsf{ssk}_i,\mathsf{tsk}_i, \mathsf{accd}_i\}_{i\in S}), (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{accd}'_i)_{i\in T}) \\
+    \mathsf{wit} := ((r,\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i\}_{i\in S}), (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i)_{i\in T}) \\
     \pi \gets \Pi.\mathsf{Prove}(\mathsf{crs},\mathsf{stmnt},\mathsf{wit}) \\
     \mathsf{tx} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \pi) \\
     \mathsf{TK} := {\mathsf{tk}_i}_{i \in T} \\
@@ -360,16 +384,20 @@ where
 }
 \vspace{1em}
 \pseudocode{
-    \mathsf{CmtSrcChk}(\mathsf{ac}, \mathsf{sk}, \mathsf{accd}, \mathsf{clock}) \\[0.1\baselineskip ][\hline]
-    (\mathsf{tpk}, \mathsf{spk}, \mathsf{co}) := \mathbf{parse} \: \mathsf{ac} \\
+    \mathsf{SrcChk}(\mathsf{ac}, r, \mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk}, \mathsf{accd}, \mathsf{clock}) \\[0.1\baselineskip ][\hline]
+    (\mathsf{tpk}, \mathsf{spk}, \mathsf{rpk}, \mathsf{co}) := \mathbf{parse} \: \mathsf{ac} \\
     \mathsf{time} := \mathbf{parse} \: \mathsf{accd} \\
-    (r, s) := \mathbf{parse} \: \mathsf{sk} \\
     \mathbf{if} \: \mathsf{co} \neq \Gamma.\mathsf{Com}(\mathsf{accd}, r) \\
     \:\: \mathbf{return} \: 0 \\
-    \mathbf{if} \: \mathsf{time} <= \mathsf{clock} \\
-    \:\: \mathbf{return} \: \mathsf{tpk} = \Delta.\mathsf{KGen}(s) \\
-    \mathsf{else} \\
-    \:\: \mathbf{return} \: \mathsf{spk} = \Delta.\mathsf{KGen}(s) \\
+    \mathbf{if} \: \mathsf{time} == \: \perp \\
+    \:\: \mathbf{return} \: \mathsf{spk} = \Delta.\mathsf{KGen}(\mathsf{ssk}) \\
+    \mathbf{else} \: \mathbf{if} \: \mathsf{time} <= \mathsf{clock} \\
+    \:\: \mathbf{return} \: \begin{cases}
+        \mathsf{tpk} = \Delta.\mathsf{KGen}(\mathsf{tsk}) \tabularnewline
+        \mathsf{spk} = \Delta.\mathsf{KGen}(\mathsf{ssk}) \tabularnewline
+    \end{cases} \\
+    \mathbf{else} \\
+    \:\: \mathbf{return} \: \mathsf{rpk} = \Delta.\mathsf{KGen}(\mathsf{rsk}) \\
 }
 \end{pcvstack}
 \end{pchstack}
