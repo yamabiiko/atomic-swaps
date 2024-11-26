@@ -176,73 +176,6 @@
 \newpage
 
 \section{Introduction}
-
-\section{Commit transaction based atomic swaps}
-
-Commit transactions can be easily realized by a blockchain using a public ledger model by modifying consensus rules, and require no additional scripting capabilities. 
-A commit transaction allows to lock assets for a specified transfer until a certain timeout T, commiting to a secret value $x$ in $C$. If $C$ gets opened by broadcasting the revealed $x$ before timeout T, the transfer is completed unconditionally. 
-After timeout T, the commit transaction is considered expired, unfreezing the assets and ignoring openings on $C$.
-
-We further define the following routines for blockchains that support commitment transaction.
-\begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
-	\item $\mathbf{ctx}_{\mathbb{A}} := (\mathsf{tx_{\mathbb{A}}}, C) \gets \mathbf{CommitTx}_{(\mathbb{A})}(C, \mathsf{pk_{tx}}, \mathsf{pk_{rx}}, \mathsf{amnt}, \mathsf{T})$: creates an unsigned commit transaction paying $\mathsf{amnt}$ from $\mathsf{pk_{tx}}$ to $\mathsf{pk_{rx}}$ valid until time $\mathsf{T}$, whith  $\mathsf{amnt}$ being locked from being spent on transactions from $\mathsf{pk_{tx}}$ until $\mathsf{T}$. The transaction can be later finalized by opening and broadcasting $C$ through $\mathsf{RevTx}$.
-    \item $ \mathbf{0/1} \gets \mathbf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{ctx})$: open the (on-chain) committed transaction $\mathsf{ctx}$ by revealing the commited secret $\mathsf{sec}$. Return 0 if the opening fails or the timeout on $\mathsf{ctx}$ has expired. If the revealing succeeds, return 1 and finalize $\mathsf{ctx}$.
-\end{itemize}
-
-By assuming this functionality on both chains we can now realize the following atomic swap protocol.
-
-\begin{figure}[H]
-\begin{minipage}[t]{0.5\textwidth}
-\begin{pchstack}[boxed]
-\pseudocode{
-    \text{Global input} \:\: (T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
-    \mathsf{sec} \gets \mathbb{Z}_q \\
-    (C_0, r) \gets \Pi_{\mathsf{PCom}}.\mathsf{Commit}(\mathsf{sec_0}) \\ % verify that sec_0 has been commited
-    \mathsf{ctx_{(\mathbb{A})}} \gets \mathsf{CommitTx}_{(\mathbb{A})}(C_0, \mathsf{pk_{init}}, \mathsf{pk_{swp}}, \mathsf{amnt_a}, T + \Delta) \\
-    \sigma_{\mathsf{ctx_{(\mathbb{A})}}} \gets \Pi_{\mathsf{DS(\mathbb{A})}}.\mathsf{Sign}(\mathsf{sk_{init}}, \mathsf{ctx}) \\
-    \mathsf{PubTx}_{(\mathbb{A})}(\sigma_{\mathsf{ctx}}, \mathsf{ctx}) \\
-    \mathsf{\textbf{select}} \:\: \{ \\
-    \quad \mathsf{\textbf{wait}} \:\: \{ \\
-    \qquad \mathsf{timeout}(T) \\
-    \quad \} \\
-    \quad \mathsf{\textbf{wait}} \:\: \{ \\
-    \qquad \mathsf{send}(\mathsf{ctx_{(\mathbb{A})}}) \\
-    \qquad \textbf{do} \:\: \mathsf{ctx_{(\mathbb{B})}} \gets \mathsf{\textbf{wait}} \:\: \mathsf{GetLatestTx}_{(\mathbb{B})}(\mathsf{pk_{init}}) \\
-    \qquad \mathsf{\textbf{while}} \:\: \mathsf{ctx}_{(\mathbb{B})}.C \neq C_0 \lor \mathsf{ctx}_{(\mathbb{B})}.T \neq T \lor \mathsf{res_1} \neq 1 \\ % verify that commit transaction is valid and accepted
-    \qquad \mathsf{rtx_{swp(\mathbb{B})}} \gets \mathsf{RevTx}_{(\mathbb{B})}(\mathsf{sec}, \mathsf{ctx}) \\
-    \quad \} \\
-    \} \\
-}
-\end{pchstack}
-\end{minipage}%
-\hspace{0.4cm}
-\begin{minipage}[t]{0.5\textwidth}
-\begin{pchstack}[boxed]
-\pseudocode{
-    \text{Global input} \:\: (T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
-    \mathsf{receive}(\mathsf{ctx_{(\mathbb{A})}}) \\
-    \mathsf{res_0} \gets \mathsf{\textbf{wait}} \:\: \mathsf{WatchTx}_{(\mathbb{A})}(\mathsf{ctx}) \\
-    \mathsf{\textbf{select}} \:\: \{ \\
-    \quad \mathsf{\textbf{wait}} \:\: \{ \\
-    \qquad \mathsf{timeout}(T) \\
-    \quad \} \\
-    \quad \mathsf{\textbf{wait}} \:\: \{ \\
-    \qquad \mathsf{\textbf{if}} \:\: \mathsf{ctx_{(\mathbb{A})}}.T \neq T + \Delta \lor \mathsf{res_0} \neq 1 \\ % verify that commit transaction is valid and accepted
-    \qquad \quad \mathsf{\textbf{return}} \perp \\
-    \qquad \mathsf{ctx}_{(\mathbb{B})} \gets \mathsf{CommitTx}_{(\mathbb{B})}(C_0, \mathsf{pk_{init}}, \mathsf{pk_{swp}}, \mathsf{amnt_b}, T) \\
-    \qquad \textbf{do} \:\: \mathsf{rtx_{swp(\mathbb{B})}} \gets \mathsf{\textbf{wait}} \:\: \mathsf{GetLatestTx}_{(\mathbb{A})}(\mathsf{pk_{swp}}) \\
-    \qquad \textbf{while} \:\: \mathsf{rtx_{swp(\mathbb{B})}}.\mathsf{rev} = \perp \\
-    \qquad \mathsf{sec} := \mathsf{rtx_{swp(\mathbb{B})}}.\mathsf{rev} \\
-    \qquad \mathsf{rtx_{swp(\mathbb{A})}} \gets \mathsf{RevTx}_{(\mathbb{A})}(\mathsf{sec}, \mathsf{ctx}) \\
-    \quad \} \\
-    \} \\
-}
-\end{pchstack}
-\end{minipage}%
-\caption{Full protocol execution for $P_0$ and $P_1$, respectively left and right}
-\end{figure}
-
-\newpage
 \section{RingCCT: Ring confidential commit transaction}
 
 \textbf{Definition} A RingCCT scheme (Ring Commit Confidential Transactions) scheme consists of the PPT algorithms ($\mathsf{Setup,KGen,Tx,Vf,StExt,TxExt,SrcChk,TgtChk}$) whose interfaces are defined as follows.
@@ -404,5 +337,87 @@ where
 \end{minipage}%
 \end{figure}
 
+\newpage
+
+\section{Commit transaction based atomic swaps}
+
+\begin{figure}[H]
+\begin{pchstack}[center, boxed]
+\pseudocode{
+    P_0(\mathsf{ssk_{\mathbb{A}}},\mathsf{rsk_{\mathbb{A}}},\mathsf{tsk_{\mathbb{B}}}) \qquad \qquad P_1(\mathsf{ssk_{\mathbb{B}}},\mathsf{rsk_{\mathbb{B}}},\mathsf{tsk_{\mathbb{A}}}) \\[0.1\baselineskip ][\hline] 
+    \<\< \\[-0.4\baselineskip ]
+    \mathcal{S_\mathbb{A}} := (\mathsf{ssk}_\mathbb{A}, \mathsf{rsk}_\mathbb{A}, \mathsf{tsk}_\mathbb{A}, \mathsf{accd}_\mathbb{A}) \\
+    \mathsf{(tx_\mathbb{A}, TK_\mathbb{A})} := \mathsf{TxGen_\mathbb{A}}(\mathsf{st},P,R,\mathcal{S},\mathcal{T}) \\
+    \mathcal{S_\mathbb{B}} := (\mathsf{ssk}_\mathbb{B}, \mathsf{rsk}_\mathbb{B}, \mathsf{tsk}_\mathbb{B}, \mathsf{accd}_\mathbb{B}) \\
+    \mathsf{(tx_\mathbb{B}, TK_\mathbb{B})} := \mathsf{TxGen_\mathbb{B}}(\mathsf{st},P,R,\mathcal{S},\mathcal{T}) \\
+    \mathbf{output} \: \mathsf{(tx_\mathbb{A} \oplus \mathsf{tx_\mathbb{B}}, TK_\mathbb{A})} \: \mathbf{to} \: P_1 \\
+    \mathbf{output} \: \mathsf{(tx_\mathbb{B}, TK_\mathbb{B})} \: \mathbf{to} \: P_0 \\
+}
+\end{pchstack}
+\caption{Protocol definition of 2PC $\Gamma_{\mathsf{CommitTx}}$}
+\end{figure}
+
+
+\begin{figure}[H]
+\begin{minipage}[t]{0.5\textwidth}
+\begin{pchstack}[boxed]
+\pseudocode{
+    \text{Global input} \:\: (T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
+    \mathsf{(rmpk, rmsk)} \gets \mathsf{KGen}_\mathsf{A}(\mathsf{pp}) \\
+    \mathcal{S}_0 := \{(\mathsf{ssk}_\mathsf{A}, \perp, \perp, (\mathsf{amnt_a}, \perp))\} \\
+    \mathcal{T}_0 := \{(\mathsf{smpk}_\mathsf{A}, \mathsf{tmpk}_\mathsf{A}, \mathsf{rmpk}_\mathsf{A}, (\mathsf{amnt_a}, T_0))\} \\
+    \mathsf{(tx_0, TK_0)}_\mathbb{A} := \mathsf{TxGen_\mathbb{A}}(\mathsf{st},P,R,\mathcal{S}_0,\mathcal{T}_0) \\
+    (\_, \mathsf{st}') := \mathsf{Vf}_\mathbb{A}(\mathsf{tx_0}) \\
+    \mathsf{send}(\mathsf{(tx_0, TK_0)}_\mathbb{A}) \\
+    \mathsf{\textbf{select}} \:\: \{ \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{timeout}(T_0) \\
+    \quad \} \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{receive}(\mathsf{(tx_0, TK_0)}_\mathbb{B}) \\
+    \qquad (\mathsf{res}, \mathsf{st}') := \mathsf{Vf}_\mathbb{B}(\mathsf{tx_0}) \\
+    \qquad \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\ % verify that commit transaction is valid and accepted
+    \qquad \quad \mathsf{\textbf{return}} \perp \\
+    \qquad (\mathsf{tx_1, TK_1}) \gets \Gamma.\mathsf{CommitTx}(\mathsf{ssk_\mathbb{A}}, \mathsf{rsk_\mathbb{A}}, \mathsf{tsk_\mathbb{B}}) \\
+    \qquad (\mathsf{res}, \mathsf{st}') := \mathsf{Vf}_\mathbb{B}(\mathsf{tx_1}) \\
+    \qquad \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\ % verify that commit transaction is valid and accepted
+    \qquad \quad \mathsf{\textbf{return}} \perp \\
+    \quad \} \\
+    \} \\
+}
+\end{pchstack}
+\end{minipage}%
+\hspace{0.4cm}
+\begin{minipage}[t]{0.5\textwidth}
+\begin{pchstack}[boxed]
+\pseudocode{
+    \text{Global input} \:\: (T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
+    \mathsf{(rmpk, rmsk)} \gets \mathsf{KGen}_\mathsf{B}(\mathsf{pp}) \\
+    \mathcal{S}_0 := \{(\mathsf{ssk}_\mathsf{B}, \perp, \perp, (\mathsf{amnt_b}, \perp))\} \\
+    \mathcal{T}_0 := \{(\mathsf{smpk}_\mathsf{B}, \mathsf{tmpk}_\mathsf{B}, \mathsf{rmpk}_\mathsf{B}, (\mathsf{amnt_b}, T_1))\} \\
+    \mathsf{(tx_0, TK_0)}_\mathbb{B} := \mathsf{TxGen_\mathbb{B}}(\mathsf{st},P,R,\mathcal{S}_0,\mathcal{T}_0) \\
+    (\_, \mathsf{st}') := \mathsf{Vf}_\mathbb{B}(\mathsf{tx_0}) \\
+    \mathsf{send}(\mathsf{(tx_0, TK_0)}_\mathbb{B}) \\
+    \mathsf{\textbf{select}} \:\: \{ \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{timeout}(T_1) \\
+    \quad \} \\
+    \quad \mathsf{\textbf{wait}} \:\: \{ \\
+    \qquad \mathsf{receive}(\mathsf{(tx_0, TK_0)}_\mathbb{A}) \\
+    \qquad (\mathsf{res}, \mathsf{st}') := \mathsf{Vf}_\mathbb{A}(\mathsf{tx_0}) \\
+    \qquad \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\ % verify that commit transaction is valid and accepted
+    \qquad \quad \mathsf{\textbf{return}} \perp \\
+    \qquad (\mathsf{lk, TK_1}) \gets \Gamma.\mathsf{CommitTx}(\mathsf{ssk_\mathbb{B}}, \mathsf{rsk_\mathbb{B}}, \mathsf{tsk_\mathbb{A}}) \\
+    \qquad (\mathsf{res}, \mathsf{st}') := \mathsf{Vf}_\mathbb{B}(\mathsf{tx_1}) \\
+    \qquad \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\ % verify that commit transaction is valid and accepted
+    \qquad \quad \mathsf{\textbf{return}} \perp \\
+    \quad \} \\
+    \} \\
+}
+
+\end{pchstack}
+\end{minipage}%
+\caption{Full protocol execution for $P_0$ and $P_1$, respectively left and right}
+\end{figure}
 
 \end{document}
