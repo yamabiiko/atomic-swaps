@@ -212,7 +212,7 @@ where
 \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathcal{Z}_{\bar{S}}, \mathsf{AC}_T, \mathsf{clock}) \\
 \end{equation*}
 \begin{equation*}
-\mathsf{wit} := ((r,\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i\}_{i\in S}), (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i)_{i\in T}) \\
+\mathsf{wit} := ((r,\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i)_{i\in S}), (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i)_{i\in T}) \\
 \end{equation*}
 
 
@@ -271,8 +271,8 @@ where
     \mathsf{co} := \mathbf{parse} \: \mathsf{ac} \\
     (r, \mathsf{accd}') := \mathbf{parse} \: \mathsf{tk} \\
     \mathbf{return} \: \begin{cases}
-        \mathsf{accd}' = \mathsf{accd} \tabularnewline
-        \mathsf{co} = \Gamma.\mathsf{Com}(\mathsf{accd},r)
+        %\mathsf{accd}' \overset{?}{=} \mathsf{accd} \tabularnewline
+        \mathsf{co} \overset{?}{=} \Gamma.\mathsf{Com}(\mathsf{accd},r)
     \end{cases} 
 }
 \end{pcvstack}
@@ -309,7 +309,7 @@ where
     \mathsf{AC}_T := \{\mathsf{ac}_i\}_{i \in T} \\
     \mathcal{Z}_{\bar{S}} := \{\Delta.\mathsf{Eval}(s_i)\}_{\phi S(i)\in \bar{S}} \\
     \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \mathsf{clock}) \\
-    \mathsf{wit} := ((r,\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i\}_{i\in S}), (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i)_{i\in T}) \\
+    \mathsf{wit} := ((r,\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i)_{i\in S}), (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i)_{i\in T}) \\
     \pi \gets \Pi.\mathsf{Prove}(\mathsf{crs},\mathsf{stmnt},\mathsf{wit}) \\
     \mathsf{tx} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \pi) \\
     \mathsf{TK} := {\mathsf{tk}_i}_{i \in T} \\
@@ -322,15 +322,15 @@ where
     \mathsf{time} := \mathbf{parse} \: \mathsf{accd} \\
     \mathbf{if} \: \mathsf{co} \neq \Gamma.\mathsf{Com}(\mathsf{accd}, r) \\
     \:\: \mathbf{return} \: 0 \\
-    \mathbf{if} \: \mathsf{time} == \: \perp \\
-    \:\: \mathbf{return} \: \mathsf{spk} = \Delta.\mathsf{KGen}(\mathsf{ssk}) \\
+    \mathbf{if} \: \mathsf{time} = \: \perp \\
+    \:\: \mathbf{return} \: \mathsf{spk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{ssk}) \\
     \mathbf{else} \: \mathbf{if} \: \mathsf{time} <= \mathsf{clock} \\
     \:\: \mathbf{return} \: \begin{cases}
-        \mathsf{tpk} = \Delta.\mathsf{KGen}(\mathsf{tsk}) \tabularnewline
-        \mathsf{spk} = \Delta.\mathsf{KGen}(\mathsf{ssk}) \tabularnewline
+        \mathsf{tpk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{tsk}) \tabularnewline
+        \mathsf{spk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{ssk}) \tabularnewline
     \end{cases} \\
     \mathbf{else} \\
-    \:\: \mathbf{return} \: \mathsf{rpk} = \Delta.\mathsf{KGen}(\mathsf{rsk}) \\
+    \:\: \mathbf{return} \: \mathsf{rpk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{rsk}) \\
 }
 \end{pcvstack}
 \end{pchstack}
