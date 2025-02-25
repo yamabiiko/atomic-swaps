@@ -177,6 +177,18 @@
 
 \section{Introduction}
 \section{RingCCT: Ring confidential commit transaction}
+We present an extension of ring confidential transactions (RingCT), called ring confidential commit transactions (RingCCT).
+
+\subsection{Syntax}
+
+A RingCCT scheme is initialised by running the algorithm $\mathsf{Setup}$ that generates the public parameters and initial state $\mathsf{st}$. The system can be joined by running $\mathsf{KGen}$ to generate master public key pair consisting of $\mathsf{mpk}$ and $\mathsf{msk}$.
+Accounts in the systems are defined by the tuple $(\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk}, \mathsf{rsk}, \mathsf{co})$, where 
+\begin{itemize}
+	\item $\mathsf{co}$ is a commitment of the account data $\mathsf{accd}$, which is a tuple of $(a, \mathsf{time})$. $a$ denotes the amount stored in the account, while $\mathsf{time}$ is an optional epoch timeout parameter that defines a cutoff epoch for the ownership of the commit account.
+	\item $\mathsf{spk}$ is the public key of the owner of the account. In case $\mathsf{time}$ is defined as 0, this is the only owner of the account, as in normal RingCT.
+	\item $\mathsf{tpk}$ is the public key of the joint owner of a commit transaction account, the ccommit account is jointly owned by $\mathsf{spk}, \mathsf{tpk}$ until the epoc defined $\mathsf{time}$.
+	\item $\mathsf{rpk}$ is a recovery public key, which becomes the owner of a commit transaction account after $\mathsf{time}$.
+\end{itemize}
 
 \textbf{Definition} A RingCCT scheme (Ring Commit Confidential Transactions) scheme consists of the PPT algorithms ($\mathsf{Setup,KGen,Tx,Vf,StExt,TxExt,SrcChk,TgtChk}$) whose interfaces are defined as follows.
 
@@ -194,6 +206,61 @@ extracts the set of universe accounts $\mathsf{AC}_T = \{\mathsf{ac}_i\}_{i \in 
 \item $b \gets \mathsf{TgtChk}(\mathsf{ac,accd})$: The target checking algorithms outputs a bit $b$ deciding whether to accept or reject that the $\mathsf{accd}$ has been commited in $\mathsf{ac}$. 
 \end{itemize}
 
+\subsection{Correctness}
+
+\subsection{Security}
+We here define the security properties of RingCCT.
+
+\begin{definition}[Balance] A RingCCT scheme is balanced if: \\
+	1. A commit transaction account ownership changes from $\mathsf{ssk}, \mathsf{tsk}$ to $\mathsf{rsk}$ based on some epoch $\mathsf{time}$, i.e. for any PPT adversary $\mathcal{A}$ it holds that
+\end{definition}
+$\mathsf{Pr}\left[
+    \begin{cases} 
+	\mathsf{SrcChk}(\mathsf{ac}, r, (\mathsf{ssk}, \mathsf{tsk}, \perp), \mathsf{accd}, \mathsf{time}+1) \tabularnewline 
+	\mathsf{SrcChk}(\mathsf{ac}, r, (\perp, \perp, \mathsf{rsk}), \mathsf{accd}, \mathsf{time}-1) \tabularnewline
+        \Gamma.\mathsf{Com}(\mathsf{accd}, r) = \mathsf{co} 
+    \end{cases} 
+    \middle|(
+    \begin{aligned}
+	(\mathsf{pp}, \mathsf{st}) \gets \mathsf{Setup}(1^\lambda) \\
+	\mathsf{ac}, \mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk}, \mathsf{accd}) \gets \mathcal{A}(\mathsf{pp}) \\
+    	\mathsf{time} := \mathbf{parse} \: \mathsf{accd} \\
+    \end{aligned}
+\right]
+\leq \negl
+$
+
+
+\begin{figure}[H]
+\begin{pchstack}[center, boxed]
+\pseudocode{
+    \text{Balance} \\[0.1\baselineskip ][\hline] 
+    (\mathsf{pp}, \mathsf{st}_0) \gets \mathsf{Setup}(1^\lambda) \\
+    (\mathsf{tx}_i)_{i \in \mathbb{Z}_l} \gets \mathcal{A}(\mathsf{pp}, \mathsf{st}_0) \\
+    (P_i, R_i, S_i, T_i)_{i \in \mathbb{Z}_{l}} \gets \mathcal{E}_{\mathsf{A}} (\mathsf{pp}, \mathsf{st}_0, (\mathsf{tx}_i)_{i \in \mathbb{Z}_{l}}) \\
+    \{ \mathsf{sks}_{i,j}, \mathsf{accd}_{i,j} \}_{j \in S_i} := \mathbf{parse} \: (S_i)_{i \in \mathbb{Z}_{l}} \\
+    \{ \mathsf{mpks}_{i,j},\mathsf{tk}_{i,j}, \mathsf{accd}'_{i,j} \}_{j \in T_i}) := \mathbf{parse} \: (T_i)_{i \in \mathbb{Z}_{l}} \\
+    \mathbf{for} \: t \in \mathbb{Z}_l \: \mathbf{do} \: (b_t, \mathsf{st}_{t+1}) := \mathsf{Vf}(\mathsf{st_t}, \mathsf{tx_t}) \\
+    \mathbf{for} \: i \in \mathbb{Z}_l \: \mathbf{do} \\
+    \qquad \mathsf{accd}_{i, S_i} := (\mathsf{accd}_{i,j})_{j \in S_i},
+    \mathsf{accd}'_{i, T_i} := (\mathsf{accd}'_{i,j})_{j \in T_i} \\
+    \qquad \{ \mathsf{ac}_{i,j} \}_{j \in U_i} := \mathsf{StExt}(\mathsf{st}_i), \{ \mathsf{ac'}_{i,j} \}_{j \in T_i} := \mathsf{TxExt}(\mathsf{tx}_i) \\
+    \qquad b'_i := 
+    \begin{cases}
+	\mathsf{TxExt} \subseteq \mathsf{StExt}(\mathsf{st}_{i+1}) \vspace{0.3em} \tabularnewline
+	P_i \in \mathcal{P} \tabularnewline
+	P_i(\mathsf{accd}_{i, S_i}, \mathsf{accd}'_{i, T_i}) \vspace{0.3em} \tabularnewline
+	S_i \subseteq R_i \subseteq U_i \vspace{0.3em} \tabularnewline
+	\mathsf{SrcChk}(\mathsf{StExt}(\mathsf{st}_i)[j], \mathsf{sks}_{i,j}, \mathsf{accd}_{i,j}) = 1 \:\:\: \forall j \in \mathsf{S}_i \vspace{0.3em} \tabularnewline
+	\mathsf{TgtChk}(\mathsf{TxExt}(\mathsf{tx}_i)[j], \mathsf{mpks}_{i,j}, \mathsf{accd}_{i,j}) = 1 \:\:\: \forall j \in \mathsf{S}_i \vspace{0.3em} \tabularnewline
+    \end{cases} \\
+    b'' := (\exists i_0 < i_1, S_{i_0} \cap S_{i_1} = \emptyset) \\
+    \mathbf{return} \bigwedge_{i \in \mathbb{Z}_l} b_i \land \neg (\bigwedge_{i \in \mathbb{Z}_l} b_i' \land b_i'')
+}
+\end{pchstack}
+\caption{Protocol definition of 2PC $\Gamma_{\mathsf{CommitTx}}$}
+\end{figure}
+
 
 \subsection*{Construction}
 
@@ -201,18 +268,17 @@ extracts the set of universe accounts $\mathsf{AC}_T = \{\mathsf{ac}_i\}_{i \in 
 \mathcal{R}(\mathsf{stmnt}, \mathsf{wit}) := \begin{cases} 
     S \subseteq R \\ 
     \xi_{\phi S(i)} = \Delta.\mathsf{Eval}(s_i) \qquad \forall i \in S \\
-    \mathsf{SrcChk}(\mathsf{ac}_i, r, \mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i, \mathsf{clock}) = 1 \qquad \forall i \in S \\ 
+    \mathsf{SrcChk}(\mathsf{ac}_i, r, \mathsf{sks}_i, \mathsf{accd}_i, \mathsf{clock}) = 1 \qquad \forall i \in S \\ 
     \mathsf{TgtChk}(\mathsf{ac'}_i, \mathsf{accd}'_i) = 1 \qquad \forall i \in T \\ 
     P(a_S, a'_T) = 1
 \end{cases}
 \end{equation*}
 
-where 
 \begin{equation*}
 \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathcal{Z}_{\bar{S}}, \mathsf{AC}_T, \mathsf{clock}) \\
 \end{equation*}
 \begin{equation*}
-\mathsf{wit} := ((r,\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i)_{i\in S}), (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i)_{i\in T}) \\
+\mathsf{wit} := ((r,\mathsf{sks}_i, \mathsf{accd}_i)_{i\in S}), (\mathsf{mpks}_i, \mathsf{accd}'_i)_{i\in T}) \\
 \end{equation*}
 
 
@@ -287,29 +353,31 @@ where
 \vspace{1em}
 \pseudocode{
     \mathsf{TxGen}(\mathsf{st}, P, R, \mathcal{S}, \mathcal{T}) \\[0.1\baselineskip ][\hline]
-    \{\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i\}_{i\in S} := \mathbf{parse} \: \mathcal{S} \\
-    \{\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i\}_{i\in T} := \mathbf{parse} \: \mathcal{T} \\
+    \{\mathsf{sks}_i, \mathsf{accd}_i\}_{i\in S} := \mathbf{parse} \: \mathcal{S} \\
+    \{\mathsf{mpks}_i, \mathsf{accd}'_i\}_{i\in T} := \mathbf{parse} \: \mathcal{T} \\
     \mathbf{for} \; i \in T \: \mathbf{do} \\
     \:\: r'_i \sample \chi \\
     \:\: \delta'_i \sample \mathcal{K} \\
     \:\: \mathsf{co}'_i := \Gamma.\mathsf{Com}(\mathsf{accd}'_i, r'_i) \\
-    \:\: \mathsf{spk}'_i := \mathsf{smpk}_i + \Delta.\mathsf{Eval}(\delta''_i) \\
+    \:\: (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i) := \mathbf{parse} \: \mathsf{mpks}_i \\
+    \:\: \mathsf{spk}_i := \mathsf{smpk}_i + \Delta.\mathsf{Eval}(\delta''_i) \\
     \:\: \mathbf{if} \: \mathsf{rmpk}_i \neq \: \perp \land \: \mathsf{tmpk}_i \neq \: \perp \\
     \:\:\:\: \delta''_i \sample \mathcal{K} \\
     \:\:\:\: \delta'''_i \sample \mathcal{K} \\
-    \:\:\:\: \mathsf{tpk}'_i := \mathsf{tmpk}_i + \Delta.\mathsf{Eval}(\delta'_i) \\
-    \:\:\:\: \mathsf{rpk}'_i := \mathsf{rmpk}_i + \Delta.\mathsf{Eval}(\delta''_i) \\
-    \;\:\:\: \mathsf{ac}'_i := (\mathsf{spk}'_i, \mathsf{tpk}'_i, \mathsf{rpk}'_i, \mathsf{co}'_i) \\
+    \:\:\:\: \mathsf{tpk}_i := \mathsf{tmpk}_i + \Delta.\mathsf{Eval}(\delta'_i) \\
+    \:\:\:\: \mathsf{rpk}_i := \mathsf{rmpk}_i + \Delta.\mathsf{Eval}(\delta''_i) \\
+    \:\:\:\: \mathsf{pks}_i := (\mathsf{spk}_i, \mathsf{tpk}_i, \mathsf{rpk}_i) \\
     \:\:\;\: \mathsf{tk}_i := (r'_i, \delta'_i, \delta''_i, \delta'''_i, \mathsf{accd}'_i) \\
     \;\: \mathbf{else} \\
-    \;\:\:\: \mathsf{ac}'_i := (\mathsf{spk}'_i, \mathsf{co}'_i) \\
+    \:\:\:\: \mathsf{pks}_i := (\mathsf{spk}_i, \perp, \perp) \\
     \:\:\;\: \mathsf{tk}_i := (r'_i, \delta'_i, \mathsf{accd}'_i) \\
+    \mathsf{ac}'_i := (\mathsf{pks}_i, \mathsf{co}'_i) \\
     \{\mathsf{ac}_i\}_{i \in U} := \mathsf{StExt(st)} \\
     \mathsf{AC}_R := \{\mathsf{ac}_i\}_{i \in R} \\
     \mathsf{AC}_T := \{\mathsf{ac}_i\}_{i \in T} \\
     \mathcal{Z}_{\bar{S}} := \{\Delta.\mathsf{Eval}(s_i)\}_{\phi S(i)\in \bar{S}} \\
     \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \mathsf{clock}) \\
-    \mathsf{wit} := ((r,\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i)_{i\in S}), (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i)_{i\in T}) \\
+    \mathsf{wit} := ((r,\mathsf{sks}_i, \mathsf{accd}_i)_{i\in S}), (\mathsf{mpks}_i, \mathsf{accd}'_i)_{i\in T}) \\
     \pi \gets \Pi.\mathsf{Prove}(\mathsf{crs},\mathsf{stmnt},\mathsf{wit}) \\
     \mathsf{tx} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \pi) \\
     \mathsf{TK} := {\mathsf{tk}_i}_{i \in T} \\
@@ -317,8 +385,10 @@ where
 }
 \vspace{1em}
 \pseudocode{
-    \mathsf{SrcChk}(\mathsf{ac}, r, \mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk}, \mathsf{accd}, \mathsf{clock}) \\[0.1\baselineskip ][\hline]
-    (\mathsf{tpk}, \mathsf{spk}, \mathsf{rpk}, \mathsf{co}) := \mathbf{parse} \: \mathsf{ac} \\
+    \mathsf{SrcChk}(\mathsf{ac}, r, \mathsf{sks}, \mathsf{accd}, \mathsf{clock}) \\[0.1\baselineskip ][\hline]
+    (\mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk}) := \mathbf{parse} \: \mathsf{sks} \\
+    (\mathsf{pks}, \mathsf{co}) := \mathbf{parse} \: \mathsf{ac} \\
+    (\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk}) := \mathbf{parse} \: \mathsf{pks} \\
     \mathsf{time} := \mathbf{parse} \: \mathsf{accd} \\
     \mathbf{if} \: \mathsf{co} \neq \Gamma.\mathsf{Com}(\mathsf{accd}, r) \\
     \:\: \mathbf{return} \: 0 \\
@@ -414,10 +484,33 @@ where
     \quad \} \\
     \} \\
 }
-
 \end{pchstack}
 \end{minipage}%
 \caption{Full protocol execution for $P_0$ and $P_1$, respectively left and right}
 \end{figure}
+
+\subsection{Efficient 2PC}
+\vspace{1em}
+
+$[M_0] := \begin{pmatrix}
+[1] & 0 & 0 & -[s] \\
+0 & [1] & 0 & -[t] \\
+0 & 0 & [1] & -[r]
+\end{pmatrix} $
+$w_1 := \begin{bmatrix} s \\ t \\ r \\ 1 \\ \end{bmatrix}$
+$[w_2] := \begin{pmatrix}
+1-b & 0 & 0 \\
+0 & c(1-b) & 0 \\
+0 & 0 & b \\
+\end{pmatrix}$
+$[0] :=
+\begin{pmatrix}
+0 & 0 & 0 \\
+0 & 0 & 0 \\
+0 & 0 & 0 \\
+\end{pmatrix} $
+$([M_0]w_1)^T[w_2] = [0]$
+
+
 
 \end{document}
