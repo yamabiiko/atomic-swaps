@@ -245,21 +245,12 @@ Clearly, HTLCs have the following drawbacks:
 \end{itemize}
 
 
-\subsubsection{CommiTx interface (public ledger)}
-\begin{todobox}
-Goal should be defining a CommiTx interface which is shared by RingCT-schemes and "standard" blockchains, but it is non-trivial to explicitly define. \\
-The algorithm should create a Commit multi-sig account which:
-\begin{itemize}
-\item before time T, transactions must be signed by both $\mathsf{ssk}$ and $\mathsf{tsk}$
-\item after time T, transaction must be signed by $\mathsf{rsk}$ only
-\end{itemize}
-In Bitcoin, this account corresponds to a script and assets need to be transferred using the P2SH address (BIP-16).
-\end{todobox}
-
-
+\subsubsection{Commit Transaction interface}
 \begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
-	\item %$(\mathsf{hpk}, \mathsf{tx}) \gets \mathbf{CommitTx}(\mathsf{spk}, \mathsf{rpk}, \mathsf{tpk}, \mathsf{ssk}, \mathsf{amnt}, \mathsf{T})$: creates a commit account, paying $\mathsf{amnt}$ from  to $\mathsf{rpk}$ valid until time $\mathsf{T}$, whith  $\mathsf{amnt}$ being locked from being spent on transactions from $\mathsf{pk_{tx}}$ until $\mathsf{T}$. The transaction can be later finalized by opening and broadcasting $C$ through $\mathsf{RevTx}$.
+	\item Commit phase: A user makes a transaction sending $a$ coins to an account which is a binding commitment to the amount $a$, a main secret key $\mathsf{sk}_0$, a list of auxiliary secret keys $\mathsf{sk}_1, \dots, \mathsf{sk}_k$, and two (or more) index sets $I_0, I_1 \subseteq [k]$.
+	\item Reveal phase: Before time $T$, the main key $\mathsf{sk}_0$ and the auxiliary keys $(\mathsf{sk}_i)_{i \in I_0}$ are needed to spend from the account. After time $T$, the main key $\mathsf{sk}_0$ and the auxiliary keys $(\mathsf{sk}_i)_{i \in I_1}$ are needed to spend from the account. The tag of an account is deterministically computed from the main key $\mathsf{sk}_0$.
 \end{itemize}
+%$(\mathsf{hpk}, \mathsf{tx}) \gets \mathbf{CommitTx}(\mathsf{spk}, \mathsf{rpk}, \mathsf{tpk}, \mathsf{ssk}, \mathsf{amnt}, \mathsf{T})$: creates a commit account, paying $\mathsf{amnt}$ from  to $\mathsf{rpk}$ valid until time $\mathsf{T}$, whith  $\mathsf{amnt}$ being locked from being spent on transactions from $\mathsf{pk_{tx}}$ until $\mathsf{T}$. The transaction can be later finalized by opening and broadcasting $C$ through $\mathsf{RevTx}$.
 
 
 \section{RingCCT: Ring confidential commit transaction}
@@ -298,8 +289,7 @@ extracts the set of universe accounts $\mathsf{AC}_T = \{\mathsf{ac}_i\}_{i \in 
 We here define the security properties of RingCCT.
 
 \begin{definition}[Balance] A RingCCT scheme is balanced if: \\
-	1. A commit transaction account ownership changes from $\mathsf{ssk}, \mathsf{tsk}$ to $\mathsf{rsk}$ based on some epoch $\mathsf{time}$, i.e. for any PPT adversary $\mathcal{A}$ it holds that
-\end{definition}
+	1. A commit transaction account ownership changes from $\mathsf{ssk}, \mathsf{tsk}$ to $\mathsf{rsk}$ based on some epoch $\mathsf{time}$, i.e. for any PPT adversary $\mathcal{A}$ it holds that \\
 $\mathsf{Pr}\left[
     \begin{cases} 
 	\mathsf{SrcChk}(\mathsf{ac}, r, (\mathsf{ssk}, \mathsf{tsk}, \perp), \mathsf{accd}, \mathsf{time}+1) \tabularnewline 
@@ -315,7 +305,7 @@ $\mathsf{Pr}\left[
 \right]
 \leq \negl
 $
-
+\end{definition}
 
 \begin{figure}[H]
 \begin{pchstack}[center, boxed]
@@ -344,9 +334,53 @@ $
     \mathbf{return} \bigwedge_{i \in \mathbb{Z}_l} b_i \land \neg (\bigwedge_{i \in \mathbb{Z}_l} b_i' \land b_i'')
 }
 \end{pchstack}
-\caption{Protocol definition of 2PC $\Gamma_{\mathsf{CommitTx}}$}
+\caption{Balance experiment definition}
 \end{figure}
 
+\begin{definition}[Privacy] A RingCCT scheme is private if: \\
+\end{definition}
+
+\begin{figure}[H]
+\begin{pchstack}[center, boxed]
+\pseudocode{
+    \mathsf{Privacy}^b_{\mathcal{A}} \\[0.1\baselineskip ][\hline] 
+    (\mathsf{pp}, \mathsf{st}) \gets \mathsf{Setup}(1^\lambda) \\
+    \mathcal{O} := \{\mathsf{KGen}\mathcal{O}, \mathsf{Corr}\mathcal{O}, \mathsf{Trans}\mathcal{O}, \mathsf{Vf}\mathcal{O}\}
+}
+\end{pchstack}
+%\caption{Privacy experiment definition}
+\end{figure}
+
+\begin{figure}
+\begin{minipage}[t]{\textwidth}
+\begin{pchstack}[boxed]
+\begin{pcvstack}
+\pseudocode{
+    \mathsf{KGen}\mathcal{O}(\mathsf{id}) \\[0.1\baselineskip ][\hline]
+    \mathbf{if} \mathsf{id} \notin \mathsf{ID} \\
+    \qquad (\mathsf{mpk},\mathsf{msk}) \gets \mathsf{KGen}(\mathsf{pp}) \\
+    \qquad (\mathsf{MPK}, \mathsf{MSK})[\mathsf{id}] := (\mathsf{mpk},\mathsf{msk}) \\
+    \mathsf{ID} := \mathsf{ID} \cup \{\mathsf{id}\}
+    \mathbf{return} \mathsf{MPK}[\mathsf{id}]
+}
+\vspace{1em}
+\pseudocode{
+	\mathsf{Corr}\mathcal{O}(\mathsf{id})
+}
+\end{pcvstack}
+\qquad
+\begin{pcvstack}
+\pseudocode{
+	\mathsf{Trans}\mathcal{O}(P, R, \mathcal{S'}, \mathcal{T'}, \mathcal{S}^*, \mathcal{T}^*) \\[0.1\baselineskip ][\hline]
+	 \{\mathsf{ssk}_i, \mathsf{accd}_i\}_{i \in S'} := \mathbf{parse} \: \mathcal{S'}  \\
+	 \{\mathsf{id}_i, \mathsf{tk}_i\}_{i \in S^*} := \mathbf{parse} \: \mathcal{S}^*  \\
+	 \{\mathsf{mpk}_i, \mathsf{accd}'_i\}_{i \in T'} := \mathbf{parse} \: \mathcal{T'} \\
+	 \{\mathsf{id}'_i, \mathsf{accd}'_i\}_{i \in T^*} := \mathbf{parse} \: \mathcal{T}^*  \\
+}
+\end{pcvstack}
+\end{pchstack}
+\end{minipage}%
+\end{figure}
 
 \subsection*{Construction}
 
