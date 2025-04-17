@@ -207,9 +207,7 @@
 \begin{itemize}
     \item Find out what are already known/considered for commit transactions (or however it is called)
     \item Discuss "natural applications" of commit transactions, beyond atomic swaps, e.g. P2P escrow system 
-    \item Discuss differences between commit transactions and time-lock contracts  
     \item Find out what goes wrong if one tries to realise HTLC in privacy-preserving chains, e.g. Monero.
-    \item Do HTLC-based atomic swaps really need to share the same hash function?
     \item A more detailed comparison between CommitTx-based and HTLC-based atomic swaps, and see how exactly does the former avoid needing both chains to share common configurations, e.g. the same hash function.
 \end{itemize}
 \end{todobox}
@@ -337,35 +335,31 @@ $
 \caption{Balance experiment definition}
 \end{figure}
 
-\begin{definition}[Privacy] A RingCCT scheme is private if: \\
-\end{definition}
-
-\begin{figure}[H]
-\begin{pchstack}[center, boxed]
-\pseudocode{
-    \mathsf{Privacy}^b_{\mathcal{A}} \\[0.1\baselineskip ][\hline] 
-    (\mathsf{pp}, \mathsf{st}) \gets \mathsf{Setup}(1^\lambda) \\
-    \mathcal{O} := \{\mathsf{KGen}\mathcal{O}, \mathsf{Corr}\mathcal{O}, \mathsf{Trans}\mathcal{O}, \mathsf{Vf}\mathcal{O}\}
-}
-\end{pchstack}
-%\caption{Privacy experiment definition}
-\end{figure}
-
 \begin{figure}
 \begin{minipage}[t]{\textwidth}
 \begin{pchstack}[boxed]
 \begin{pcvstack}
 \pseudocode{
     \mathsf{KGen}\mathcal{O}(\mathsf{id}) \\[0.1\baselineskip ][\hline]
-    \mathbf{if} \mathsf{id} \notin \mathsf{ID} \\
+    \mathbf{if} \: \mathsf{id} \notin \mathsf{ID} \\
     \qquad (\mathsf{mpk},\mathsf{msk}) \gets \mathsf{KGen}(\mathsf{pp}) \\
     \qquad (\mathsf{MPK}, \mathsf{MSK})[\mathsf{id}] := (\mathsf{mpk},\mathsf{msk}) \\
-    \mathsf{ID} := \mathsf{ID} \cup \{\mathsf{id}\}
-    \mathbf{return} \mathsf{MPK}[\mathsf{id}]
+    \mathsf{ID} := \mathsf{ID} \cup \{\mathsf{id}\} \\
+    \mathbf{return} \: \mathsf{MPK}[\mathsf{id}]
 }
 \vspace{1em}
 \pseudocode{
-	\mathsf{Corr}\mathcal{O}(\mathsf{id})
+	\mathsf{Corr}\mathcal{O}(\mathsf{id}) \\[0.1\baselineskip ][\hline]
+        \mathbf{if} \: \mathsf{id} \notin \mathsf{ID}^* \: \mathbf{return} \: \perp \\
+        * \gets \mathsf{KGen}\mathcal{O}(\mathsf{id}) \\
+        \mathsf{ID}^* := \mathsf{ID}^* \cup \{\mathsf{id}\} \\
+        \mathsf{AC}^* := \bigcup_{\mathsf{id} \in \mathsf{ID}^*} \mathsf{AC}[\mathsf{id}] \\
+        \mathbf{return} \: \mathsf{MSK}[\mathsf{id}]
+}
+\vspace{1em}
+\pseudocode{
+	\mathsf{Vf}\mathcal{O}(\mathsf{tx}) \\[0.1\baselineskip ][\hline]
+        \mathbf{return} \: \mathsf{Vf}(\mathsf{st}, \mathsf{tx})
 }
 \end{pcvstack}
 \qquad
@@ -376,11 +370,72 @@ $
 	 \{\mathsf{id}_i, \mathsf{tk}_i\}_{i \in S^*} := \mathbf{parse} \: \mathcal{S}^*  \\
 	 \{\mathsf{mpk}_i, \mathsf{accd}'_i\}_{i \in T'} := \mathbf{parse} \: \mathcal{T'} \\
 	 \{\mathsf{id}'_i, \mathsf{accd}'_i\}_{i \in T^*} := \mathbf{parse} \: \mathcal{T}^*  \\
+         \mathbf{if} \: \mathcal{S}^* \cap \mathcal{S}' \neq \emptyset \lor \mathcal{T}' \cap \mathcal{T}^* \: \mathbf{return} \perp \\
+         \mathbf{if} \: (\{\mathsf{id_i}_{i\in S^*}\} \cup \{\mathsf{id_i}_{i\in T^*}\}) \cap \mathsf{ID}^* \neq \emptyset \: \mathbf{return} \perp \\
+         \mathbf{if} \: \mathsf{StExt}(\mathsf{st})[\mathcal{S}^*] \cap \mathsf{AC}^* \neq \emptyset \: \mathbf{return} \perp \\
+         \mathcal{S} := \mathcal{S}' \cup \{\mathsf{KDer}(\mathsf{MSK}[\mathsf{id}_i], \mathsf{tk}_i)\}_{i \in S^*} \\
+         \mathcal{T} := \mathcal{T}' \cup \{\mathsf{MPK}[\mathsf{id}'_i], \mathsf{accd}'_i\}_{i\in T^*} \\
+         (\mathsf{tx}, \mathsf{TK}) \gets \mathsf{Trans}(\mathsf{st}, P, R, \mathcal{S}, \mathcal{T}) \\
+         \mathsf{AC}[\mathsf{id'}_i] := \mathsf{AC}[\mathsf{id'}_i] \cup \mathsf{TxExt}(\mathsf{tx})[i], \forall i \in T \\
+         \mathbf{return} \: (\mathsf{tx}, \mathsf{TK})
 }
 \end{pcvstack}
 \end{pchstack}
 \end{minipage}%
 \end{figure}
+
+\begin{definition}[Privacy] A RingCCT scheme is private if: \\
+\end{definition}
+
+\begin{figure}[H]
+\begin{pchstack}[center, boxed]
+\pseudocode{
+    \mathsf{Privacy}^b_{\mathcal{A}} \\[0.1\baselineskip ][\hline] 
+    (\mathsf{pp}, \mathsf{st}) \gets \mathsf{Setup}(1^\lambda) \\
+    \mathcal{O} := \{\mathsf{KGen}\mathcal{O}, \mathsf{Corr}\mathcal{O}, \mathsf{Trans}\mathcal{O}, \mathsf{Vf}\mathcal{O}\} \\
+    (P,R, \mathcal{S}', \mathcal{T}', (\mathcal{S}^*_i, \mathcal{T}^*_i)_{i \in \{0,1\}}) \gets \mathcal{A}^\mathcal{O}(\mathsf{pp}) \\
+    \mathbf{for} i \in \{0, 1\} \\
+    \:\: (\mathsf{tx}_i, *) \gets \mathsf{Trans}\mathcal{O}(P, R, \mathcal{S}', \mathcal{T}', \mathcal{S}^*_i, \mathcal{T}^*_i)
+    \:\: (b_i, \mathsf{st'_i}) := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}_i) \\
+    \:\: \mathbf{if} b_i = 0 \mathbf{return} \: 0 \\
+    \{ \mathsf{id}_{i,j},\mathsf{tk}_{i,j} \}_{j\in S^*_i} := \mathbf{parse} \: \mathcal{S}^*_i \\
+    \{ \mathsf{id}'_{i,j},\mathsf{accd}_{i,j} \}_{j\in S^*_i} := \mathbf{parse} \: \mathcal{T}^*_i \\
+    \mathsf{ID}^* := \mathsf{ID}^* \cup \{\mathsf{id}_{i,j}\}_{j\in S^*_i} \cup \{\mathsf{id;}_{i,j}\}_{j\in T^*_i} \\
+    \mathsf{AC}^* := \mathsf{AC}^* \cup \mathsf{StExt}(\mathsf{st})[\mathcal{S}^*_i] \cup \mathsf{TxExt}(\mathsf{tx}_i)[\mathcal{T}^*_i] \\
+    \mathbf{if} (|\mathcal{S^*_0}| \neq |\mathcal{S^*_1}|) \lor (|\mathsf{StExt}(\mathsf{st}'_0) \ \mathsf{StExt}(\mathsf{st})| \neq |\mathsf{StExt}(\mathsf{st}'_1) \ \mathsf{StExt}(\mathsf{st})|) \:\: \mathbf{return} \: 0 \\
+    b' \gets \mathcal{A}^\mathcal{O}(\mathsf{tx}_b) \\
+    \mathbf{return} \: b'
+}
+\end{pchstack}
+%\caption{Privacy experiment definition}
+\end{figure}
+
+
+
+\begin{definition}[Availability] A RingCCT scheme is available if: \\
+\end{definition}
+
+\begin{figure}[H]
+\begin{pchstack}[center, boxed]
+\pseudocode{
+    \mathsf{Available}_{\mathcal{A}} \\[0.1\baselineskip ][\hline] 
+    (\mathsf{pp}, \mathsf{st}) \gets \mathsf{Setup}(1^\lambda) \\
+    \mathcal{O} := \{\mathsf{KGen}\mathcal{O}, \mathsf{Corr}\mathcal{O}, \mathsf{Trans}\mathcal{O}, \mathsf{Vf}\mathcal{O}\} \\
+    (P,R, \mathcal{S}', \mathcal{T}', (\mathcal{S}^*_i, \mathcal{T}^*_i)_{i \in \{0,1\}}) \gets \mathcal{A}^\mathcal{O}(\mathsf{pp}) \\
+    (\mathsf{tx}, \mathsf{TK}) \gets \mathsf{Trans}\mathcal{O}(P, R, \mathcal{S}', \mathcal{T}', \mathcal{S}^*_i, \mathcal{T}^*_i)
+    \{ \mathsf{id}_j,\mathsf{tk}_j \}_{j\in S^*} := \mathbf{parse} \: \mathcal{S}^* \\
+    \mathbf{if} \mathcal{S}^* \not\subseteq U \mathbf{return} \: 0 \\
+    (\mathsf{ID}^*, \mathsf{AC}^*) := (\{id_j\}_{j \in S^*}, \mathsf{StExt}(\mathsf{st})[\mathcal{S}^*])
+    (b, \perp) := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}) \\
+    \perp \gets \mathcal{A}\mathcal{O}(\mathsf{tx}, \mathsf{TK}) \\
+    (b', \perp) := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}) \\
+    \mathbf{return} \: b' \land b'
+}
+\end{pchstack}
+%\caption{Privacy experiment definition}
+\end{figure}
+
+\newpage
 
 \subsection*{Construction}
 
@@ -388,14 +443,14 @@ $
 \mathcal{R}(\mathsf{stmnt}, \mathsf{wit}) := \begin{cases} 
     S \subseteq R \\ 
     \xi_{\phi S(i)} = \Delta.\mathsf{Eval}(s_i) \qquad \forall i \in S \\
-    \mathsf{SrcChk}(\mathsf{ac}_i, r, \mathsf{sks}_i, \mathsf{accd}_i, \mathsf{clock}) = 1 \qquad \forall i \in S \\ 
+    \mathsf{SrcChk}(\mathsf{ac}_i, r, \mathsf{sks}_i, \mathsf{accd}_i, \mathsf{time}, \mathsf{type}) = 1 \qquad \forall i \in S \\ 
     \mathsf{TgtChk}(\mathsf{ac'}_i, \mathsf{accd}'_i) = 1 \qquad \forall i \in T \\ 
     P(a_S, a'_T) = 1
 \end{cases}
 \end{equation*}
 
 \begin{equation*}
-\mathsf{stmnt} := (P,\mathsf{AC}_R,\mathcal{Z}_{\bar{S}}, \mathsf{AC}_T, \mathsf{clock}) \\
+\mathsf{stmnt} := (P,\mathsf{AC}_R,\mathcal{Z}_{\bar{S}}, \mathsf{AC}_T, \mathsf{time}, \mathsf{type}) \\
 \end{equation*}
 \begin{equation*}
 \mathsf{wit} := ((r,\mathsf{sks}_i, \mathsf{accd}_i)_{i\in S}), (\mathsf{mpks}_i, \mathsf{accd}'_i)_{i\in T}) \\
@@ -412,7 +467,7 @@ $
     \mathsf{Setup}(1^\lambda) \\ [0.1\baselineskip ][\hline]
     \mathsf{crs} \gets \Pi.\mathsf{Setup}(1^\lambda) \\
     \mathsf{ck} \gets \Gamma.\mathsf{Gen}(1^\lambda) \\
-    \mathsf{pp_\Delta} \gets \Delta.\mathsf{Setup}(1^\lambda) \\
+    \mathsf{pp_\Delta} \gets \Delta.\mathsf{Setup}(1\lambda) \\
     \mathbf{return} \: (\mathsf{pp}, \mathsf{st})
 }
 \vspace{1em}
@@ -424,20 +479,39 @@ $
 }
 \vspace{1em}
 \pseudocode{
+    \mathsf{TimeExt}(\mathsf{st}) \\[0.1\baselineskip ][\hline]
+    \mathsf{time} := \mathbf{parse} st \\
+    \mathbf{return} \: \mathsf{time}
+}
+\vspace{1em}
+\pseudocode{
     \mathsf{Vf}(\mathsf{st},\mathsf{tx}) \\[0.1\baselineskip ][\hline]
     (\mathsf{AC}_U, \mathcal{Z}_U) := \mathbf{parse} \: \mathsf{st} \\
     \{\mathsf{ac}_i\}_{i \in U} := \mathbf{parse} \: \mathsf{AC}_U \\
     (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}) := \mathbf{parse} \: \mathsf{tx} \\
     \mathsf{AC}_R := \{\mathsf{ac}_i\}_{i \in R} \\
-    \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \mathsf{clock}) \\
+    \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \mathsf{type}, \mathsf{time}) \\
     \mathbf{if} \: \begin{cases}
         P \in \mathcal{P} \tabularnewline
         R \subseteq U \tabularnewline
         \Pi.\mathsf{Vf}(\mathsf{crs}, \mathsf{stmnt}, \pi) = 1 \tabularnewline
-        \mathcal{Z}_{\bar{S}} \cap \mathcal{Z}_{\bar{U}} =  
+        \mathcal{Z}_{\bar{S}} \cap \mathcal{Z}_{\bar{U}} = \emptyset
     \end{cases} \: \mathbf{then} \\
     \:\: \mathbf{return} \: (1, \mathsf{st}') \\
     \mathbf{else} \: \mathbf{return} \: (0, \mathsf{st})
+}
+\vspace{1em}
+\pseudocode{
+    \mathsf{TimeVf}(\mathsf{st}, \mathsf{tx}) \\[0.1\baselineskip ][\hline]
+    \mathsf{time} := \mathbf{parse} \: \mathsf{st} \\
+    \mathsf{type}, \mathsf{time}' := \mathbf{parse} \: \mathsf{tx} \\
+    (\mathsf{ret}, \mathsf{st}') := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}) \\
+    \mathbf{if} \: \mathsf{ret} = 1 \\
+    \:\: \mathbf{if} \: \mathsf{type} = 0 \: \lor \\
+    \:\: \: (\mathsf{type} = 1 \land  \mathsf{time} \leq \mathsf{time}') \: \lor\\
+    \:\: \: (\mathsf{type} = -1 \land  \mathsf{time} > \mathsf{time}') \\
+    \:\:\:\:\:\: \mathbf{return} \: (1, \mathsf{st}') \\
+    \mathbf{return} \: (0, \mathsf{st})
 }
 \vspace{1em}
 \pseudocode{
@@ -466,7 +540,7 @@ $
 \begin{pcvstack}
 \pseudocode{
     \mathsf{KDer}(\mathsf{msk},\tau) \\[0.1\baselineskip ][\hline]
-    (r, \delta, \mathsf{accd} := (a, \mathsf{time})) := \mathbf{parse} \: \tau \\
+    (r, \delta, \mathsf{accd} := (a, \mathsf{time}, \mathsf{type})) := \mathbf{parse} \: \tau \\
     \mathsf{sk} := \mathsf{msk}+\delta \\
     \mathbf{return} \: (\mathsf{sk}, r, \mathsf{accd})
 }
@@ -496,7 +570,7 @@ $
     \mathsf{AC}_R := \{\mathsf{ac}_i\}_{i \in R} \\
     \mathsf{AC}_T := \{\mathsf{ac}_i\}_{i \in T} \\
     \mathcal{Z}_{\bar{S}} := \{\Delta.\mathsf{Eval}(\mathsf{ssk}_i)\}_{\phi S(i)\in \bar{S}} \\
-    \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \mathsf{clock}) \\
+    \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \mathsf{time}, \mathsf{type}) \\
     \mathsf{wit} := ((r,\mathsf{sks}_i, \mathsf{accd}_i)_{i\in S}), (\mathsf{mpks}_i, \mathsf{accd}'_i)_{i\in T}) \\
     \pi \gets \Pi.\mathsf{Prove}(\mathsf{crs},\mathsf{stmnt},\mathsf{wit}) \\
     \mathsf{tx} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \pi) \\
@@ -505,16 +579,16 @@ $
 }
 \vspace{1em}
 \pseudocode{
-    \mathsf{SrcChk}(\mathsf{ac}, r, \mathsf{sks}, \mathsf{accd}, \mathsf{clock}) \\[0.1\baselineskip ][\hline]
+    \mathsf{SrcChk}(\mathsf{ac}, r, \mathsf{sks}, \mathsf{accd}, \mathsf{time}, \mathsf{type}) \\[0.1\baselineskip ][\hline]
     (\mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk}) := \mathbf{parse} \: \mathsf{sks} \\
     (\mathsf{pks}, \mathsf{co}) := \mathbf{parse} \: \mathsf{ac} \\
     (\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk}) := \mathbf{parse} \: \mathsf{pks} \\
-    \mathsf{time} := \mathbf{parse} \: \mathsf{accd} \\
+    \mathsf{accd} := (a, \mathsf{time'}, \mathsf{type'}) \\
     \mathbf{if} \: \mathsf{co} \neq \Gamma.\mathsf{Com}(\mathsf{accd}, r) \\
     \:\: \mathbf{return} \: 0 \\
-    \mathbf{if} \: \mathsf{time} = \: \perp \\
+    \mathbf{if} \: \mathsf{type} = \: 0 \\
     \:\: \mathbf{return} \: \mathsf{spk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{ssk}) \\
-    \mathbf{else} \: \mathbf{if} \: \mathsf{time} <= \mathsf{clock} \\
+    \mathbf{else} \: \mathbf{if} \: \mathsf{type} = 1  \\
     \:\: \mathbf{return} \: \begin{cases}
         \mathsf{tpk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{tsk}) \tabularnewline
         \mathsf{spk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{ssk}) \tabularnewline
@@ -630,7 +704,5 @@ $[0] :=
 0 & 0 & 0 \\
 \end{pmatrix} $
 $([M_0]w_1)^T[w_2] = [0]$
-
-
 
 \end{document}
