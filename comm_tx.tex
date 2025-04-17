@@ -1,0 +1,121 @@
+% TeX root = atomic-swaps.tex
+
+\section{Commit Transactions and Atomic Swaps}
+
+\subsection{Commit Transactions}
+
+\begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
+	\item Commit phase: A user makes a transaction sending $a$ coins to an account which is a binding commitment to the amount $a$, a main secret key $\mathsf{sk}_0$, a list of auxiliary secret keys $\mathsf{sk}_1, \dots, \mathsf{sk}_k$, and two (or more) index sets $I_0, I_1 \subseteq [k]$.
+	\item Reveal phase: Before time $T$, the main key $\mathsf{sk}_0$ and the auxiliary keys $(\mathsf{sk}_i)_{i \in I_0}$ are needed to spend from the account. After time $T$, the main key $\mathsf{sk}_0$ and the auxiliary keys $(\mathsf{sk}_i)_{i \in I_1}$ are needed to spend from the account. The tag of an account is deterministically computed from the main key $\mathsf{sk}_0$.
+\end{itemize}
+%$(\mathsf{hpk}, \mathsf{tx}) \gets \mathbf{CommitTx}(\mathsf{spk}, \mathsf{rpk}, \mathsf{tpk}, \mathsf{ssk}, \mathsf{amnt}, \mathsf{T})$: creates a commit account, paying $\mathsf{amnt}$ from  to $\mathsf{rpk}$ valid until time $\mathsf{T}$, whith  $\mathsf{amnt}$ being locked from being spent on transactions from $\mathsf{pk_{tx}}$ until $\mathsf{T}$. The transaction can be later finalized by opening and broadcasting $C$ through $\mathsf{RevTx}$.
+
+\subsection{Commit-Transaction-based Atomic Swaps}
+
+\begin{figure}[H]
+    \begin{pchstack}[center, boxed]
+    \pseudocode{
+        P_0(\mathsf{ssk_{\mathbb{A}}},\mathsf{rsk_{\mathbb{A}}},\mathsf{tsk_{\mathbb{B}}}) \qquad \qquad P_1(\mathsf{ssk_{\mathbb{B}}},\mathsf{rsk_{\mathbb{B}}},\mathsf{tsk_{\mathbb{A}}}) \\[0.1\baselineskip ][\hline] 
+        \<\< \\[-0.4\baselineskip ]
+        \mathcal{S_\mathbb{A}} := (\mathsf{ssk}_\mathbb{A}, \mathsf{rsk}_\mathbb{A}, \mathsf{tsk}_\mathbb{A}, \mathsf{accd}_\mathbb{A}) \\
+        \mathsf{(tx_\mathbb{A}, TK_\mathbb{A})} := \mathsf{TxGen_\mathbb{A}}(\mathsf{st},P,R,\mathcal{S},\mathcal{T}) \\
+        \mathcal{S_\mathbb{B}} := (\mathsf{ssk}_\mathbb{B}, \mathsf{rsk}_\mathbb{B}, \mathsf{tsk}_\mathbb{B}, \mathsf{accd}_\mathbb{B}) \\
+        \mathsf{(tx_\mathbb{B}, TK_\mathbb{B})} := \mathsf{TxGen_\mathbb{B}}(\mathsf{st},P,R,\mathcal{S},\mathcal{T}) \\
+        \mathbf{output} \: \mathsf{(tx_\mathbb{A} \oplus \mathsf{tx_\mathbb{B}}, TK_\mathbb{A})} \: \mathbf{to} \: P_1 \\
+        \mathbf{output} \: \mathsf{(tx_\mathbb{B}, TK_\mathbb{B})} \: \mathbf{to} \: P_0 \\
+    }
+    \end{pchstack}
+    \caption{Protocol definition of 2PC $\Gamma_{\mathsf{CommitTx}}$}
+    \end{figure}
+    
+    
+    \begin{figure}[H]
+    \begin{minipage}[t]{0.5\textwidth}
+    \begin{pchstack}[boxed]
+    \pseudocode{
+        \text{Global input} \:\: (T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
+        \mathsf{(rmpk, rmsk)} \gets \mathsf{KGen}_\mathsf{A}(\mathsf{pp}) \\
+        \mathcal{S}_0 := \{(\mathsf{ssk}_\mathsf{A}, \perp, \perp, (\mathsf{amnt_a}, \perp))\} \\
+        \mathcal{T}_0 := \{(\mathsf{smpk}_\mathsf{A}, \mathsf{tmpk}_\mathsf{A}, \mathsf{rmpk}_\mathsf{A}, (\mathsf{amnt_a}, T_0))\} \\
+        \mathsf{(tx_0, TK_0)}_\mathbb{A} := \mathsf{TxGen_\mathbb{A}}(\mathsf{st},P,R,\mathcal{S}_0,\mathcal{T}_0) \\
+        (\_, \mathsf{st}') := \mathsf{Vf}_\mathbb{A}(\mathsf{tx_0}) \\
+        \mathsf{send}(\mathsf{(tx_0, TK_0)}_\mathbb{A}) \\
+        \mathsf{\textbf{select}} \:\: \{ \\
+        \quad \mathsf{\textbf{wait}} \:\: \{ \\
+        \qquad \mathsf{timeout}(T_0) \\
+        \quad \} \\
+        \quad \mathsf{\textbf{wait}} \:\: \{ \\
+        \qquad \mathsf{receive}(\mathsf{(tx_0, TK_0)}_\mathbb{B}) \\
+        \qquad (\mathsf{res}, \mathsf{st}') := \mathsf{Vf}_\mathbb{B}(\mathsf{tx_0}) \\
+        \qquad \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\ % verify that commit transaction is valid and accepted
+        \qquad \quad \mathsf{\textbf{return}} \perp \\
+        \qquad (\mathsf{tx_1, TK_1}) \gets \Gamma.\mathsf{CommitTx}(\mathsf{ssk_\mathbb{A}}, \mathsf{rsk_\mathbb{A}}, \mathsf{tsk_\mathbb{B}}) \\
+        \qquad (\mathsf{res}, \mathsf{st}') := \mathsf{Vf}_\mathbb{B}(\mathsf{tx_1}) \\
+        \qquad \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\ % verify that commit transaction is valid and accepted
+        \qquad \quad \mathsf{\textbf{return}} \perp \\
+        \quad \} \\
+        \} \\
+    }
+    \end{pchstack}
+    \end{minipage}%
+    \hspace{0.4cm}
+    \begin{minipage}[t]{0.5\textwidth}
+    \begin{pchstack}[boxed]
+    \pseudocode{
+        \text{Global input} \:\: (T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
+        \mathsf{(rmpk, rmsk)} \gets \mathsf{KGen}_\mathsf{B}(\mathsf{pp}) \\
+        \mathcal{S}_0 := \{(\mathsf{ssk}_\mathsf{B}, \perp, \perp, (\mathsf{amnt_b}, \perp))\} \\
+        \mathcal{T}_0 := \{(\mathsf{smpk}_\mathsf{B}, \mathsf{tmpk}_\mathsf{B}, \mathsf{rmpk}_\mathsf{B}, (\mathsf{amnt_b}, T_1))\} \\
+        \mathsf{(tx_0, TK_0)}_\mathbb{B} := \mathsf{TxGen_\mathbb{B}}(\mathsf{st},P,R,\mathcal{S}_0,\mathcal{T}_0) \\
+        (\_, \mathsf{st}') := \mathsf{Vf}_\mathbb{B}(\mathsf{tx_0}) \\
+        \mathsf{send}(\mathsf{(tx_0, TK_0)}_\mathbb{B}) \\
+        \mathsf{\textbf{select}} \:\: \{ \\
+        \quad \mathsf{\textbf{wait}} \:\: \{ \\
+        \qquad \mathsf{timeout}(T_1) \\
+        \quad \} \\
+        \quad \mathsf{\textbf{wait}} \:\: \{ \\
+        \qquad \mathsf{receive}(\mathsf{(tx_0, TK_0)}_\mathbb{A}) \\
+        \qquad (\mathsf{res}, \mathsf{st}') := \mathsf{Vf}_\mathbb{A}(\mathsf{tx_0}) \\
+        \qquad \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\ % verify that commit transaction is valid and accepted
+        \qquad \quad \mathsf{\textbf{return}} \perp \\
+        \qquad (\mathsf{lk, TK_1}) \gets \Gamma.\mathsf{CommitTx}(\mathsf{ssk_\mathbb{B}}, \mathsf{rsk_\mathbb{B}}, \mathsf{tsk_\mathbb{A}}) \\
+        \qquad (\mathsf{res}, \mathsf{st}') := \mathsf{Vf}_\mathbb{B}(\mathsf{tx_1}) \\
+        \qquad \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\ % verify that commit transaction is valid and accepted
+        \qquad \quad \mathsf{\textbf{return}} \perp \\
+        \quad \} \\
+        \} \\
+    }
+    \end{pchstack}
+    \end{minipage}%
+    \caption{Full protocol execution for $P_0$ and $P_1$, respectively left and right}
+    \end{figure}
+
+\subsection{Comparison with HTLC-based Atomic Swaps}
+
+\paragraph*{Definition}
+a Hash Time Lock Contract (HTLC) is defined by a tuple $(\mathsf{amnt_a}, h, T, \mathsf{pk_0}, \mathsf{pk_1})$ where 
+\begin{itemize}
+	\item $\mathsf{amnt_a}$ denotes the amount of $\mathsf{a}$ assets to be exchanged
+	\item $h$ is a hash value
+	\item $T$ the timeout
+	\item $\mathsf{pk_{tx}}$ and $\mathsf{pk_{rx}}$ the public key addresses of two users
+\end{itemize}
+
+The HTLC transfers $\mathsf{amnt_a}$ to $\mathsf{pk_1}$ if invoked before timeout $T$ with input value $r$ such that $\mathcal{H}(r) = h$. 
+If the contract is invoked after timeout $T$, it refunds the assets $\mathsf{amnt_a}$ to $\mathsf{pk_0}$ unconditionally.
+
+Using HTLCs as a building block, an atomic swap protocol can be constructed as follows: \\
+1) Alice chooses $r$, computes $h = \mathcal{H}(r)$, transfers $\mathsf{amnt_a}$ into an $(\mathsf{amnt_a}, h, T_0, \mathsf{pk_0}, \mathsf{pk_1})$ on blockchain $\mathbb{A}$ and sends $h,T$ to Bob. \\
+2) Bob finishes the setup of the exchange by choosing a time $T_1 < T_0$ and transferring his $\mathsf{amnt_b}$ assets into an HTLC$(\mathsf{amnt_b}, h, T_1, \mathsf{pk_{tx}}, \mathsf{pk_{rx}})$ on blockchain $\mathbb{B}$.
+
+
+\paragraph*{Comparison}
+Clearly, HTLCs have the following drawbacks:
+\begin{itemize}
+	\item An HTLCs-based cross-chain protocol requires both chains to support the same hash function. (This could be avoided if the mover provides the hash-value $h'$ of $r$ supported by chain $\mathbb{B}$, together with a NIZK proving that $H(r) = h \land H'(r) = h'$ ; but complicates the protocol).
+	\item The hash preimage is reused across different chains, creates a link between those payments, which is not privacy friendly. (Similarly to above we can give $H(r+r')$, and give $r'$ together with a proof that $H(r+r') = h' \land H(r) = h$).
+	\item If naively implemented on RingCT, we make transaction easily distinguishable. If privately implemented, the protocol is asymmetric (public chain must always move first, in order to obtain preimage and mage of h).
+	\item Straighforward private chain to private chain HTLCs might not be possible
+	\item CommitTx, even for public chains, have no extra data on-chain except the timeout. Equivalent to a timeout-based multisig.
+	\item Potential security issues (miner incentives) ? https://eprint.iacr.org/2022/546.pdf
+\end{itemize}

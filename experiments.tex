@@ -1,0 +1,41 @@
+% TeX root = atomic-swaps.tex
+
+\section{Instantiation and Performance Evaluation}
+
+\subsection{Instantiation}
+
+\paragraph{Commitment}
+
+\paragraph{Tagging Scheme}
+
+\paragraph{2PC}
+
+\begin{todobox}
+    Write down explicitly (i.e. in terms of $\GG$ and $\ZZ_q$ arithmetic) for which functionalities do we need 2PCs.     
+\end{todobox}
+
+
+$[M_0] := \begin{pmatrix}
+[1] & 0 & 0 & -[s] \\
+0 & [1] & 0 & -[t] \\
+0 & 0 & [1] & -[r]
+\end{pmatrix} $
+$w_1 := \begin{bmatrix} s \\ t \\ r \\ 1 \\ \end{bmatrix}$
+$[w_2] := \begin{pmatrix}
+1-b & 0 & 0 \\
+0 & c(1-b) & 0 \\
+0 & 0 & b \\
+\end{pmatrix}$
+$[0] :=
+\begin{pmatrix}
+0 & 0 & 0 \\
+0 & 0 & 0 \\
+0 & 0 & 0 \\
+\end{pmatrix} $
+$([M_0]w_1)^T[w_2] = [0]$
+
+\paragraph{Zero-Knowledge Proofs}
+
+\subsection{Performance Evaluation}
+
+\end{document}
