@@ -3,12 +3,36 @@
 \section{Commit Transactions and Atomic Swaps}
 
 \subsection{Commit Transactions}
+CommitTx provides a minimal interface for implementing conditional asset transfers on-chain without requiring general-purpose scripting. It enables locking funds under flexible spending conditions that can change over time, thereby allowing time-sensitive contracts such as atomic swaps or escrows.
 
-\begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
-	\item Commit phase: A user makes a transaction sending $a$ coins to an account which is a binding commitment to the amount $a$, a main secret key $\mathsf{sk}_0$, a list of auxiliary secret keys $\mathsf{sk}_1, \dots, \mathsf{sk}_k$, and two (or more) index sets $I_0, I_1 \subseteq [k]$.
-	\item Reveal phase: Before time $T$, the main key $\mathsf{sk}_0$ and the auxiliary keys $(\mathsf{sk}_i)_{i \in I_0}$ are needed to spend from the account. After time $T$, the main key $\mathsf{sk}_0$ and the auxiliary keys $(\mathsf{sk}_i)_{i \in I_1}$ are needed to spend from the account. The tag of an account is deterministically computed from the main key $\mathsf{sk}_0$.
+We note that providing a fully universal definition of the CommitTx primitive is challenging due to the diversity in transaction models across cryptocurrencies. In particular, fundamental differences between UTXO-based (e.g., Bitcoin, MimbleWimble) and account-based (e.g., Ethereum, ZCash Sapling) systems lead to distinct transaction semantics and interface requirements. As a result, a single formalization of CommitTx that universaly applies to all transaction schemes would either be overly abstract or fail to capture critical implementation details. Nevertheless, the underlying concept of CommitTx  namely, conditional asset ownership based on timeouts —remains simple and expressive. In practice, this functionality can be readily adapted to different ledger models with modest modifications to fit the specifics of the transaction scheme and primitives in use.
+
+A CommitTx-account operates in two phases:
+\begin{itemize}
+	\item Commit Phase: The user locks a given amount of coins into a special account defined by a commitment to:
+	\begin{itemize}
+		\item A main secret key $\mathsf{sk}_0$
+
+		\item A set of auxiliary secret keys $\mathsf{sk}_1, \dots, \mathsf{sk}_k$
+
+		\item Two (or more) index sets $I_0, I_1 \subseteq [k]$ which define authorized key combinations for spending the funds
+
+		\item A time threshold $T$
+	\end{itemize}
+
+The account's address (or tag) is deterministically derived from $\mathsf{sk}_0$ and can be publicly computed, preserving the binding nature of the commitment without revealing spending conditions.
+
+\item Reveal Phase: Depending on whether a transaction is issued before or after time $T$, different subsets of auxiliary keys are required:
+
+	\begin{itemize}
+		\item Before time $T$: The account can be spent using $\mathsf{sk}_0$ and the auxiliary keys indexed by $I_0$
+
+		\item After time $T$: The spending requires $\mathsf{sk}_0$ and keys indexed by $I_1$
+
+	\end{itemize}
+This time-dependent spending rule supports two disjoint execution paths—ideal for use in atomic swap protocols where one party should be able to claim funds within a deadline, and the other should recover them afterward if the protocol fails to complete.
 \end{itemize}
-%$(\mathsf{hpk}, \mathsf{tx}) \gets \mathbf{CommitTx}(\mathsf{spk}, \mathsf{rpk}, \mathsf{tpk}, \mathsf{ssk}, \mathsf{amnt}, \mathsf{T})$: creates a commit account, paying $\mathsf{amnt}$ from  to $\mathsf{rpk}$ valid until time $\mathsf{T}$, whith  $\mathsf{amnt}$ being locked from being spent on transactions from $\mathsf{pk_{tx}}$ until $\mathsf{T}$. The transaction can be later finalized by opening and broadcasting $C$ through $\mathsf{RevTx}$.
+
 
 \subsection{Commit-Transaction-based Atomic Swaps}
 
@@ -92,13 +116,13 @@
 
 \subsection{Comparison with HTLC-based Atomic Swaps}
 
-\paragraph*{Definition}
-a Hash Time Lock Contract (HTLC) is defined by a tuple $(\mathsf{amnt_a}, h, T, \mathsf{pk_0}, \mathsf{pk_1})$ where 
+A Hash Time-Lock Contract (HTLC) is a contract that enables conditional payment based on the revelation of a cryptographic secret within a certain time window. Formally, an HTLC is characterized by a tuple  $(\mathsf{amnt_a}, h, T, \mathsf{pk_0}, \mathsf{pk_1})$ where
 \begin{itemize}
 	\item $\mathsf{amnt_a}$ denotes the amount of $\mathsf{a}$ assets to be exchanged
-	\item $h$ is a hash value
-	\item $T$ the timeout
-	\item $\mathsf{pk_{tx}}$ and $\mathsf{pk_{rx}}$ the public key addresses of two users
+	\item $h$ is the hash of a secret value $r$, i.e., $h = \mathcal{H}(r)$ for some cryptographic hash function $\mathcal{H}$
+	\item $T$ is a timelock parameter, typically a block height or timestamp, indicating the deadline after which funds can be refunded
+	\item $\mathsf{pk_0}$ is the public key of the sender (who can reclaim the funds after the timeout).
+	\item $\mathsf{pk_1}$ is the public key of the intended recipient (who can claim the funds upon presenting the correct preimage $r$ before the timeout).
 \end{itemize}
 
 The HTLC transfers $\mathsf{amnt_a}$ to $\mathsf{pk_1}$ if invoked before timeout $T$ with input value $r$ such that $\mathcal{H}(r) = h$. 
@@ -108,14 +132,22 @@ Using HTLCs as a building block, an atomic swap protocol can be constructed as f
 1) Alice chooses $r$, computes $h = \mathcal{H}(r)$, transfers $\mathsf{amnt_a}$ into an $(\mathsf{amnt_a}, h, T_0, \mathsf{pk_0}, \mathsf{pk_1})$ on blockchain $\mathbb{A}$ and sends $h,T$ to Bob. \\
 2) Bob finishes the setup of the exchange by choosing a time $T_1 < T_0$ and transferring his $\mathsf{amnt_b}$ assets into an HTLC$(\mathsf{amnt_b}, h, T_1, \mathsf{pk_{tx}}, \mathsf{pk_{rx}})$ on blockchain $\mathbb{B}$.
 
+HTLCs serve as the core building block in many atomic swap protocols. A standard two-party protocol between Alice and Bob proceeds as follows:
 
-\paragraph*{Comparison}
-Clearly, HTLCs have the following drawbacks:
-\begin{itemize}
-	\item An HTLCs-based cross-chain protocol requires both chains to support the same hash function. (This could be avoided if the mover provides the hash-value $h'$ of $r$ supported by chain $\mathbb{B}$, together with a NIZK proving that $H(r) = h \land H'(r) = h'$ ; but complicates the protocol).
-	\item The hash preimage is reused across different chains, creates a link between those payments, which is not privacy friendly. (Similarly to above we can give $H(r+r')$, and give $r'$ together with a proof that $H(r+r') = h' \land H(r) = h$).
-	\item If naively implemented on RingCT, we make transaction easily distinguishable. If privately implemented, the protocol is asymmetric (public chain must always move first, in order to obtain preimage and mage of h).
-	\item Straighforward private chain to private chain HTLCs might not be possible
-	\item CommitTx, even for public chains, have no extra data on-chain except the timeout. Equivalent to a timeout-based multisig.
-	\item Potential security issues (miner incentives) ? https://eprint.iacr.org/2022/546.pdf
-\end{itemize}
+Alice chooses a uniformly random secret value $r$, computes $h = \mathcal{H}(r)$, and initiates an HTLC on blockchain $\mathbb{A}$ locking $\mathsf{amnt_a}$ to Bob under the tuple $(\mathsf{amnt_a}, h, T_0, \mathsf{pk}\text{Alice}, \mathsf{pk}\text{Bob})$. She then sends $(h, T_0)$ to Bob.
+
+Bob selects a smaller timeout $T_1 < T_0$ and sets up an HTLC on blockchain $\mathbb{B}$ locking his $\mathsf{amnt_b}$ to Alice under $(\mathsf{amnt_b}, h, T_1, \mathsf{pk}\text{Bob}, \mathsf{pk}\text{Alice})$.
+
+Alice redeems the funds from Bob’s HTLC on $\mathbb{B}$ by revealing $r$. Since transactions on public blockchains are visible, Bob can then observe $r$ on-chain and use it to redeem the funds from Alice’s HTLC on $\mathbb{A}$ before her timeout $T_0$.
+
+This protocol ensures atomicity: either both parties receive their respective assets, or after the timeout, each party reclaims their original funds.
+
+While HTLCs are widely used in practice, especially in early cross-chain systems and off-chain protocols such as the Lightning Network, they suffer from several critical limitations, especially when applied in a privacy-preserving or cross-paradigm setting.
+
+\paragraph*{Compatibility of hash functions}
+HTLC-based atomic swaps require both blockchains involved to support the same hash function. For instance, if chain $\mathbb{A}$ supports SHA-256 and chain $\mathbb{B}$ supports Blake2, an HTLC constructed with a hash $h = \mathcal{H}(r)$ cannot be replicated on the second chain unless both parties can compute and verify the same preimage relation. One possible workaround is to have Alice compute $h = \mathcal{H}(r)$ and $h' = \mathcal{H}'(r)$ and publish a non-interactive zero-knowledge (NIZK) proof that both hashes are computed from the same preimage. However, this increases protocol complexity and setup cost, and depends on the availability of NIZK-friendly primitives on both chains.
+Since the same preimage $r$ is reused on both chains, an external observer can trivially link the two transactions, breaking the unlinkability that privacy-preserving systems aim to provide. A workaround—such as committing to a shifted value $r + r'$ with an accompanying NIZK proof—adds cryptographic overhead and requires careful implementation to avoid privacy leaks.
+\paragraph*{(In)compatibility with private ledgers}
+Many privacy-preserving cryptocurrencies, such as Monero or Zcash, do not support expressive scripting or global hash preimage verifiability. Even when HTLCs are theoretically implementable (e.g., in a limited form over RingCT), their transaction structure becomes easily distinguishable from standard private transfers, harming plausible deniability. In such cases, the protocol becomes asymmetric: the public-chain participant must move first, revealing the preimage, which the private-chain user can then observe off-chain—this violates the symmetry typically desired in fair exchange protocols.
+\paragraph*{Miner incentives attacks} HTLCs may also suffer from incentive misalignments, particularly in adversarial mining environments. Miners observing the hash preimage during the redemption phase may attempt to front-run or extract value, especially when the reward from a successful claim is higher than the block reward or other fees. These risks have been documented in Kolluri et al., 2022, which explores protocol designs vulnerable to such "griefing" attacks in HTLC settings.
+\newpage

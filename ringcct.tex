@@ -2,18 +2,47 @@
 
 \section{RingCCT: Ring confidential commit transaction}
 We present an extension of ring confidential transactions (RingCT), called ring confidential commit transactions (RingCCT).
+RingCCT introduces an additional account abstraction that incorporates commitment-based ownership logic with epoch-based timeout semantics. More precisely, accounts in RingCCT are represented as commitments to account data, including both a token amount and a (possibly zero) timeout parameter, which governs conditional control over the committed asset.
 
-\subsection{Syntax}
+At a high level, RingCCT abstracts the ledger into a set of accounts, each cryptographically encoded as a commitment $\mathsf{co}$ to underlying account data $\mathsf{accd} := (a, \mathsf{time})$, where $a$ represents the committed amount and $\mathsf{time}$ optionally specifies an epoch-based timeout. Each account is associated with a tuple of public keys $(\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk})$ that respectively define:
 
-A RingCCT scheme is initialised by running the algorithm $\mathsf{Setup}$ that generates the public parameters and initial state $\mathsf{st}$. The system can be joined by running $\mathsf{KGen}$ to generate master public key pair consisting of $\mathsf{mpk}$ and $\mathsf{msk}$.
-Accounts in the systems are defined by the tuple $(\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk}, \mathsf{rsk}, \mathsf{co})$, where 
 \begin{itemize}
-	\item $\mathsf{co}$ is a commitment of the account data $\mathsf{accd}$, which is a tuple of $(a, \mathsf{time})$. $a$ denotes the amount stored in the account, while $\mathsf{time}$ is an optional epoch timeout parameter that defines a cutoff epoch for the ownership of the commit account.
-	\item $\mathsf{spk}$ is the public key of the owner of the account. In case $\mathsf{time}$ is defined as 0, this is the only owner of the account, as in normal RingCT.
-	\item $\mathsf{tpk}$ is the public key of the joint owner of a commit transaction account, the ccommit account is jointly owned by $\mathsf{spk}, \mathsf{tpk}$ until the epoc defined $\mathsf{time}$.
-	\item $\mathsf{rpk}$ is a recovery public key, which becomes the owner of a commit transaction account after $\mathsf{time}$.
+	\item a primary owner key $\mathsf{spk}$,
+
+	\item an optional joint-control timeout key $\mathsf{tpk}$, and
+
+	\item a recovery key $\mathsf{rpk}$ which gains control after timeout.
 \end{itemize}
 
+Bfore the timeout epoch, spending from the account requires joint authorization from the primary and timeout keys; after the timeout, spending transitions to the recovery key alone. When no timeout is defined, the account behaves identically to a standard RingCT output, where only $\mathsf{spk}$ is required to authorize transactions.
+
+\paragraph*{Account Types} We distinguish between two types of accounts:
+
+\begin{itemize}
+	\item Standard RingCT accounts: encoded as commitments to $(a, 0)$ with $\mathsf{spk}$ defined, and no meaningful $\mathsf{tpk}$ or $\mathsf{rpk}$. These replicate classic RingCT behavior.
+
+	\item Commit accounts: commit to $(a, \mathsf{time})$ with a complete triplet $(\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk})$. These implement time-based joint ownership and recovery.
+\end{itemize}
+
+\paragraph*{Transaction Generation}
+Transactions in RingCCT are generated via the algorithm $\mathsf{TxGen}$, which accepts a global state $\mathsf{st}$, a set of source account information $\mathcal{S}$, each including a tuple of secret keys $(\mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk})$ and the committed data $\mathsf{accd}$, a set of target account data $\mathcal{T}$ (including public keys and updated $\mathsf{accd}'$), a ring of public accounts used to obfuscate the true input, and a predicate $P$ over source/target amounts (e.g., sum conservation).
+The transaction enforces predicate correctness and zero-knowledge ownership proof via ring signatures, commitments, and zero-knowledge proofs that validates that knowledge of keys consistent with timeout logic, the conservation of committed amounts, and correct embedding of public keys and account data.
+
+\paragraph*{Timeout-Aware Ownership Checks}
+The algorithms $\mathsf{SrcChk}$ and $\mathsf{TgtChk}$ verify ownership and integrity of account data based on time:
+
+$\mathsf{SrcChk}$ ensures that the provided secret keys correctly match the account’s public keys and timeout logic. If the account is a commit account with epoch timeout $\mathsf{time}$, it checks:
+
+$(\mathsf{ssk}, \mathsf{tsk})$ are valid when the transaction clock $\mathsf{clock} \leq \mathsf{time}$,
+
+$(\mathsf{rsk})$ is valid when $\mathsf{clock} > \mathsf{time}$.
+
+$\mathsf{TgtChk}$ ensures that the target account includes a valid commitment to the new account data $\mathsf{accd}'$.
+
+\paragraph*{State and Transaction Extraction}
+The ledger state and transactions are abstracted into sets of committed accounts via $\mathsf{StExt}$ and $\mathsf{TxExt}$, enabling stateless verification, auditability, and off-chain analysis without leaking sensitive linkage information.
+
+\subsection{Syntax}
 \textbf{Definition} A RingCCT scheme (Ring Commit Confidential Transactions) scheme consists of the PPT algorithms ($\mathsf{Setup},\mathsf{KGen,Tx,Vf,StExt,TxExt,SrcChk,TgtChk}$) whose interfaces are defined as follows.
 
 \begin{todobox}

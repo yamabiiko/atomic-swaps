@@ -7,7 +7,26 @@
 \end{todobox}
 
 \subsection{Atomic Swaps}
+An atomic cross-chain swap is a cryptographic protocol that enables two mutually distrusting parties to exchange assets residing on distinct blockchains, such that the swap is guaranteed to be atomic: either both parties receive the desired asset from the other, or neither party’s asset is transferred. The protocol ensures that, even in the presence of network delays or malicious behavior, no party can unilaterally gain an advantage or cause the other to lose funds. The atomicity condition is enforced through mechanisms that allow each party to place their asset in a conditional transfer state: the asset is locked in such a way that it can either be claimed by the counterparty upon fulfillment of certain conditions (e.g., revealing a secret or solving a puzzle), or refunded after a timeout. \\
+The most commonly used mechanism for atomic swaps relies on Hash Time-Locked Contracts (HTLCs), which use a combination of hash preimages and time-locks to ensure atomicity: either both parties complete the swap, or neither does. However, HTLC-based protocols require non-trivial scripting capabilities on the involved chains. These assumptions are often not supported in practice, particularly in privacy-focused cryptocurrencies such as Monero, ZCash, and MimbleWimble, which intentionally restrict or eliminate scripting capabilities to improve privacy and efficiency.
+
+This creates a significant limitation: despite the growing interest in interoperability and cross-chain trading, most privacy chains cannot support conventional HTLC-based atomic swaps. Prior works have attempted to address this through Universal Atomic Swaps (UAS), which replace HTLCs with time-lock puzzles (TLPs) to avoid scripting assumptions. While theoretically sound, UAS introduces practical complications: designa a secure atomic swap protocol based on TLPs is fundamentally restricted by difference in (linear) computation power between parties, which can be huge when accounting for ASIC, resulting in the design of appropriate difficulty levels as either impractical for normal clients or weak security.
+
+This motivates the need for an atomic swap mechanism that:
+
+Requires only minimal chain support—ideally compatible with non-scripting chains.
+
+Enables practical, efficient, and privacy-preserving cross-chain swaps.
 
 \subsection{Our Contributions}
+In this work, we propose a new minimal blockchain primitive (defined at the transaction-level) called commit transactions which enables to write efficient and simple atomic swap protocols with relatelively little change for atomic swaps based on a minimal primitive we call commit transactions. Our contributions are as follows:
+
+\begin{itemize} \item \textbf{CommitTx: a generalized blockchain functionality for time-conditional transfers}
+We propose \emph{CommitTx}, a blockchain functionality that generalizes time-based conditional transfers. CommitTx accounts enable assets to be locked under dynamic ownership conditions—transitioning from joint control to unilateral refund based on a timeout—without requiring scripting or hash preimage disclosure. This construction is agnostic to underlying transaction models and can be instantiated in both UTXO- and account-based blockchains. Particularly, it can be trivially implemented in public ledgers by slightly modifying the verification algorithm, without increasing the transaction size.
+\item \textbf{RingCCT: A RingCT extension with commit transactions}  
+We extend the RingCT transaction model to support CommitTx functionality, in \emph{RingCCT} (Ring Commit Confidential Transactions). RingCCT introduces commit accounts with jointly owned, time-conditional verification rules while preserving transaction confidentiality and anonymity. We formalize its syntax and provide an interface that includes time-aware account validation, ownership transfer, and state extraction.
+\item \textbf{Practical atomic swap implementation}  
+Leveraging CommitTx and RingCCT, we design and implement an atomic swap protocol that enables secure cross-chain asset exchange between a RingCT-based blockchain and a non-private blockchain. Our construction avoids the privacy and compatibility limitations of HTLCs and demonstrates feasibility even in environments lacking scripting capabilities.
+\end{itemize}
 
 \subsection{Related Work}
