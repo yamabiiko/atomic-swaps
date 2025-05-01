@@ -43,9 +43,11 @@ $\mathsf{TgtChk}$ ensures that the target account includes a valid commitment to
 The ledger state and transactions are abstracted into sets of committed accounts via $\mathsf{StExt}$ and $\mathsf{TxExt}$, enabling stateless verification, auditability, and off-chain analysis without leaking sensitive linkage information.
 
 \subsection{Syntax}
-\textbf{Definition} A RingCCT scheme (Ring Commit Confidential Transactions) scheme consists of the PPT algorithms ($\mathsf{Setup},\mathsf{KGen,Tx,Vf,StExt,TxExt,SrcChk,TgtChk}$) whose interfaces are defined as follows.
 
-
+\begin{definition}[Ring  Confidential Commit Transactions (RingCCT)]
+    A RingCCT scheme consists of the PPT algorithms 
+    \[\mathsf{Setup},\mathsf{KGen,Tx,Vf,StExt,TxExt,SrcChk,TgtChk}\] 
+    whose interfaces are defined as follows.
     \begin{itemize}
         \item $(\mathsf{pp,st}) \gets \mathsf{Setup}(1^\lambda)$: the setup algorithm generates the public parameters $\mathsf{st}$ and an initial global state $\mathsf{st}$.
         \item $(\mathsf{mpk},\mathsf{msk}) \gets \mathsf{KGen}(\mathsf{pp})$: the key generation algorithm generates a master public key $\mathsf{mpk}$ and a matching secret key $\mathsf{msk}$.
