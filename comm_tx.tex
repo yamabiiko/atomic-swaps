@@ -92,14 +92,15 @@
 
 \subsection{Comparison with HTLC-based Atomic Swaps}
 
-\paragraph*{Definition}
-a Hash Time Lock Contract (HTLC) is defined by a tuple $(\mathsf{amnt_a}, h, T, \mathsf{pk_0}, \mathsf{pk_1})$ where 
-\begin{itemize}
-	\item $\mathsf{amnt_a}$ denotes the amount of $\mathsf{a}$ assets to be exchanged
-	\item $h$ is a hash value
-	\item $T$ the timeout
-	\item $\mathsf{pk_{tx}}$ and $\mathsf{pk_{rx}}$ the public key addresses of two users
-\end{itemize}
+\begin{definition}[Hash Time Lock Contract (HTLC)]
+    A Hash Time Lock Contract (HTLC) is defined by a tuple $(\mathsf{amnt_a}, h, T, \mathsf{pk_0}, \mathsf{pk_1})$ where 
+    \begin{itemize}
+        \item $\mathsf{amnt_a}$ denotes the amount of $\mathsf{a}$ assets to be exchanged
+        \item $h$ is a hash value
+        \item $T$ the timeout
+        \item $\mathsf{pk_{tx}}$ and $\mathsf{pk_{rx}}$ the public key addresses of two users
+    \end{itemize}
+\end{definition}
 
 The HTLC transfers $\mathsf{amnt_a}$ to $\mathsf{pk_1}$ if invoked before timeout $T$ with input value $r$ such that $\mathcal{H}(r) = h$. 
 If the contract is invoked after timeout $T$, it refunds the assets $\mathsf{amnt_a}$ to $\mathsf{pk_0}$ unconditionally.
