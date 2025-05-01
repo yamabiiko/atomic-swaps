@@ -125,6 +125,7 @@ A Hash Time-Lock Contract (HTLC) is a contract that enables conditional payment 
 	\item $\mathsf{pk_1}$ is the public key of the intended recipient (who can claim the funds upon presenting the correct preimage $r$ before the timeout).
 \end{itemize}
 
+
 The HTLC transfers $\mathsf{amnt_a}$ to $\mathsf{pk_1}$ if invoked before timeout $T$ with input value $r$ such that $\mathcal{H}(r) = h$. 
 If the contract is invoked after timeout $T$, it refunds the assets $\mathsf{amnt_a}$ to $\mathsf{pk_0}$ unconditionally.
 

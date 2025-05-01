@@ -45,23 +45,22 @@ The ledger state and transactions are abstracted into sets of committed accounts
 \subsection{Syntax}
 \textbf{Definition} A RingCCT scheme (Ring Commit Confidential Transactions) scheme consists of the PPT algorithms ($\mathsf{Setup},\mathsf{KGen,Tx,Vf,StExt,TxExt,SrcChk,TgtChk}$) whose interfaces are defined as follows.
 
-\begin{todobox}
-    We need to expose the state-time extraction and account-time extraction algorithms in the syntax. 
-\end{todobox}
 
-\begin{itemize}
-    \item $(\mathsf{pp,st}) \gets \mathsf{Setup}(1^\lambda)$: the setup algorithm generates the public parameters $\mathsf{st}$ and an initial global state $\mathsf{st}$.
-    \item $(\mathsf{mpk},\mathsf{msk}) \gets \mathsf{KGen}(\mathsf{pp})$: the key generation algorithm generates a master public key $\mathsf{mpk}$ and a matching secret key $\mathsf{msk}$.
-    \item $(\mathsf{sk},\mathsf{accd}) \gets \mathsf{KDer}(\mathsf{msk, \tau})$: the key derivation algorithm generates derives the keys-account data tuple given the master key $\mathsf{msk}$ owning the account and the token $\tau$ of the account.
-    \item $(\mathsf{tx,TK}) \gets \mathsf{TxGen}(\mathsf{st},P,R,\mathcal{S},\mathcal{T})$: the transaction algorithm inputs a state $\mathsf{st}$, a predicate $P: \mathbb{Z}^S \times \mathbb{Z}^T \rightarrow \{0,1\}$, an index set R called the ring, a set of source accouts information $\mathcal{S} = \{\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i\}_{i\in S}$ and some targets account information $\mathcal{T} = \{\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i\}_{i\in T}$; where $\mathsf{ssk,tsk,rsk}$ and $\mathsf{spk,tpk,rpk}$ are the source, target and recovery secret and public keys respectively. If source or target account is not commit based, only the source key pair is defined. Each account has some $\mathsf{accd} := (a,\mathsf{time})$ defined, where $a$ represents some amount and $\mathsf{time}$ sets a specific epoch timeout of the ownership of commit account by the target key pair, and empty otherwise. 
-    \item $(b,\mathsf{st}') \gets \mathsf{Vf}(\mathsf{st,tx})$: The verification algorithm outputs a bit b deciding whether to accept or reject that the transaction $\mathsf{tx}$ is a valid relative to the state $\mathsf{st}$, outputting an updated state $\mathsf{st}'$ if the verification is sucessful.
-\item $\mathsf{AC}_U \gets \mathsf{StExt}(\mathsf{st})$: The state extraction algorithm
-extracts the set of universe accounts $\mathsf{AC}_U = \{\mathsf{ac}_i\}_{i \in U}$ encoded in the state $\mathsf{st}$.
-\item $\mathsf{AC}_T \gets \mathsf{TxExt}(\mathsf{tx})$: The transaction extraction algorithm
-extracts the set of universe accounts $\mathsf{AC}_T = \{\mathsf{ac}_i\}_{i \in T}$ encoded in the state $\mathsf{st}$.
-\item $b \gets \mathsf{SrcChk}(\mathsf{ac,r,ssk,tsk,rsk,accd,clock})$: The source checking algorithm outputs a bit $b$ deciding whether to accept or reject that the account $\mathsf{ac}$ is associated to the provided secret keys and that $\mathsf{accd}$ has been commited with randomness $r$. If the account is commit based, it checks validity of $\mathsf{ssk,tsk}$ when $\mathsf{clock} <= \mathsf{time}$ and of $\mathsf{rsk}$ otherwise; if the account is standard only $\mathsf{ssk}$ is required.
-\item $b \gets \mathsf{TgtChk}(\mathsf{ac,accd})$: The target checking algorithms outputs a bit $b$ deciding whether to accept or reject that the $\mathsf{accd}$ has been commited in $\mathsf{ac}$. 
-\end{itemize}
+    \begin{itemize}
+        \item $(\mathsf{pp,st}) \gets \mathsf{Setup}(1^\lambda)$: the setup algorithm generates the public parameters $\mathsf{st}$ and an initial global state $\mathsf{st}$.
+        \item $(\mathsf{mpk},\mathsf{msk}) \gets \mathsf{KGen}(\mathsf{pp})$: the key generation algorithm generates a master public key $\mathsf{mpk}$ and a matching secret key $\mathsf{msk}$.
+        \item $(\mathsf{sk},\mathsf{accd}) \gets \mathsf{KDer}(\mathsf{msk, \tau})$: the key derivation algorithm generates derives the keys-account data tuple given the master key $\mathsf{msk}$ owning the account and the token $\tau$ of the account.
+        \item $(\mathsf{tx,TK}) \gets \mathsf{TxGen}(\mathsf{st},P,R,\mathcal{S},\mathcal{T})$: the transaction algorithm inputs a state $\mathsf{st}$, a predicate $P: \mathbb{Z}^S \times \mathbb{Z}^T \rightarrow \{0,1\}$, an index set R called the ring, a set of source accouts information $\mathcal{S} = \{\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i\}_{i\in S}$ and some targets account information $\mathcal{T} = \{\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i\}_{i\in T}$; where $\mathsf{ssk,tsk,rsk}$ and $\mathsf{spk,tpk,rpk}$ are the source, target and recovery secret and public keys respectively. If source or target account is not commit based, only the source key pair is defined. Each account has some $\mathsf{accd} := (a,\mathsf{time})$ defined, where $a$ represents some amount and $\mathsf{time}$ sets a specific epoch timeout of the ownership of commit account by the target key pair, and empty otherwise. 
+        \item $(b,\mathsf{st}') \gets \mathsf{Vf}(\mathsf{st,tx})$: The verification algorithm outputs a bit b deciding whether to accept or reject that the transaction $\mathsf{tx}$ is a valid relative to the state $\mathsf{st}$, outputting an updated state $\mathsf{st}'$ if the verification is sucessful.
+    \item $\mathsf{AC}_U \gets \mathsf{StExt}(\mathsf{st})$: The state extraction algorithm
+    extracts the set of universe accounts $\mathsf{AC}_U = \{\mathsf{ac}_i\}_{i \in U}$ encoded in the state $\mathsf{st}$.
+    \item $\mathsf{AC}_T \gets \mathsf{TxExt}(\mathsf{tx})$: The transaction extraction algorithm
+    extracts the set of universe accounts $\mathsf{AC}_T = \{\mathsf{ac}_i\}_{i \in T}$ encoded in the state $\mathsf{st}$.
+    \item $b \gets \mathsf{SrcChk}(\mathsf{ac,r,ssk,tsk,rsk,accd,clock})$: The source checking algorithm outputs a bit $b$ deciding whether to accept or reject that the account $\mathsf{ac}$ is associated to the provided secret keys and that $\mathsf{accd}$ has been commited with randomness $r$. If the account is commit based, it checks validity of $\mathsf{ssk,tsk}$ when $\mathsf{clock} <= \mathsf{time}$ and of $\mathsf{rsk}$ otherwise; if the account is standard only $\mathsf{ssk}$ is required.
+    \item $b \gets \mathsf{TgtChk}(\mathsf{ac,accd})$: The target checking algorithms outputs a bit $b$ deciding whether to accept or reject that the $\mathsf{accd}$ has been commited in $\mathsf{ac}$. 
+    \end{itemize}
+\end{definition}
+
 
 \subsection{Correctness}
 
