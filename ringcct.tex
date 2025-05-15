@@ -4,7 +4,7 @@
 We present an extension of ring confidential transactions (RingCT), called ring confidential commit transactions (RingCCT).
 RingCCT introduces an additional account abstraction that incorporates commitment-based ownership logic with epoch-based timeout semantics. More precisely, accounts in RingCCT are represented as commitments to account data, including both a token amount and a (possibly zero) timeout parameter, which governs conditional control over the committed asset.
 
-At a high level, RingCCT abstracts the ledger into a set of accounts, each cryptographically encoded as a commitment $\mathsf{co}$ to underlying account data $\mathsf{accd} := (a, \mathsf{time})$, where $a$ represents the committed amount and $\mathsf{time}$ optionally specifies an epoch-based timeout. Each account is associated with a tuple of public keys $(\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk})$ that respectively define:
+At a high level, RingCCT abstracts the ledger into a set of accounts, each cryptographically encoded as a commitment $\mathsf{co}$ to underlying account data $\mathsf{accd} := (a, \time)$, where $a$ represents the committed amount and $\mathsf{time}$ optionally specifies an epoch-based timeout. Each account is associated with a tuple of public keys $(\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk})$ that respectively define:
 
 \begin{itemize}
 	\item a primary owner key $\mathsf{spk}$,
@@ -21,7 +21,7 @@ Bfore the timeout epoch, spending from the account requires joint authorization 
 \begin{itemize}
 	\item Standard RingCT accounts: encoded as commitments to $(a, 0)$ with $\mathsf{spk}$ defined, and no meaningful $\mathsf{tpk}$ or $\mathsf{rpk}$. These replicate classic RingCT behavior.
 
-	\item Commit accounts: commit to $(a, \mathsf{time})$ with a complete triplet $(\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk})$. These implement time-based joint ownership and recovery.
+	\item Commit accounts: commit to $(a, \time)$ with a complete triplet $(\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk})$. These implement time-based joint ownership and recovery.
 \end{itemize}
 
 \paragraph*{Transaction Generation}
@@ -31,11 +31,11 @@ The transaction enforces predicate correctness and zero-knowledge ownership proo
 \paragraph*{Timeout-Aware Ownership Checks}
 The algorithms $\mathsf{SrcChk}$ and $\mathsf{TgtChk}$ verify ownership and integrity of account data based on time:
 
-$\mathsf{SrcChk}$ ensures that the provided secret keys correctly match the account’s public keys and timeout logic. If the account is a commit account with epoch timeout $\mathsf{time}$, it checks:
+$\mathsf{SrcChk}$ ensures that the provided secret keys correctly match the account’s public keys and timeout logic. If the account is a commit account with epoch timeout $\time$, it checks:
 
-$(\mathsf{ssk}, \mathsf{tsk})$ are valid when the transaction clock $\mathsf{clock} \leq \mathsf{time}$,
+$(\mathsf{ssk}, \mathsf{tsk})$ are valid when the transaction clock $\mathsf{clock} \leq \time$,
 
-$(\mathsf{rsk})$ is valid when $\mathsf{clock} > \mathsf{time}$.
+$(\mathsf{rsk})$ is valid when $\mathsf{clock} > \time$.
 
 $\mathsf{TgtChk}$ ensures that the target account includes a valid commitment to the new account data $\mathsf{accd}'$.
 
@@ -49,14 +49,14 @@ The ledger state and transactions are abstracted into sets of committed accounts
     \begin{itemize}
         \item $(\mathsf{pp,st}) \gets \mathsf{Setup}(1^\lambda)$: the setup algorithm generates the public parameters $\mathsf{st}$ and an initial global state $\mathsf{st}$.
         \item $(\mathsf{mpk},\mathsf{msk}) \gets \mathsf{KGen}(\mathsf{pp})$: the key generation algorithm generates a master public key $\mathsf{mpk}$ and a matching secret key $\mathsf{msk}$.
-        \item $(\mathsf{sk},\mathsf{accd}) \gets \mathsf{KDer}(\mathsf{msk, \tau})$: the key derivation algorithm generates derives the keys-account data tuple given the master key $\mathsf{msk}$ owning the account and the token $\tau$ of the account.
-        \item $(\mathsf{tx,TK}) \gets \mathsf{TxGen}(\mathsf{st},P,R,\mathcal{S},\mathcal{T})$: the transaction algorithm inputs a state $\mathsf{st}$, a predicate $P: \mathbb{Z}^S \times \mathbb{Z}^T \rightarrow \{0,1\}$, an index set R called the ring, a set of source accouts information $\mathcal{S} = \{\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i\}_{i\in S}$ and some targets account information $\mathcal{T} = \{\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i\}_{i\in T}$; where $\mathsf{ssk,tsk,rsk}$ and $\mathsf{spk,tpk,rpk}$ are the source, target and recovery secret and public keys respectively. If source or target account is not commit based, only the source key pair is defined. Each account has some $\mathsf{accd} := (a,\mathsf{time})$ defined, where $a$ represents some amount and $\mathsf{time}$ sets a specific epoch timeout of the ownership of commit account by the target key pair, and empty otherwise. 
+        \item $(\mathsf{sk},\mathsf{accd}) \gets \mathsf{KDer}(\mathsf{msk, \tau}, \type)$: the key derivation algorithm generates derives the keys-account data tuple given the master key $\mathsf{msk}$ owning the account, a token $\tau$ of the account, and the desired.
+        \item $(\mathsf{tx,TK}) \gets \mathsf{TxGen}(\mathsf{st},P,R,\mathcal{S},\mathcal{T})$: the transaction algorithm inputs a state $\mathsf{st}$, a predicate $P: \mathbb{Z}^S \times \mathbb{Z}^T \rightarrow \{0,1\}$, an index set R called the ring, a set of source accouts information $\mathcal{S} = \{\mathsf{ssk}_i, \mathsf{tsk}_i, \mathsf{rsk}_i, \mathsf{accd}_i\}_{i\in S}$ and some targets account information $\mathcal{T} = \{\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i, \mathsf{accd}'_i\}_{i\in T}$; where $\mathsf{ssk,tsk,rsk}$ and $\mathsf{spk,tpk,rpk}$ are the source, target and recovery secret and public keys respectively. If source or target account is not commit based, only the source key pair is defined. Each account has some $\mathsf{accd} := (a,\time)$ defined, where $a$ represents some amount and $\mathsf{time}$ sets a specific epoch timeout of the ownership of commit account by the target key pair, and empty otherwise. 
         \item $(b,\mathsf{st}') \gets \mathsf{Vf}(\mathsf{st,tx})$: The verification algorithm outputs a bit b deciding whether to accept or reject that the transaction $\mathsf{tx}$ is a valid relative to the state $\mathsf{st}$, outputting an updated state $\mathsf{st}'$ if the verification is sucessful.
     \item $\mathsf{AC}_U \gets \mathsf{StExt}(\mathsf{st})$: The state extraction algorithm
     extracts the set of universe accounts $\mathsf{AC}_U = \{\mathsf{ac}_i\}_{i \in U}$ encoded in the state $\mathsf{st}$.
     \item $\mathsf{AC}_T \gets \mathsf{TxExt}(\mathsf{tx})$: The transaction extraction algorithm
     extracts the set of universe accounts $\mathsf{AC}_T = \{\mathsf{ac}_i\}_{i \in T}$ encoded in the state $\mathsf{st}$.
-    \item $b \gets \mathsf{SrcChk}(\mathsf{ac,r,ssk,tsk,rsk,accd,clock})$: The source checking algorithm outputs a bit $b$ deciding whether to accept or reject that the account $\mathsf{ac}$ is associated to the provided secret keys and that $\mathsf{accd}$ has been commited with randomness $r$. If the account is commit based, it checks validity of $\mathsf{ssk,tsk}$ when $\mathsf{clock} <= \mathsf{time}$ and of $\mathsf{rsk}$ otherwise; if the account is standard only $\mathsf{ssk}$ is required.
+    \item $b \gets \mathsf{SrcChk}(\mathsf{ac,r,ssk,tsk,rsk,accd,clock})$: The source checking algorithm outputs a bit $b$ deciding whether to accept or reject that the account $\mathsf{ac}$ is associated to the provided secret keys and that $\mathsf{accd}$ has been commited with randomness $r$. If the account is commit based, it checks validity of $\mathsf{ssk,tsk}$ when $\mathsf{clock} <= \time$ and of $\mathsf{rsk}$ otherwise; if the account is standard only $\mathsf{ssk}$ is required.
     \item $b \gets \mathsf{TgtChk}(\mathsf{ac,accd})$: The target checking algorithms outputs a bit $b$ deciding whether to accept or reject that the $\mathsf{accd}$ has been commited in $\mathsf{ac}$. 
     \end{itemize}
 \end{definition}
@@ -78,18 +78,18 @@ We here define the security properties of RingCCT.
 
 
 \begin{definition}[Balance] A RingCCT scheme is balanced if: \\
-	1. A commit transaction account ownership changes from $\mathsf{ssk}, \mathsf{tsk}$ to $\mathsf{rsk}$ based on some epoch $\mathsf{time}$, i.e. for any PPT adversary $\mathcal{A}$ it holds that \\
+	1. A commit transaction account ownership changes from $\mathsf{ssk}, \mathsf{tsk}$ to $\mathsf{rsk}$ based on some epoch $\time$, i.e. for any PPT adversary $\mathcal{A}$ it holds that \\
 $\mathsf{Pr}\left[
     \begin{cases} 
-	\mathsf{SrcChk}(\mathsf{ac}, r, (\mathsf{ssk}, \mathsf{tsk}, \perp), \mathsf{accd}, \mathsf{time}+1) \tabularnewline 
-	\mathsf{SrcChk}(\mathsf{ac}, r, (\perp, \perp, \mathsf{rsk}), \mathsf{accd}, \mathsf{time}-1) \tabularnewline
+	\mathsf{SrcChk}(\mathsf{ac}, r, (\mathsf{ssk}, \mathsf{tsk}, \perp), \mathsf{accd}, \time+1) \tabularnewline 
+	\mathsf{SrcChk}(\mathsf{ac}, r, (\perp, \perp, \mathsf{rsk}), \mathsf{accd}, \time-1) \tabularnewline
         \Gamma.\mathsf{Com}(\mathsf{accd}, r) = \mathsf{co} 
     \end{cases} 
     \middle|(
     \begin{aligned}
 	(\mathsf{pp}, \mathsf{st}) \gets \mathsf{Setup}(1^\lambda) \\
 	\mathsf{ac}, \mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk}, \mathsf{accd}) \gets \mathcal{A}(\mathsf{pp}) \\
-    	\mathsf{time} := \mathbf{parse} \: \mathsf{accd} \\
+    	\time := \parse \: \mathsf{accd} \\
     \end{aligned}
 \right]
 \leq \negl
@@ -103,8 +103,8 @@ $
     (\mathsf{pp}, \mathsf{st}_0) \gets \mathsf{Setup}(1^\lambda) \\
     (\mathsf{tx}_i)_{i \in \mathbb{Z}_l} \gets \mathcal{A}(\mathsf{pp}, \mathsf{st}_0) \\
     (P_i, R_i, S_i, T_i)_{i \in \mathbb{Z}_{l}} \gets \mathcal{E}_{\mathsf{A}} (\mathsf{pp}, \mathsf{st}_0, (\mathsf{tx}_i)_{i \in \mathbb{Z}_{l}}) \\
-    \{ \mathsf{sks}_{i,j}, \mathsf{accd}_{i,j} \}_{j \in S_i} := \mathbf{parse} \: (S_i)_{i \in \mathbb{Z}_{l}} \\
-    \{ \mathsf{mpks}_{i,j},\mathsf{tk}_{i,j}, \mathsf{accd}'_{i,j} \}_{j \in T_i}) := \mathbf{parse} \: (T_i)_{i \in \mathbb{Z}_{l}} \\
+    \{ \mathsf{sks}_{i,j}, \mathsf{accd}_{i,j} \}_{j \in S_i} := \parse \: (S_i)_{i \in \mathbb{Z}_{l}} \\
+    \{ \mathsf{mpks}_{i,j},\mathsf{tk}_{i,j}, \mathsf{accd}'_{i,j} \}_{j \in T_i}) := \parse \: (T_i)_{i \in \mathbb{Z}_{l}} \\
     \mathbf{for} \: t \in \mathbb{Z}_l \: \mathbf{do} \: (b_t, \mathsf{st}_{t+1}) := \mathsf{Vf}(\mathsf{st_t}, \mathsf{tx_t}) \\
     \mathbf{for} \: i \in \mathbb{Z}_l \: \mathbf{do} \\
     \qquad \mathsf{accd}_{i, S_i} := (\mathsf{accd}_{i,j})_{j \in S_i},
@@ -120,7 +120,7 @@ $
 	\mathsf{TgtChk}(\mathsf{TxExt}(\mathsf{tx}_i)[j], \mathsf{mpks}_{i,j}, \mathsf{accd}_{i,j}) = 1 \:\:\: \forall j \in \mathsf{S}_i \vspace{0.3em} \tabularnewline
     \end{cases} \\
     b'' := (\exists i_0 < i_1, S_{i_0} \cap S_{i_1} = \emptyset) \\
-    \mathbf{return} \bigwedge_{i \in \mathbb{Z}_l} b_i \land \neg (\bigwedge_{i \in \mathbb{Z}_l} b_i' \land b_i'')
+    \pcreturn \bigwedge_{i \in \mathbb{Z}_l} b_i \land \neg (\bigwedge_{i \in \mathbb{Z}_l} b_i' \land b_i'')
 }
 \end{pchstack}
 \caption{Balance experiment definition}
@@ -132,43 +132,43 @@ $
 \begin{pcvstack}
 \pseudocode{
     \mathsf{KGen}\mathcal{O}(\mathsf{id}) \\[0.1\baselineskip ][\hline]
-    \mathbf{if} \: \mathsf{id} \notin \mathsf{ID} \\
+    \pcif \mathsf{id} \notin \mathsf{ID} \\
     \qquad (\mathsf{mpk},\mathsf{msk}) \gets \mathsf{KGen}(\mathsf{pp}) \\
     \qquad (\mathsf{MPK}, \mathsf{MSK})[\mathsf{id}] := (\mathsf{mpk},\mathsf{msk}) \\
     \mathsf{ID} := \mathsf{ID} \cup \{\mathsf{id}\} \\
-    \mathbf{return} \: \mathsf{MPK}[\mathsf{id}]
+    \pcreturn \: \mathsf{MPK}[\mathsf{id}]
 }
 \vspace{1em}
 \pseudocode{
 	\mathsf{Corr}\mathcal{O}(\mathsf{id}) \\[0.1\baselineskip ][\hline]
-        \mathbf{if} \: \mathsf{id} \notin \mathsf{ID}^* \: \mathbf{return} \: \perp \\
+        \pcif \mathsf{id} \notin \mathsf{ID}^* \: \pcreturn \: \perp \\
         * \gets \mathsf{KGen}\mathcal{O}(\mathsf{id}) \\
         \mathsf{ID}^* := \mathsf{ID}^* \cup \{\mathsf{id}\} \\
         \mathsf{AC}^* := \bigcup_{\mathsf{id} \in \mathsf{ID}^*} \mathsf{AC}[\mathsf{id}] \\
-        \mathbf{return} \: \mathsf{MSK}[\mathsf{id}]
+        \pcreturn \: \mathsf{MSK}[\mathsf{id}]
 }
 \vspace{1em}
 \pseudocode{
 	\mathsf{Vf}\mathcal{O}(\mathsf{tx}) \\[0.1\baselineskip ][\hline]
-        \mathbf{return} \: \mathsf{Vf}(\mathsf{st}, \mathsf{tx})
+        \pcreturn \: \mathsf{Vf}(\mathsf{st}, \mathsf{tx})
 }
 \end{pcvstack}
 \qquad
 \begin{pcvstack}
 \pseudocode{
 	\mathsf{Trans}\mathcal{O}(P, R, \mathcal{S'}, \mathcal{T'}, \mathcal{S}^*, \mathcal{T}^*) \\[0.1\baselineskip ][\hline]
-	 \{\mathsf{ssk}_i, \mathsf{accd}_i\}_{i \in S'} := \mathbf{parse} \: \mathcal{S'}  \\
-	 \{\mathsf{id}_i, \mathsf{tk}_i\}_{i \in S^*} := \mathbf{parse} \: \mathcal{S}^*  \\
-	 \{\mathsf{mpk}_i, \mathsf{accd}'_i\}_{i \in T'} := \mathbf{parse} \: \mathcal{T'} \\
-	 \{\mathsf{id}'_i, \mathsf{accd}'_i\}_{i \in T^*} := \mathbf{parse} \: \mathcal{T}^*  \\
-         \mathbf{if} \: \mathcal{S}^* \cap \mathcal{S}' \neq \emptyset \lor \mathcal{T}' \cap \mathcal{T}^* \: \mathbf{return} \perp \\
-         \mathbf{if} \: (\{\mathsf{id_i}_{i\in S^*}\} \cup \{\mathsf{id_i}_{i\in T^*}\}) \cap \mathsf{ID}^* \neq \emptyset \: \mathbf{return} \perp \\
-         \mathbf{if} \: \mathsf{StExt}(\mathsf{st})[\mathcal{S}^*] \cap \mathsf{AC}^* \neq \emptyset \: \mathbf{return} \perp \\
+	 \{\mathsf{ssk}_i, \mathsf{accd}_i\}_{i \in S'} := \parse \: \mathcal{S'}  \\
+	 \{\mathsf{id}_i, \mathsf{tk}_i\}_{i \in S^*} := \parse \: \mathcal{S}^*  \\
+	 \{\mathsf{mpk}_i, \mathsf{accd}'_i\}_{i \in T'} := \parse \: \mathcal{T'} \\
+	 \{\mathsf{id}'_i, \mathsf{accd}'_i\}_{i \in T^*} := \parse \: \mathcal{T}^*  \\
+         \pcif \mathcal{S}^* \cap \mathcal{S}' \neq \emptyset \lor \mathcal{T}' \cap \mathcal{T}^* \: \pcreturn \perp \\
+         \pcif (\{\mathsf{id_i}_{i\in S^*}\} \cup \{\mathsf{id_i}_{i\in T^*}\}) \cap \mathsf{ID}^* \neq \emptyset \: \pcreturn \perp \\
+         \pcif \mathsf{StExt}(\mathsf{st})[\mathcal{S}^*] \cap \mathsf{AC}^* \neq \emptyset \: \pcreturn \perp \\
          \mathcal{S} := \mathcal{S}' \cup \{\mathsf{KDer}(\mathsf{MSK}[\mathsf{id}_i], \mathsf{tk}_i)\}_{i \in S^*} \\
          \mathcal{T} := \mathcal{T}' \cup \{\mathsf{MPK}[\mathsf{id}'_i], \mathsf{accd}'_i\}_{i\in T^*} \\
          (\mathsf{tx}, \mathsf{TK}) \gets \mathsf{Trans}(\mathsf{st}, P, R, \mathcal{S}, \mathcal{T}) \\
          \mathsf{AC}[\mathsf{id'}_i] := \mathsf{AC}[\mathsf{id'}_i] \cup \mathsf{TxExt}(\mathsf{tx})[i], \forall i \in T \\
-         \mathbf{return} \: (\mathsf{tx}, \mathsf{TK})
+         \pcreturn \: (\mathsf{tx}, \mathsf{TK})
 }
 \end{pcvstack}
 \end{pchstack}
@@ -193,14 +193,14 @@ $
     \mathbf{for} i \in \{0, 1\} \\
     \:\: (\mathsf{tx}_i, *) \gets \mathsf{Trans}\mathcal{O}(P, R, \mathcal{S}', \mathcal{T}', \mathcal{S}^*_i, \mathcal{T}^*_i)
     \:\: (b_i, \mathsf{st'_i}) := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}_i) \\
-    \:\: \mathbf{if} b_i = 0 \mathbf{return} \: 0 \\
-    \{ \mathsf{id}_{i,j},\mathsf{tk}_{i,j} \}_{j\in S^*_i} := \mathbf{parse} \: \mathcal{S}^*_i \\
-    \{ \mathsf{id}'_{i,j},\mathsf{accd}_{i,j} \}_{j\in S^*_i} := \mathbf{parse} \: \mathcal{T}^*_i \\
+    \:\: \mathbf{if} b_i = 0 \pcreturn \: 0 \\
+    \{ \mathsf{id}_{i,j},\mathsf{tk}_{i,j} \}_{j\in S^*_i} := \parse \: \mathcal{S}^*_i \\
+    \{ \mathsf{id}'_{i,j},\mathsf{accd}_{i,j} \}_{j\in S^*_i} := \parse \: \mathcal{T}^*_i \\
     \mathsf{ID}^* := \mathsf{ID}^* \cup \{\mathsf{id}_{i,j}\}_{j\in S^*_i} \cup \{\mathsf{id;}_{i,j}\}_{j\in T^*_i} \\
     \mathsf{AC}^* := \mathsf{AC}^* \cup \mathsf{StExt}(\mathsf{st})[\mathcal{S}^*_i] \cup \mathsf{TxExt}(\mathsf{tx}_i)[\mathcal{T}^*_i] \\
-    \mathbf{if} (|\mathcal{S^*_0}| \neq |\mathcal{S^*_1}|) \lor (|\mathsf{StExt}(\mathsf{st}'_0) \ \mathsf{StExt}(\mathsf{st})| \neq |\mathsf{StExt}(\mathsf{st}'_1) \ \mathsf{StExt}(\mathsf{st})|) \:\: \mathbf{return} \: 0 \\
+    \mathbf{if} (|\mathcal{S^*_0}| \neq |\mathcal{S^*_1}|) \lor (|\mathsf{StExt}(\mathsf{st}'_0) \ \mathsf{StExt}(\mathsf{st})| \neq |\mathsf{StExt}(\mathsf{st}'_1) \ \mathsf{StExt}(\mathsf{st})|) \:\: \pcreturn \: 0 \\
     b' \gets \mathcal{A}^\mathcal{O}(\mathsf{tx}_b) \\
-    \mathbf{return} \: b'
+    \pcreturn \: b'
 }
 \end{pchstack}
 %\caption{Privacy experiment definition}
@@ -219,13 +219,13 @@ $
     \mathcal{O} := \{\mathsf{KGen}\mathcal{O}, \mathsf{Corr}\mathcal{O}, \mathsf{Trans}\mathcal{O}, \mathsf{Vf}\mathcal{O}\} \\
     (P,R, \mathcal{S}', \mathcal{T}', (\mathcal{S}^*_i, \mathcal{T}^*_i)_{i \in \{0,1\}}) \gets \mathcal{A}^\mathcal{O}(\mathsf{pp}) \\
     (\mathsf{tx}, \mathsf{TK}) \gets \mathsf{Trans}\mathcal{O}(P, R, \mathcal{S}', \mathcal{T}', \mathcal{S}^*_i, \mathcal{T}^*_i)
-    \{ \mathsf{id}_j,\mathsf{tk}_j \}_{j\in S^*} := \mathbf{parse} \: \mathcal{S}^* \\
-    \mathbf{if} \mathcal{S}^* \not\subseteq U \mathbf{return} \: 0 \\
+    \{ \mathsf{id}_j,\mathsf{tk}_j \}_{j\in S^*} := \parse \: \mathcal{S}^* \\
+    \mathbf{if} \mathcal{S}^* \not\subseteq U \pcreturn \: 0 \\
     (\mathsf{ID}^*, \mathsf{AC}^*) := (\{id_j\}_{j \in S^*}, \mathsf{StExt}(\mathsf{st})[\mathcal{S}^*])
     (b, \perp) := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}) \\
     \perp \gets \mathcal{A}\mathcal{O}(\mathsf{tx}, \mathsf{TK}) \\
     (b', \perp) := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}) \\
-    \mathbf{return} \: b' \land b'
+    \pcreturn \: b' \land b'
 }
 \end{pchstack}
 %\caption{Privacy experiment definition}
@@ -239,158 +239,174 @@ $
 \mathcal{R}(\mathsf{stmnt}, \mathsf{wit}) := \begin{cases} 
     S \subseteq R \\ 
     \xi_{\phi S(i)} = \Delta.\mathsf{Eval}(s_i) \qquad \forall i \in S \\
-    \mathsf{SrcChk}(\mathsf{ac}_i, r, \mathsf{sks}_i, \mathsf{accd}_i, \mathsf{time}, \mathsf{type}) = 1 \qquad \forall i \in S \\ 
+    \mathsf{SrcChk}(\mathsf{ac}_i, r, \mathsf{sks}_i, \mathsf{accd}_i, \time, \type) = 1 \qquad \forall i \in S \\ 
     \mathsf{TgtChk}(\mathsf{ac'}_i, \mathsf{accd}'_i) = 1 \qquad \forall i \in T \\ 
     P(a_S, a'_T) = 1
 \end{cases}
 \end{equation*}
 
 \begin{equation*}
-\mathsf{stmnt} := (P,\mathsf{AC}_R,\mathcal{Z}_{\bar{S}}, \mathsf{AC}_T, \mathsf{time}, \mathsf{type}) \\
+\mathsf{stmnt} := (P,\mathsf{AC}_R,\mathcal{Z}_{\bar{S}}, \mathsf{AC}_T, \time, \type) \\
 \end{equation*}
 \begin{equation*}
 \mathsf{wit} := ((r,\mathsf{sks}_i, \mathsf{accd}_i)_{i\in S}), (\mathsf{mpks}_i, \mathsf{accd}'_i)_{i\in T}) \\
 \end{equation*}
 
-
-
+\begin{figure}
+\begin{minipage}[t]{\textwidth}
+\begin{pchstack}[boxed]
+\begin{pcvstack}
+\pseudocode{
+    \Setup(1^\lambda) \\ [0.1\baselineskip ][\hline]
+    \mathsf{crs} \gets \Pi.\Setup(1^\lambda) \\
+    \mathsf{ck} \gets \Gamma.\mathsf{Gen}(1^\lambda) \\
+    \mathsf{pp}_\Delta \gets \Delta.\Setup(1^\lambda) \\
+    \pcreturn (\mathsf{pp}, \mathsf{st})
+}
+\vspace{1em}
+\pseudocode{
+    \mathsf{TimeExt}(\mathsf{st}) \\[0.1\baselineskip ][\hline]
+    (\mathsf{AC}_U, \mathcal{Z}_U, \time) := \parse \mathsf{st} \\
+    \pcreturn \time
+}
+\vspace{1em}
+\pseudocode{
+    \mathsf{StExt}(\mathsf{st}) \\[0.1\baselineskip ][\hline]
+    (\mathsf{AC}_U, \mathcal{Z}_U, \time) := \parse \mathsf{st} \\
+    \pcreturn \mathsf{AC}_U
+}
+\end{pcvstack}
+\qquad
+\begin{pcvstack}
+\pseudocode{
+    \mathsf{KGen}(\mathsf{pp}) \\[0.1\baselineskip ][\hline]
+    \mathsf{msk} \sample\mathcal{K} \\
+    \mathsf{mpk} := \Delta.\mathsf{KGen(msk)} \\
+    \pcreturn (\mathsf{mpk}, \mathsf{msk})
+}
+\vspace{1em}
+\pseudocode{
+    \mathsf{TxExt}(\mathsf{tx}) \\[0.1\baselineskip ][\hline]
+    (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}) := \parse \mathsf{tx} \\
+    \pcreturn \mathsf{AC}_T
+}\vspace{1em}
+\pseudocode{
+    \mathsf{AccTypeExt}(\mathsf{AC}) \\[0.1\baselineskip ][\hline]
+    \mathsf{ac_i} := \parse \\
+    \pcif \forall \mathsf{ac}, \mathsf{ac}' \in \mathsf{AC} : \mathsf{ac}.\time = \mathsf{ac}'.\time \land \mathsf{ac}'.\type = \mathsf{ac}'.\type \\
+    \t \pcreturn (\mathsf{ac}_0.\time, \mathsf{ac}_0.\type) \\
+    \pcreturn \perp
+}
+\end{pcvstack}
+\end{pchstack}
+\end{minipage}%
+\end{figure}
 \begin{figure}
 \begin{minipage}[t]{\textwidth}
 \begin{pchstack}[boxed]
 
 \begin{pcvstack}
 \pseudocode{
-    \mathsf{Setup}(1^\lambda) \\ [0.1\baselineskip ][\hline]
-    \mathsf{crs} \gets \Pi.\mathsf{Setup}(1^\lambda) \\
-    \mathsf{ck} \gets \Gamma.\mathsf{Gen}(1^\lambda) \\
-    \mathsf{pp_\Delta} \gets \Delta.\mathsf{Setup}(1\lambda) \\
-    \mathbf{return} \: (\mathsf{pp}, \mathsf{st})
-}
-\vspace{1em}
-\pseudocode{
-    \mathsf{KGen}(\mathsf{pp}) \\[0.1\baselineskip ][\hline]
-    \mathsf{msk} \sample\mathcal{K} \\
-    \mathsf{mpk} := \Delta.\mathsf{KGen(msk)} \\
-    \mathbf{return} \: (\mathsf{mpk}, \mathsf{msk})
-}
-\vspace{1em}
-\pseudocode{
-    \mathsf{TimeExt}(\mathsf{st}) \\[0.1\baselineskip ][\hline]
-    \mathsf{time} := \mathbf{parse} st \\
-    \mathbf{return} \: \mathsf{time}
-}
-\vspace{1em}
-\pseudocode{
     \mathsf{Vf}(\mathsf{st},\mathsf{tx}) \\[0.1\baselineskip ][\hline]
-    (\mathsf{AC}_U, \mathcal{Z}_U) := \mathbf{parse} \: \mathsf{st} \\
-    \{\mathsf{ac}_i\}_{i \in U} := \mathbf{parse} \: \mathsf{AC}_U \\
-    (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}) := \mathbf{parse} \: \mathsf{tx} \\
+    (\mathsf{AC}_U, \mathcal{Z}_U, \time) := \parse \mathsf{st} \\
+    \{\mathsf{ac}_i\}_{i \in U} := \parse \mathsf{AC}_U \\
+    (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}, \time', \type, \pi) := \parse \mathsf{tx} \\
     \mathsf{AC}_R := \{\mathsf{ac}_i\}_{i \in R} \\
-    \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \mathsf{type}, \mathsf{time}) \\
-    \mathbf{if} \: \begin{cases}
+    \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \type, \time') \\
+    \pcif \begin{cases}
         P \in \mathcal{P} \tabularnewline
         R \subseteq U \tabularnewline
         \Pi.\mathsf{Vf}(\mathsf{crs}, \mathsf{stmnt}, \pi) = 1 \tabularnewline
         \mathcal{Z}_{\bar{S}} \cap \mathcal{Z}_{\bar{U}} = \emptyset
     \end{cases} \: \mathbf{then} \\
-    \:\: \mathbf{return} \: (1, \mathsf{st}') \\
-    \mathbf{else} \: \mathbf{return} \: (0, \mathsf{st})
+    \t \pcreturn (1, \mathsf{st}') \\
+    \pcelse \pcreturn \: (0, \mathsf{st})
 }
 \vspace{1em}
 \pseudocode{
     \mathsf{TimeVf}(\mathsf{st}, \mathsf{tx}) \\[0.1\baselineskip ][\hline]
-    \mathsf{time} := \mathbf{parse} \: \mathsf{st} \\
-    \mathsf{type}, \mathsf{time}' := \mathbf{parse} \: \mathsf{tx} \\
+    (\mathsf{AC}_U, \mathcal{Z}_U, \time) := \parse \mathsf{st} \\
+    (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}, \time', \type, \pi) := \parse \mathsf{tx} \\
     (\mathsf{ret}, \mathsf{st}') := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}) \\
-    \mathbf{if} \: \mathsf{ret} = 1 \\
-    \:\: \mathbf{if} \: \mathsf{type} = 0 \: \lor \\
-    \:\: \: (\mathsf{type} = 1 \land  \mathsf{time} \leq \mathsf{time}') \: \lor\\
-    \:\: \: (\mathsf{type} = -1 \land  \mathsf{time} > \mathsf{time}') \\
-    \:\:\:\:\:\: \mathbf{return} \: (1, \mathsf{st}') \\
-    \mathbf{return} \: (0, \mathsf{st})
-}
-\vspace{1em}
-\pseudocode{
-    \mathsf{StExt}(\mathsf{st}) \\[0.1\baselineskip ][\hline]
-    (\mathsf{AC}_U, \mathcal{Z}_U) := \mathbf{parse} \: \mathsf{st} \\
-    \mathbf{return} \: \mathsf{AC}_U
-}
-\vspace{1em}
-\pseudocode{
-    \mathsf{TxExt}(\mathsf{tx}) \\[0.1\baselineskip ][\hline]
-    (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}) := \mathbf{parse} \: \mathsf{tx} \\
-    \mathbf{return} \: \mathsf{AC}_T
+    \pcif \mathsf{ret} = 1 \\
+    	\t \pcif \type = 0 \: \lor \\
+           \t\t (\type = 1 \land  \time \leq \mathsf{time}') \: \lor\\
+           \t\t (\type = -1 \land  \time > \mathsf{time}') \\
+               \t[3] \pcreturn (1, \mathsf{st}') \\
+    \pcreturn (0, \mathsf{st})
 }
 \vspace{1em}
 \pseudocode{
     \mathsf{TgtChk}(\mathsf{ac}, \mathsf{accd}) \\[0.1\baselineskip ][\hline]
-    \mathsf{co} := \mathbf{parse} \: \mathsf{ac} \\
-    (r, \mathsf{accd}') := \mathbf{parse} \: \mathsf{tk} \\
-    \mathbf{return} \: \begin{cases}
+    (\mathsf{pks}, \mathsf{co}) := \parse \mathsf{ac} \\
+    (r, \delta,\delta', \delta'', \mathsf{accd}') := \parse \mathsf{tk} \\
+    \pcreturn \begin{cases}
         %\mathsf{accd}' \overset{?}{=} \mathsf{accd} \tabularnewline
         \mathsf{co} \overset{?}{=} \Gamma.\mathsf{Com}(\mathsf{accd},r)
     \end{cases} 
+}
+\vspace{1em}
+\pseudocode{
+    \mathsf{SrcChk}(\mathsf{ac}, r, \mathsf{sks}, \mathsf{accd}, \time, \type) \\[0.1\baselineskip ][\hline]
+    (\mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk}) := \parse \mathsf{sks} \\
+    (\mathsf{pks}, \mathsf{co}) := \parse \mathsf{ac} \\
+    (\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk}) := \parse \mathsf{pks} \\
+    \mathsf{accd} := (a, \mathsf{time'}, \mathsf{type'}) \\
+    \pcif \mathsf{co} \neq \Gamma.\mathsf{Com}(\mathsf{accd}, r) \\
+    \t \pcreturn  0 \\
+    \pcif  \type = \: 0 \\
+    \t \pcreturn \mathsf{spk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{ssk}) \\
+    \pcelse \pcif  \type = 1  \\
+    \t \pcreturn  \begin{cases}
+        \mathsf{tpk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{tsk}) \tabularnewline
+        \mathsf{spk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{ssk}) \tabularnewline
+    \end{cases} \\
+    \pcelse \\
+    \t \pcreturn \mathsf{rpk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{rsk}) \\
 }
 \end{pcvstack}
 \qquad
 \begin{pcvstack}
 \pseudocode{
-    \mathsf{KDer}(\mathsf{msk},\tau) \\[0.1\baselineskip ][\hline]
-    (r, \delta, \mathsf{accd} := (a, \mathsf{time}, \mathsf{type})) := \mathbf{parse} \: \tau \\
+    \mathsf{KDer}(\mathsf{msk},\tau, \type) \\[0.1\baselineskip ][\hline]
+    (r, \delta, \mathsf{accd}) := \parse \tau \\
     \mathsf{sk} := \mathsf{msk}+\delta \\
-    \mathbf{return} \: (\mathsf{sk}, r, \mathsf{accd})
+    \pcreturn (\mathsf{sk}, r, \mathsf{accd})
 }
 \vspace{1em}
 \pseudocode{
     \mathsf{TxGen}(\mathsf{st}, P, R, \mathcal{S}, \mathcal{T}) \\[0.1\baselineskip ][\hline]
-    \{\mathsf{sks}_i, \mathsf{accd}_i\}_{i\in S} := \mathbf{parse} \: \mathcal{S} \\
-    \{\mathsf{mpks}_i, \mathsf{accd}'_i\}_{i\in T} := \mathbf{parse} \: \mathcal{T} \\
+    \{\mathsf{sks}_i, \mathsf{accd}_i\}_{i\in S} := \parse \mathcal{S} \\
+    \{\mathsf{mpks}_i, \mathsf{accd}'_i\}_{i\in T} := \parse \mathcal{T} \\
     \mathbf{for} \; i \in T \: \mathbf{do} \\
-    \:\: r'_i \sample \chi \\
-    \:\: \delta'_i \sample \mathcal{K} \\
-    \:\: \mathsf{co}'_i := \Gamma.\mathsf{Com}(\mathsf{accd}'_i, r'_i) \\
-    \:\: (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i) := \mathbf{parse} \: \mathsf{mpks}_i \\
-    \:\: \mathsf{spk}_i := \mathsf{smpk}_i + \Delta.\mathsf{Eval}(\delta''_i) \\
-    \:\: \mathbf{if} \: \mathsf{rmpk}_i \neq \: \perp \land \: \mathsf{tmpk}_i \neq \: \perp \\
-    \:\:\:\: \delta''_i \sample \mathcal{K} \\
-    \:\:\:\: \delta'''_i \sample \mathcal{K} \\
-    \:\:\:\: \mathsf{tpk}_i := \mathsf{tmpk}_i + \Delta.\mathsf{Eval}(\delta'_i) \\
-    \:\:\:\: \mathsf{rpk}_i := \mathsf{rmpk}_i + \Delta.\mathsf{Eval}(\delta''_i) \\
-    \:\:\:\: \mathsf{pks}_i := (\mathsf{spk}_i, \mathsf{tpk}_i, \mathsf{rpk}_i) \\
-    \:\:\;\: \mathsf{tk}_i := (r'_i, \delta'_i, \delta''_i, \delta'''_i, \mathsf{accd}'_i) \\
-    \;\: \mathbf{else} \\
-    \:\:\:\: \mathsf{pks}_i := (\mathsf{spk}_i, \perp, \perp) \\
-    \:\:\;\: \mathsf{tk}_i := (r'_i, \delta'_i, \mathsf{accd}'_i) \\
+    \t r'_i \sample \chi \\
+    \t \delta_i \sample \mathcal{K} \\
+    \t \mathsf{co}'_i := \Gamma.\mathsf{Com}(\mathsf{accd}'_i, r'_i) \\
+    \t (a_i, \time_i, \type_i) := \parse \mathsf{accd}'_i \\
+    \t (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i) := \parse \mathsf{mpks}_i \\
+    \t \mathsf{spk}_i := \mathsf{smpk}_i + \Delta.\mathsf{Eval}(\delta_i) \\
+    \t \pcif \type \neq 0 \\
+    \t\t \delta'_i \sample \mathcal{K} \\
+    \t\t \delta''_i \sample \mathcal{K} \\
+    \t\t \mathsf{tpk}_i := \mathsf{tmpk}_i + \Delta.\mathsf{Eval}(\delta'_i) \\
+    \t\t \mathsf{rpk}_i := \mathsf{rmpk}_i + \Delta.\mathsf{Eval}(\delta''_i) \\
+    \t\t \mathsf{pks}_i := (\mathsf{spk}_i, \mathsf{tpk}_i, \mathsf{rpk}_i) \\
+    \t\t \mathsf{tk}_i := (r'_i, \delta_i, \mathsf{accd}'_i) \\
+    \t \pcelse \\
+    \t\t \mathsf{pks}_i := (\mathsf{spk}_i, \perp, \perp) \\
+    \t\t \mathsf{tk}'_i := (r'_i, \delta'_i, \perp, \perp, \mathsf{accd}'_i) \\
+    \t\t \mathsf{tk}''_i := (r'_i, \delta''_i,\mathsf{accd}'_i) \\
     \mathsf{ac}'_i := (\mathsf{pks}_i, \mathsf{co}'_i) \\
     \{\mathsf{ac}_i\}_{i \in U} := \mathsf{StExt(st)} \\
     \mathsf{AC}_R := \{\mathsf{ac}_i\}_{i \in R} \\
     \mathsf{AC}_T := \{\mathsf{ac}_i\}_{i \in T} \\
     \mathcal{Z}_{\bar{S}} := \{\Delta.\mathsf{Eval}(\mathsf{ssk}_i)\}_{\phi S(i)\in \bar{S}} \\
-    \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \mathsf{time}, \mathsf{type}) \\
+    \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \time, \type) \\
     \mathsf{wit} := ((r,\mathsf{sks}_i, \mathsf{accd}_i)_{i\in S}), (\mathsf{mpks}_i, \mathsf{accd}'_i)_{i\in T}) \\
     \pi \gets \Pi.\mathsf{Prove}(\mathsf{crs},\mathsf{stmnt},\mathsf{wit}) \\
-    \mathsf{tx} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \pi) \\
-    \mathsf{TK} := {\mathsf{tk}_i}_{i \in T} \\
-    \mathbf{return} \: (\mathsf{tx}, \mathsf{TK})
-}
-\vspace{1em}
-\pseudocode{
-    \mathsf{SrcChk}(\mathsf{ac}, r, \mathsf{sks}, \mathsf{accd}, \mathsf{time}, \mathsf{type}) \\[0.1\baselineskip ][\hline]
-    (\mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk}) := \mathbf{parse} \: \mathsf{sks} \\
-    (\mathsf{pks}, \mathsf{co}) := \mathbf{parse} \: \mathsf{ac} \\
-    (\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk}) := \mathbf{parse} \: \mathsf{pks} \\
-    \mathsf{accd} := (a, \mathsf{time'}, \mathsf{type'}) \\
-    \mathbf{if} \: \mathsf{co} \neq \Gamma.\mathsf{Com}(\mathsf{accd}, r) \\
-    \:\: \mathbf{return} \: 0 \\
-    \mathbf{if} \: \mathsf{type} = \: 0 \\
-    \:\: \mathbf{return} \: \mathsf{spk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{ssk}) \\
-    \mathbf{else} \: \mathbf{if} \: \mathsf{type} = 1  \\
-    \:\: \mathbf{return} \: \begin{cases}
-        \mathsf{tpk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{tsk}) \tabularnewline
-        \mathsf{spk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{ssk}) \tabularnewline
-    \end{cases} \\
-    \mathbf{else} \\
-    \:\: \mathbf{return} \: \mathsf{rpk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{rsk}) \\
+    \mathsf{tx} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \mathsf{time}, \mathsf{type}, \pi) \\
+    \mathsf{TK} := {\mathsf{tk}_i, \mathsf{tk}'_i,  \mathsf{tk}''_i}_{i \in T} \\
+    \pcreturn (\mathsf{tx}, \mathsf{TK})
 }
 \end{pcvstack}
 \end{pchstack}
