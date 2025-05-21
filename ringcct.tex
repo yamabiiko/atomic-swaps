@@ -188,7 +188,7 @@ Where $\mathsf{Privacy}_{\Omega,\adv}^b$ is defined in.
 
 \begin{figure}
 \begin{minipage}[t]{\textwidth}
-\begin{pchstack}[boxed]
+\begin{pchstack}[center,boxed]
 \begin{pcvstack}
 \pseudocode{
     \mathsf{AccGen}\mathcal{O}(\mathsf{id}) \\[0.1\baselineskip ][\hline]
@@ -243,7 +243,7 @@ Where $\mathsf{Privacy}_{\Omega,\adv}^b$ is defined in.
 \vspace{1em}
 \pseudocode{
 	\mathsf{Corr}\mathcal{O}(\mathsf{id}) \\[0.1\baselineskip ][\hline]
-        \pcif \mathsf{id} \notin \mathsf{ID}^* \: \pcreturn \: \perp \\
+        \pcif \mathsf{id} \notin \mathsf{ID} \pcthen \pcreturn \bot \\
         * \gets \mathsf{AccGen}\mathcal{O}(\mathsf{id}) \\
         \mathsf{ID}^* := \mathsf{ID}^* \cup \{\mathsf{id}\} \\
         \mathsf{AC}^* := \bigcup_{\mathsf{id} \in \mathsf{ID}^*} \mathsf{AC}[\mathsf{id}] \\
@@ -278,7 +278,7 @@ Where $\mathsf{Privacy}_{\Omega,\adv}^b$ is defined in.
 \caption{Privacy experiment definition}
 \end{figure}
 
-\begin{definition}[Privacy] A RingCCT scheme is available if for all PPT adversaries $\adv$ it holds that
+\begin{definition}[Availability] A RingCCT scheme is available if for all PPT adversaries $\adv$ it holds that
 \begin{equation*}
 \mathsf{Pr}\left[\mathsf{Availability}_{\Omega,\adv}(1^\lambda) = 1\right] \leq \negl
 \end{equation*}
@@ -328,7 +328,7 @@ Where $\mathsf{Availability}_{\Omega,\adv}$ is defined in.
 
 \begin{figure}
 \begin{minipage}[t]{\textwidth}
-\begin{pchstack}[boxed]
+\begin{pchstack}[center,boxed]
 \begin{pcvstack}
 \pseudocode{
     \Setup(1^\lambda) \\ [0.1\baselineskip ][\hline]
@@ -379,7 +379,7 @@ Where $\mathsf{Availability}_{\Omega,\adv}$ is defined in.
 \end{figure}
 \begin{figure}
 \begin{minipage}[t]{\textwidth}
-\begin{pchstack}[boxed]
+\begin{pchstack}[center,boxed]
 
 \begin{pcvstack}
 \pseudocode{
