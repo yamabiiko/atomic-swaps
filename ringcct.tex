@@ -43,8 +43,11 @@ $\mathsf{TgtChk}$ ensures that the target account includes a valid commitment to
 The ledger state and transactions are abstracted into sets of committed accounts via $\mathsf{StExt}$ and $\mathsf{TxExt}$, enabling stateless verification, auditability, and off-chain analysis without leaking sensitive linkage information.
 
 \subsection{Syntax}
-\textbf{Definition} A RingCCT scheme (Ring Commit Confidential TxGenerations) scheme consists of the PPT algorithms ($\mathsf{Setup},\mathsf{KGen},\mathsf{KDer}, \mathsf{Tx},\mathsf{Vf},\mathsf{TimeVf}, \mathsf{StExt},\mathsf{TxExt}, \mathsf{TimeExt}, \mathsf{AccTimeExt}, \mathsf{SrcChk},\mathsf{TgtChk}$) whose interfaces are defined as follows.
-\begin{itemize}
+\begin{definition}[Ring  Confidential Commit Transactions (RingCCT)]
+    A RingCCT scheme consists of the PPT algorithms 
+    \[\mathsf{Setup},\mathsf{KGen},\mathsf{KDer}, \mathsf{Tx},\mathsf{Vf},\mathsf{TimeVf}, \mathsf{StExt},\mathsf{TxExt}, \mathsf{TimeExt}, \mathsf{AccTimeExt}, \mathsf{SrcChk},\mathsf{TgtChk}\]
+    whose interfaces are defined as follows.
+    \begin{itemize}
         \item $(\mathsf{pp,st}) \gets \mathsf{Setup}(1^\lambda)$: the setup algorithm generates the public parameters $\mathsf{st}$ and an initial global state $\mathsf{st}$.
         \item $(\mathsf{mpk},\mathsf{msk}) \gets \mathsf{KGen}(\pp)$: the key generation algorithm generates a master public key $\mathsf{mpk}$ and a matching secret key $\mathsf{msk}$.
         \item $(\mathsf{sk},\accd) \gets \mathsf{KDer}(\mathsf{msk, \tau})$: the key derivation algorithm generates derives the keys-account data tuple given the master key $\mathsf{msk}$ owning the account and a token $\tau$ of the account.
