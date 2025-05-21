@@ -35,77 +35,103 @@ This time-dependent spending rule supports two disjoint execution paths—ideal 
 
 
 \subsection{Commit-Transaction-based Atomic Swaps}
+\subsubsection{Preliminaries}
+
+\subsection{Blockchains}
+
+We define the following routines to interact with the blockchains. The subscript $\bca$ indicates that we are interacting with chain $\bca$.
+
+\begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
+    \item $\mathbf{0/1} \gets \mathbf{TxPub}(\tx)$: publishes the transaction $\tx$. Outputs 1 if the transaction is accepted, 0 otherwise.
+    \item $\mathbf{tx}  \gets \mathbf{TxGen}(\st, \{ \pk, \sk \}_S, \pk_T, \amnt)$: creates a signed transaction transferring $\amnt$ to $\pk_T$ from an account defined by the set $\{ \pk, \sk \}_S$.
+\item $\mathbf{0/1} \gets \mathbf{CommitTx}(\st, \{ \pk, \sk \}_S, \mathsf{pk}_T, \{ \pk \}_0, \{ \pk \}_1, T, \amnt)$: creates a commit transaction transferring $\mathsf{amnt}$ from $\mathsf{ac}_S$ to a commit-based account defined by the main public key $\pk_T$, two index sets of public keys $\{ \pk \}_0, \{ \pk \}_1$ and a timeout $T$.
+    \item $\mathbf{0/1} \gets \mathbf{TxVf}(\st, \tx)$: verifies the validity of the transaction based on the given state. Outputs 1 if the verification succeeds, 0 otherwise.
+    \item $\mathsf{st} \gets \mathbf{GetState}$: gets the latest blockchain state, which encodes the set of accounts, verified transactions and current epoch of the blockchain.
+    \item $\mathsf{time} \gets \mathbf{TimeExt}$: extracts the epoch from the state.
+\end{itemize}
+
+Additionally, we assume blockchains to have parameters $\bca.\mathsf{ctime}, \bca.\Pi_\mathsf{DS}$, where $\bca.\mathsf{ctime}$ is the chain's confirmation time and $\bca.\Pi_\mathsf{DS}$ its digital signature scheme, also noted as $\Pi_\mathsf{DS(\bca)}$.
+
+We require the standard safety and liveness security properties for the blockchains.
 
 \begin{figure}[H]
     \begin{pchstack}[center, boxed]
     \pseudocode{
-        P_0(\mathsf{ssk_{\mathbb{A}}},\mathsf{rsk_{\mathbb{A}}},\mathsf{tsk_{\mathbb{B}}}) \qquad \qquad P_1(\mathsf{ssk_{\mathbb{B}}},\mathsf{rsk_{\mathbb{B}}},\mathsf{tsk_{\mathbb{A}}}) \\[0.1\baselineskip ][\hline] 
+	    P_0((\pkm, \skm)_\bca,  (\pkc, \skc)_\bcb, \mathsf{\pk_{\mathsf{s}, \bcb}}) \qquad \qquad P_1((\pkm, \skm)_\bcb,  (\pkc, \skc)_\bca, \mathsf{\pk_{\mathsf{s}, \bca}}) \\[0.1\baselineskip ][\hline] 
         \<\< \\[-0.4\baselineskip ]
-        \mathcal{S_\mathbb{A}} := (\mathsf{ssk}_\mathbb{A}, \mathsf{rsk}_\mathbb{A}, \mathsf{tsk}_\mathbb{A}, \mathsf{accd}_\mathbb{A}) \\
-        \mathsf{(tx_\mathbb{A}, TK_\mathbb{A})} := \mathsf{TxGen_\mathbb{A}}(\mathsf{st},P,R,\mathcal{S},\mathcal{T}) \\
-        \mathcal{S_\mathbb{B}} := (\mathsf{ssk}_\mathbb{B}, \mathsf{rsk}_\mathbb{B}, \mathsf{tsk}_\mathbb{B}, \mathsf{accd}_\mathbb{B}) \\
-        \mathsf{(tx_\mathbb{B}, TK_\mathbb{B})} := \mathsf{TxGen_\mathbb{B}}(\mathsf{st},P,R,\mathcal{S},\mathcal{T}) \\
-        \mathbf{output} \: \mathsf{(tx_\mathbb{A} \oplus \mathsf{tx_\mathbb{B}}, TK_\mathbb{A})} \: \mathbf{to} \: P_1 \\
-        \mathbf{output} \: \mathsf{(tx_\mathbb{B}, TK_\mathbb{B})} \: \mathbf{to} \: P_0 \\
+	\mathbf{assert} \: (\st_\bcb, \st_\bca, \amnt_\bcb,  \amnt_\bca)^0 = (\st_\bcb, \st_\bca, \amnt_\bcb,  \amnt_\bca)^1 \\
+	\tx_{\mathsf{s}, \bcb} := \mathsf{TxGen_\bcb}(\st, \{ (\pkm^1, \skm^1), (\pkc^0, \skc^0) \}, \pks^0, \amnt) \\
+	\mathbf{assert} \: \mathsf{TxVf}_\bcb(\st, \tx_{\mathsf{s}}) \\
+	\tx_{\mathsf{s}, \bca} := \mathsf{TxGen_\bca}(\st, \{ (\pkm^0, \skm^0), (\pkc^1, \skc^1) \}, \pks^1, \amnt) \\
+	\mathbf{assert} \: \mathsf{TxVf}_\bca(\st, \tx_{\mathsf{s}}) \\
+	\mathsf{lk} \gets \mathcal{H}(\tx_{\mathsf{s}, \bcb}) \oplus \tx_{\mathsf{s}, \bca} \\
+        \mathbf{output} \: \mathsf{lk} \: \mathbf{to} \: P_1 \\
+        \mathbf{output} \: \tx_{\mathsf{s}, \bcb} \: \mathbf{to} \: P_0
     }
     \end{pchstack}
     \caption{Protocol definition of 2PC $\Gamma_{\mathsf{CommitTx}}$}
     \end{figure}
-    
-    
     \begin{figure}[H]
     \begin{minipage}[t]{0.5\textwidth}
     \begin{pchstack}[boxed]
     \pseudocode{
-        \text{Global input} \:\: (T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
-        \mathsf{(rmpk, rmsk)} \gets \mathsf{KGen}_\mathsf{A}(\mathsf{pp}) \\
-        \mathcal{S}_0 := \{(\mathsf{ssk}_\mathsf{A}, \perp, \perp, (\mathsf{amnt_a}, \perp))\} \\
-        \mathcal{T}_0 := \{(\mathsf{smpk}_\mathsf{A}, \mathsf{tmpk}_\mathsf{A}, \mathsf{rmpk}_\mathsf{A}, (\mathsf{amnt_a}, T_0))\} \\
-        \mathsf{(tx_0, TK_0)}_\mathbb{A} := \mathsf{TxGen_\mathbb{A}}(\mathsf{st},P,R,\mathcal{S}_0,\mathcal{T}_0) \\
-        (\_, \mathsf{st}') := \mathsf{Vf}_\mathbb{A}(\mathsf{tx_0}) \\
-        \mathsf{send}(\mathsf{(tx_0, TK_0)}_\mathbb{A}) \\
-        \mathsf{\textbf{select}} \:\: \{ \\
-        \quad \mathsf{\textbf{wait}} \:\: \{ \\
-        \qquad \mathsf{timeout}(T_0) \\
+	\text{Party input} \:\: (\pki, \ski)_{\bca}, (\pks, \sks)_{\bcb} \\[0.1\baselineskip ][\hline]
+	(\skm, \pkm)^0 \gets \mathsf{KGen}_\bca(\pp) \\
+	(\skr, \pkr)^0 \gets \mathsf{KGen}_\bca(\pp) \\
+	(\skc, \pkc)^0 \gets \mathsf{KGen}_\bcb(\pp) \\
+	\mathsf{send}(\pk_{\mathsf{c}, \bcb}^0) \\
+	\pk_{\mathsf{c}, \bca}^1 \gets \mathsf{receive} \\
+	\tx_{\mathsf{r}, \bca} \gets \mathsf{CommitTx}_\bca(\st, (\pki, \ski)^0, \pkm^0, \{ \pkc^1 \}, \{ \pkr^1 \}, T_0, \amnt) \\
+	\mathsf{TxPub}_\bca(\tx_\mathsf{r}) \\
+        \mathsf{\textbf{select}} \: \{ \\
+        \quad \mathsf{\textbf{wait}} \: \{ \\
+	\qquad \textbf{do} \: \st \gets \mathsf{GetState}_\bca \\ 
+	\qquad \textbf{while} \: \mathsf{TimeExt}_\bca(\st) < T_0 \\
+	\qquad \tx_{\mathsf{r}} \gets \mathsf{TxGen_\bca}(\st, \{ (\pkm, \skm)^0, (\pkr, \skr)^0 \}, \pki^0, \amnt) \\
+	\qquad \mathsf{TxPub}_\bca(\tx_{\mathsf{r}}) \\
         \quad \} \\
         \quad \mathsf{\textbf{wait}} \:\: \{ \\
-        \qquad \mathsf{receive}(\mathsf{(tx_0, TK_0)}_\mathbb{B}) \\
-        \qquad (\mathsf{res}, \mathsf{st}') := \mathsf{Vf}_\mathbb{B}(\mathsf{tx_0}) \\
-        \qquad \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\ % verify that commit transaction is valid and accepted
-        \qquad \quad \mathsf{\textbf{return}} \perp \\
-        \qquad (\mathsf{tx_1, TK_1}) \gets \Gamma.\mathsf{CommitTx}(\mathsf{ssk_\mathbb{A}}, \mathsf{rsk_\mathbb{A}}, \mathsf{tsk_\mathbb{B}}) \\
-        \qquad (\mathsf{res}, \mathsf{st}') := \mathsf{Vf}_\mathbb{B}(\mathsf{tx_1}) \\
-        \qquad \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\ % verify that commit transaction is valid and accepted
-        \qquad \quad \mathsf{\textbf{return}} \perp \\
+	\qquad \mathsf{send}(\tx_{\mathsf{r}, \bca}) \\
+	\qquad \mathsf{tx_{\mathsf{r}, \bcb}} \gets \mathsf{receive} \\
+	\qquad \textbf{assert} \: \mathsf{TxVf}_\bcb(\mathsf{tx}_\bcb) \\
+	\qquad \textbf{assert} \: (\pk_{\mathsf{c}, \bcb}^0, \amnt_\bcb) \in \mathsf{tx_{\mathsf{r}, \bcb}} \\
+	\qquad \tx_{\mathsf{s}, \bcb} \gets \Gamma.\mathsf{Swap}(\mathsf{\pk_{\mathsf{m}, \bca}^0}, \pk_{\mathsf{r}, \bca}^0, \pk_{\mathsf{c}, \bcb}^0) \\
+	\qquad \textbf{assert} \: \mathsf{TxPub}_\bcb(\tx_{\mathsf{s}}) \\
         \quad \} \\
         \} \\
     }
     \end{pchstack}
     \end{minipage}%
-    \hspace{0.4cm}
+    \hspace{0.7cm}
     \begin{minipage}[t]{0.5\textwidth}
     \begin{pchstack}[boxed]
     \pseudocode{
-        \text{Global input} \:\: (T, \mathsf{amnt_a}, \mathsf{amnt_b},\mathbb{A}, \mathbb{B}) \\[0.1\baselineskip ][\hline] \\
-        \mathsf{(rmpk, rmsk)} \gets \mathsf{KGen}_\mathsf{B}(\mathsf{pp}) \\
-        \mathcal{S}_0 := \{(\mathsf{ssk}_\mathsf{B}, \perp, \perp, (\mathsf{amnt_b}, \perp))\} \\
-        \mathcal{T}_0 := \{(\mathsf{smpk}_\mathsf{B}, \mathsf{tmpk}_\mathsf{B}, \mathsf{rmpk}_\mathsf{B}, (\mathsf{amnt_b}, T_1))\} \\
-        \mathsf{(tx_0, TK_0)}_\mathbb{B} := \mathsf{TxGen_\mathbb{B}}(\mathsf{st},P,R,\mathcal{S}_0,\mathcal{T}_0) \\
-        (\_, \mathsf{st}') := \mathsf{Vf}_\mathbb{B}(\mathsf{tx_0}) \\
-        \mathsf{send}(\mathsf{(tx_0, TK_0)}_\mathbb{B}) \\
-        \mathsf{\textbf{select}} \:\: \{ \\
-        \quad \mathsf{\textbf{wait}} \:\: \{ \\
-        \qquad \mathsf{timeout}(T_1) \\
+	\text{Party input} \:\: (\pki, \ski)_{\bcb}, (\pks, \sks)_{\bca} \\[0.1\baselineskip ][\hline] 
+	(\skm, \pkm)^1,  \gets \mathsf{KGen}_\bcb(\pp) \\
+	(\skr, \pkr)^1 \gets \mathsf{KGen}_\bcb(\pp) \\
+	(\skc, \pkc)^1\gets \mathsf{KGen}_\bca(\pp) \\
+	\mathsf{send}(\pk_{\mathsf{c}, \bca}^1) \\
+	\pk_{\mathsf{c}, \bcb}^0 \gets \mathsf{receive} \\
+	\tx_\bcb \gets \mathsf{CommitTx}_\bcb(\st, (\pki, \ski)^1, \pkm^1 , \{ \pkc^0 \}, \{ \pkr^1 \}, T_1, \amnt) \\
+	\mathsf{TxPub}_\bcb(\tx_\bcb) \\
+        \mathsf{\textbf{select}} \: \{ \\
+        \quad \mathsf{\textbf{wait}} \: \{ \\
+	\qquad \textbf{do} \: \st \gets \mathsf{GetState}_\bcb \\ 
+	\qquad \textbf{while} \: \mathsf{TimeExt}_\bcb(\st) < T_1 \\
+	\qquad \tx_{\mathsf{r}} \gets \mathsf{TxGen_\bcb}(\st, \{ (\pkm, \skm)^1, (\pkr, \skc)^1 \}, \pki^1, \amnt) \\
+	\qquad \mathsf{TxPub}_\bcb(\tx_{\mathsf{r}}) \\
         \quad \} \\
         \quad \mathsf{\textbf{wait}} \:\: \{ \\
-        \qquad \mathsf{receive}(\mathsf{(tx_0, TK_0)}_\mathbb{A}) \\
-        \qquad (\mathsf{res}, \mathsf{st}') := \mathsf{Vf}_\mathbb{A}(\mathsf{tx_0}) \\
-        \qquad \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\ % verify that commit transaction is valid and accepted
-        \qquad \quad \mathsf{\textbf{return}} \perp \\
-        \qquad (\mathsf{lk, TK_1}) \gets \Gamma.\mathsf{CommitTx}(\mathsf{ssk_\mathbb{B}}, \mathsf{rsk_\mathbb{B}}, \mathsf{tsk_\mathbb{A}}) \\
-        \qquad (\mathsf{res}, \mathsf{st}') := \mathsf{Vf}_\mathbb{B}(\mathsf{tx_1}) \\
-        \qquad \mathsf{\textbf{if}} \:\: \mathsf{res} \neq 1 \\ % verify that commit transaction is valid and accepted
-        \qquad \quad \mathsf{\textbf{return}} \perp \\
+	\qquad \mathsf{send}(\tx_{\mathsf{r}, \bcb}) \\
+	\qquad \mathsf{tx_{\mathsf{r}, \bca}} \gets \mathsf{receive} \\
+	\qquad \textbf{assert} \: \mathsf{TxVf}_\bca(\mathsf{tx}_\mathsf{r}) \\
+	\qquad \textbf{assert} \: (\pk_{\mathsf{c}, \bca}^1\, \amnt_\bca) \in \mathsf{tx_{\mathsf{r}, \bca}} \\
+	\qquad \mathsf{lk} \gets \Gamma.\mathsf{Swap}(\mathsf{\pk_{\mathsf{m}, \bcb}^1}, \pk_{\mathsf{r}, \bcb}^1, \pk_{\mathsf{c}, \bca}^1) \\
+	\qquad \textbf{do} \: \st \gets \mathsf{GetState}_\bcb \\
+	\qquad \textbf{while} \: \not\exists \: \mathsf{tx} \in \st \mid (\pk_{\mathsf{c}, \bcb}^1, \pk_{\mathsf{m}, \bcb}^0) \in \mathsf{tx} \\
+	\qquad \tx_{\mathsf{s}, \bcb} := \mathsf{tx} \in \st \mid (\pk_{\mathsf{c}, \bcb}^1, \pk_{\mathsf{m}, \bcb}^0) \in \mathsf{tx} \\
+	\qquad \tx_{\mathsf{s}, \bca} := \mathsf{lk} \oplus  \tx_{\mathsf{s}, \bcb} \\
+	\qquad \textbf{assert} \: \mathsf{TxPub}_\bca(\tx_{\mathsf{s}}) \\
         \quad \} \\
         \} \\
     }
@@ -130,23 +156,23 @@ The HTLC transfers $\mathsf{amnt_a}$ to $\mathsf{pk_1}$ if invoked before timeou
 If the contract is invoked after timeout $T$, it refunds the assets $\mathsf{amnt_a}$ to $\mathsf{pk_0}$ unconditionally.
 
 Using HTLCs as a building block, an atomic swap protocol can be constructed as follows: \\
-1) Alice chooses $r$, computes $h = \mathcal{H}(r)$, transfers $\mathsf{amnt_a}$ into an $(\mathsf{amnt_a}, h, T_0, \mathsf{pk_0}, \mathsf{pk_1})$ on blockchain $\mathbb{A}$ and sends $h,T$ to Bob. \\
-2) Bob finishes the setup of the exchange by choosing a time $T_1 < T_0$ and transferring his $\mathsf{amnt_b}$ assets into an HTLC$(\mathsf{amnt_b}, h, T_1, \mathsf{pk_{tx}}, \mathsf{pk_{rx}})$ on blockchain $\mathbb{B}$.
+1) Alice chooses $r$, computes $h = \mathcal{H}(r)$, transfers $\mathsf{amnt_a}$ into an $(\mathsf{amnt_a}, h, T_0, \mathsf{pk_0}, \mathsf{pk_1})$ on blockchain $\bca$ and sends $h,T$ to Bob. \\
+2) Bob finishes the setup of the exchange by choosing a time $T_1 < T_0$ and transferring his $\mathsf{amnt_b}$ assets into an HTLC$(\mathsf{amnt_b}, h, T_1, \mathsf{pk_{tx}}, \mathsf{pk_{rx}})$ on blockchain $\bcb$.
 
 HTLCs serve as the core building block in many atomic swap protocols. A standard two-party protocol between Alice and Bob proceeds as follows:
 
-Alice chooses a uniformly random secret value $r$, computes $h = \mathcal{H}(r)$, and initiates an HTLC on blockchain $\mathbb{A}$ locking $\mathsf{amnt_a}$ to Bob under the tuple $(\mathsf{amnt_a}, h, T_0, \mathsf{pk}\text{Alice}, \mathsf{pk}\text{Bob})$. She then sends $(h, T_0)$ to Bob.
+Alice chooses a uniformly random secret value $r$, computes $h = \mathcal{H}(r)$, and initiates an HTLC on blockchain $\bca$ locking $\mathsf{amnt_a}$ to Bob under the tuple $(\mathsf{amnt_a}, h, T_0, \mathsf{pk}\text{Alice}, \mathsf{pk}\text{Bob})$. She then sends $(h, T_0)$ to Bob.
 
-Bob selects a smaller timeout $T_1 < T_0$ and sets up an HTLC on blockchain $\mathbb{B}$ locking his $\mathsf{amnt_b}$ to Alice under $(\mathsf{amnt_b}, h, T_1, \mathsf{pk}\text{Bob}, \mathsf{pk}\text{Alice})$.
+Bob selects a smaller timeout $T_1 < T_0$ and sets up an HTLC on blockchain $\bcb$ locking his $\mathsf{amnt_b}$ to Alice under $(\mathsf{amnt_b}, h, T_1, \mathsf{pk}\text{Bob}, \mathsf{pk}\text{Alice})$.
 
-Alice redeems the funds from Bob’s HTLC on $\mathbb{B}$ by revealing $r$. Since transactions on public blockchains are visible, Bob can then observe $r$ on-chain and use it to redeem the funds from Alice’s HTLC on $\mathbb{A}$ before her timeout $T_0$.
+Alice redeems the funds from Bob’s HTLC on $\bcb$ by revealing $r$. Since transactions on public blockchains are visible, Bob can then observe $r$ on-chain and use it to redeem the funds from Alice’s HTLC on $\bca$ before her timeout $T_0$.
 
 This protocol ensures atomicity: either both parties receive their respective assets, or after the timeout, each party reclaims their original funds.
 
 While HTLCs are widely used in practice, especially in early cross-chain systems and off-chain protocols such as the Lightning Network, they suffer from several critical limitations, especially when applied in a privacy-preserving or cross-paradigm setting.
 
 \paragraph*{Compatibility of hash functions}
-HTLC-based atomic swaps require both blockchains involved to support the same hash function. For instance, if chain $\mathbb{A}$ supports SHA-256 and chain $\mathbb{B}$ supports Blake2, an HTLC constructed with a hash $h = \mathcal{H}(r)$ cannot be replicated on the second chain unless both parties can compute and verify the same preimage relation. One possible workaround is to have Alice compute $h = \mathcal{H}(r)$ and $h' = \mathcal{H}'(r)$ and publish a non-interactive zero-knowledge (NIZK) proof that both hashes are computed from the same preimage. However, this increases protocol complexity and setup cost, and depends on the availability of NIZK-friendly primitives on both chains.
+HTLC-based atomic swaps require both blockchains involved to support the same hash function. For instance, if chain $\bca$ supports SHA-256 and chain $\bcb$ supports Blake2, an HTLC constructed with a hash $h = \mathcal{H}(r)$ cannot be replicated on the second chain unless both parties can compute and verify the same preimage relation. One possible workaround is to have Alice compute $h = \mathcal{H}(r)$ and $h' = \mathcal{H}'(r)$ and publish a non-interactive zero-knowledge (NIZK) proof that both hashes are computed from the same preimage. However, this increases protocol complexity and setup cost, and depends on the availability of NIZK-friendly primitives on both chains.
 Since the same preimage $r$ is reused on both chains, an external observer can trivially link the two transactions, breaking the unlinkability that privacy-preserving systems aim to provide. A workaround—such as committing to a shifted value $r + r'$ with an accompanying NIZK proof—adds cryptographic overhead and requires careful implementation to avoid privacy leaks.
 \paragraph*{(In)compatibility with private ledgers}
 Many privacy-preserving cryptocurrencies, such as Monero or Zcash, do not support expressive scripting or global hash preimage verifiability. Even when HTLCs are theoretically implementable (e.g., in a limited form over RingCT), their transaction structure becomes easily distinguishable from standard private transfers, harming plausible deniability. In such cases, the protocol becomes asymmetric: the public-chain participant must move first, revealing the preimage, which the private-chain user can then observe off-chain—this violates the symmetry typically desired in fair exchange protocols.
