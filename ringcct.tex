@@ -1,32 +1,19 @@
 % TeX root = atomic-swaps.tex
 
 \section{RingCCT: Ring confidential commit transaction}
-We present an extension of ring confidential transactions (RingCT), called ring confidential commit transactions (RingCCT).
-RingCCT introduces an additional account abstraction that incorporates commitment-based ownership logic with epoch-based timeout semantics. More precisely, accounts in RingCCT are represented as commitments to account data, including both a token amount and a (possibly zero) timeout parameter, which governs conditional control over the committed asset.
+We present an extension of RingCT called ring confidential commit transactions (RingCCT), 
+which introduces an additional account abstraction enabling timeout-dependent ownership logic for accounts jointly created by two parties. The system state now mantains, in addition to the the list of all existing accounts and associated tags, an integer-valued epoch counter which is incremented upon each succesful verification. Similar to RingCT, each account is associated with a commitment encoding an amount and the corresponding set of public keys. However, the commited data now additionaly encodes a bit indicating the account type and a (possibly zero-valued) timeout epoch parameter, which governs conditional control over the account. \\ 
+If the account type is standard, the timeout is set to zero and the system behaves analogously as before. Otherwise, the account type is said to be \textit{commit-based}, and its ownership is jointly held by two distinct users until the system epoch reaches the account-specified timeout. Upon expiration, the ownership reverts to a single designated user. 
 
-At a high level, RingCCT abstracts the ledger into a set of accounts, each cryptographically encoded as a commitment $\mathsf{co}$ to underlying account data $\accd := (a, \time)$, where $a$ represents the committed amount and $\mathsf{time}$ optionally specifies an epoch-based timeout. Each account is associated with a tuple of public keys $(\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk})$ that respectively define:
+\subsection{Syntax}
+\paragraph*{System setup and state.} A RingCCT system is initialized by running the setup algorithm $\mathsf{Setup}$ to generate public parameters and the initial state $\st$. Users may invoke the key genation algorithm $\mathsf{KGen}$ to obtain a master key pair $\mathsf{mpk}, \mathsf{msk}$. 
+The set of all accounts in the systems, denoted by $\mathsf{AC_U} = \{ \ac_i \}_{i\in U}$ (where U stands for universe), can be extracted from the system state $\st$ via the algorithm $\mathsf{StExt}$. 
 
-\begin{itemize}
-	\item a primary owner key $\mathsf{spk}$,
+\paragraph*{Accounts.}
+Each account $\ac$ comprises a commitment $\mathsf{co}$ to some account data $\accd$, along with a tuple of public keys $\mathsf{pks} := ( \spk, \tpk, \rpk )$, each corresponding to the secret keys  $( \ssk, \tsk, \rsk )$. The account data $\accd$ encodes an amount $a \in \mathbb{Z}$, a timeout epoch $\tout \in \mathbb{N}$, and the account type identified by the bit $b \in \{ 0, 1 \}$. If $b = 0$, the account is said to be \textit{standard} and is exclusively controlled by a single master secret key $\mathsf{msk}$. In this case, only the key pair $(\spk, \ssk)$ is populated, with the remaining keys in $\mathsf{pks}$ set to $\perp$. If $b = 1$, the account is classified as \textit{commit-based} and is associated to two distinct master keys, possibily belonging to distinct users. Prior to epoch $\tout$, the account is jointly controlled by the secret keys $\ssk$ and $\tsk$, where $\tsk$ is associated to a distinct master secret key. After the $\tout$, control over the account transitions to  $\rsk$ exclusively, which is bound to the same master key pair as $\ssk$.
 
-	\item an optional joint-control timeout key $\mathsf{tpk}$, and
-
-	\item a recovery key $\mathsf{rpk}$ which gains control after timeout.
-\end{itemize}
-
-Bfore the timeout epoch, spending from the account requires joint authorization from the primary and timeout keys; after the timeout, spending transitions to the recovery key alone. When no timeout is defined, the account behaves identically to a standard RingCT output, where only $\mathsf{spk}$ is required to authorize transactions.
-
-\paragraph*{Account Types} We distinguish between two vfts of accounts:
-
-\begin{itemize}
-	\item Standard RingCT accounts: encoded as commitments to $(a, 0)$ with $\mathsf{spk}$ defined, and no meaningful $\mathsf{tpk}$ or $\mathsf{rpk}$. These replicate classic RingCT behavior.
-
-	\item Commit accounts: commit to $(a, \time)$ with a complete triplet $(\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk})$. These implement time-based joint ownership and recovery.
-\end{itemize}
-
-\paragraph*{TxGeneration Generation}
-TxGenerations in RingCCT are generated via the algorithm $\mathsf{TxGen}$, which accepts a global state $\mathsf{st}$, a set of source account information $\mathcal{S}$, each including a tuple of secret keys $(\mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk})$ and the committed data $\accd$, a set of target account data $\mathcal{T}$ (including public keys and updated $\accd'$), a ring of public accounts used to obfuscate the true input, and a predicate $P$ over source/target amounts (e.g., sum conservation).
-The transaction enforces predicate correctness and zero-knowledge ownership proof via ring signatures, commitments, and zero-knowledge proofs that validates that knowledge of keys consistent with timeout logic, the conservation of committed amounts, and correct embedding of public keys and account data.
+\paragraph*{Transaction generation.} Transactions are generated via the algorithm $\mathsf{TxGen}$, which accepts a system state $\mathsf{st}$, a set of source account information $\mathcal{S}$, each including a tuple of secret keys $(\mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk})$ and the committed data $\accd$, a set of target account data $\mathcal{T}$ (including public keys and $\accd'$), a ring of public accounts used to obfuscate the true input, and a predicate $P$ over source/target amounts (e.g., sum conservation).
+A transaction $\tx$ can be generated using the transaction algorithm $\mathsf{TxGen}$, which takes as input the system state $\st$, a predicate $P$, an index set $R \subseteq U$ called the ring, a set of source account information $\mathcal{S} = \{ \mathsf{sks}_i, \accd_i \}_{i \in S}$ for some $S \subseteq R$ and a set of target account information $\{ \mathsf{mpks}_i, \accd'_i \}_{i \in T}$.
 
 \paragraph*{Timeout-Aware Ownership Checks}
 The algorithms $\mathsf{SrcChk}$ and $\mathsf{TgtChk}$ verify ownership and integrity of account data based on time:
@@ -39,11 +26,7 @@ $(\mathsf{rsk})$ is valid when $\mathsf{clock} > \time$.
 
 $\mathsf{TgtChk}$ ensures that the target account includes a valid commitment to the new account data $\accd'$.
 
-\paragraph*{State and TxGeneration Extraction}
-The ledger state and transactions are abstracted into sets of committed accounts via $\mathsf{StExt}$ and $\mathsf{TxExt}$, enabling stateless verification, auditability, and off-chain analysis without leaking sensitive linkage information.
-
-\subsection{Syntax}
-\begin{definition}[Ring  Confidential Commit Transactions (RingCCT)]
+	\begin{definition}[Ring  Confidential Commit Transactions (RingCCT)]
     A RingCCT scheme consists of the PPT algorithms 
     \[\mathsf{Setup},\mathsf{KGen},\mathsf{KDer}, \mathsf{Tx},\mathsf{Vf},\mathsf{TimeVf}, \mathsf{StExt},\mathsf{TxExt}, \mathsf{TimeExt}, \mathsf{AccTimeExt}, \mathsf{SrcChk},\mathsf{TgtChk}\]
     whose interfaces are defined as follows.
@@ -55,14 +38,14 @@ The ledger state and transactions are abstracted into sets of committed accounts
         \item $(b,\st') \gets \mathsf{Vf}(\st,\tx)$: The verification algorithm outputs a bit b deciding whether to accept or reject that the transaction $\tx$ is a valid relative to the state $\st$, outputting an updated state $\st'$ if the verification is sucessful. This verification is time-independent.
         \item $(b,\mathsf{st}') \gets \mathsf{TimeVf}(\st,\tx)$: The time verification algorithm performs the same verification as in $\mathsf{Vf}(\st, \tx)$ with the further constraint of checking whether the declared transaction type $\txtype$ and timeout $\tout$ are consistent with respect to the verifier's epoch $\time$ encoded in $\st$.
         \item $\mathsf{AC}_U \gets \mathsf{StExt}(\st)$: The state extraction algorithm
-        extracts the set of universe accounts $\mathsf{AC}_U = \{\mathsf{ac}_i\}_{i \in U}$ encoded in the state $\st$.
+        extracts the set of universe accounts $\mathsf{AC}_U = \{\ac_i\}_{i \in U}$ encoded in the state $\st$.
         \item $\mathsf{AC}_T \gets \mathsf{TxExt}(\tx)$: The transaction extraction algorithm
-        extracts the set of universe accounts $\mathsf{AC}_T = \{\mathsf{ac}_i\}_{i \in T}$ encoded in the state $\st$.
+        extracts the set of universe accounts $\mathsf{AC}_T = \{\ac_i\}_{i \in T}$ encoded in the state $\st$.
         \item $\time \gets \mathsf{TimeExt}(\tx)$: The time extraction algorithm
         extracts the epoch $\time$ encoded in the state $\mathsf{st}$.
         \item $(\tout, \atype) \gets \mathsf{AccTimeExt}(\{\accd\})$: The account time extraction algorithm takes a set of account data $\{\accd\}$ and extracts the epoch timeout $\tout$ and the bit $\atype$ if and only if they are all equal in the set. Returns $\perp$ otherwise.
-        \item $b \gets \mathsf{SrcChk}(\mathsf{ac,r,sks,accd,tout,txtype})$: The source checking algorithm outputs a bit $b$ deciding whether to accept or reject that the account $\mathsf{ac}$ is associated to the provided secret keys and that $\accd$ has been commited with randomness $r$. It then checks that the provided secret keys are valid according to the type of transaction $\txtype$
-        \item $b \gets \mathsf{TgtChk}(\mathsf{ac,accd})$: The target checking algorithms outputs a bit $b$ deciding whether to accept or reject that $\accd$ has been commited in $\mathsf{ac}$. 
+        \item $b \gets \mathsf{SrcChk}(\mathsf{ac,r,sks,accd,tout,txtype})$: The source checking algorithm outputs a bit $b$ deciding whether to accept or reject that the account $\ac$ is associated to the provided secret keys and that $\accd$ has been commited with randomness $r$. It then checks that the provided secret keys are valid according to the type of transaction $\txtype$
+        \item $b \gets \mathsf{TgtChk}(\mathsf{ac,accd})$: The target checking algorithms outputs a bit $b$ deciding whether to accept or reject that $\accd$ has been commited in $\ac$. 
     \end{itemize}
 \end{definition}
 
@@ -71,7 +54,7 @@ The ledger state and transactions are abstracted into sets of committed accounts
     Let $\mathcal{P}$ be a family of predicates. A RingCCT scheme $\Omega$ is $\mathcal{P}$-correct if all of the following holds for any $\lambda \in \mathbb{N}$ and any $(pp, *) \in \mathsf{Setup}(1^\lambda)$.
 \end{definition}
 
-\paragraph*{Derivation correctness.} For any $(\mathsf{mpk}, \mathsf{msk}) \in \mathsf{KGen}(\pp)$, with $\mathsf{msk} \in \mathsf{msks}$, $\mathsf{mpk} \in \mathsf{mpks}$ $(\mathsf{sks}, \mathsf{ac}, \mathsf{tk}, \accd, \accd')$ satisfying $(\mathsf{sks}, \accd') \in \mathsf{KDer}(\mathsf{msks}, \mathsf{tk})$ and $\mathsf{TgtChk}(\mathsf{ac}, \mathsf{mpks}, \accd_{i}) = 1$ we have $\accd = \accd'$ and $\forall\pk \in \accd \mid \exists \sk \in \mathsf{sks} : \pk = \Delta.\mathsf{KGen}(\pk)$.
+\paragraph*{Derivation correctness.} For any $(\mathsf{mpk}, \mathsf{msk}) \in \mathsf{KGen}(\pp)$, with $\mathsf{msk} \in \mathsf{msks}$, $\mathsf{mpk} \in \mathsf{mpks}$ $(\mathsf{sks}, \ac, \mathsf{tk}, \accd, \accd')$ satisfying $(\mathsf{sks}, \accd') \in \mathsf{KDer}(\mathsf{msks}, \mathsf{tk})$ and $\mathsf{TgtChk}(\ac, \mathsf{mpks}, \accd_{i}) = 1$ we have $\accd = \accd'$ and $\forall\pk \in \accd \mid \exists \sk \in \mathsf{sks} : \pk = \Delta.\mathsf{KGen}(\pk)$.
 
 
 \paragraph*{TxGeneration correctness.} Define the set $V_\mathsf{pp}$ to be the collection of all tuples (\st, P, R, S, T) satisfying the following properties: 
@@ -100,8 +83,8 @@ We here define the security properties of RingCCT.
 \vspace{0.3cm} \\
 $\mathsf{Pr}\left[
     \begin{cases} 
-	    \mathsf{SrcChk}(\mathsf{ac}, r, \ssk, \tsk, \rsk, \mathsf{accd}, \txtype, \mathcal{Z}_{S}) = 1 \tabularnewline
-	\mathsf{SrcChk}(\mathsf{ac}, r, \ssk', \tsk', \rsk', \mathsf{accd}',\txtype, \mathcal{Z}_{S}') = 1 \tabularnewline
+	    \mathsf{SrcChk}(\ac, r, \ssk, \tsk, \rsk, \mathsf{accd}, \txtype, \mathcal{Z}_{S}) = 1 \tabularnewline
+	\mathsf{SrcChk}(\ac, r, \ssk', \tsk', \rsk', \mathsf{accd}',\txtype, \mathcal{Z}_{S}') = 1 \tabularnewline
 	(\txtype = 0 \land (\ssk, a) \neq (\ssk', a')) \: \lor \tabularnewline 
 	(\txtype = 1 \land (\ssk, \tsk, a) \neq (\ssk', \tsk', a')) \: \lor \tabularnewline
 	(\txtype = 2 \land (\ssk, \rsk, a) \neq (\ssk', \rsk', a'))
@@ -109,8 +92,8 @@ $\mathsf{Pr}\left[
     \middle|
     \begin{aligned}
 	(\pp, \st) \gets \mathsf{Setup}(1^\lambda) \\
-	(\mathsf{ac}, \ssk, \tsk, \rsk, \accd, \mathcal{Z}_{S}, \txtype) \gets \mathcal{A}(\pp) \\
-	(\mathsf{ac}, \ssk', \tsk', \rsk', \accd',  \mathcal{Z}_{S}') \gets \mathcal{A}(\pp) \\
+	(\ac, \ssk, \tsk, \rsk, \accd, \mathcal{Z}_{S}, \txtype) \gets \mathcal{A}(\pp) \\
+	(\ac, \ssk', \tsk', \rsk', \accd',  \mathcal{Z}_{S}') \gets \mathcal{A}(\pp) \\
     \end{aligned}
 \right]
 \leq \negl
@@ -120,15 +103,15 @@ $
 \vspace{0.3cm} \\
 $\mathsf{Pr}\left[
     \begin{cases} 
-	\mathsf{TgChk}(\mathsf{ac}, \mathsf{tk}, (a, \tout, \atype)) = 1 \tabularnewline
-	\mathsf{TgChk}(\mathsf{ac}, \mathsf{tk}', (a', \tout', \atype')) = 1 \tabularnewline
+	\mathsf{TgChk}(\ac, \mathsf{tk}, (a, \tout, \atype)) = 1 \tabularnewline
+	\mathsf{TgChk}(\ac, \mathsf{tk}', (a', \tout', \atype')) = 1 \tabularnewline
 	(a, \tout, \atype) \neq (a', \tout', \atype')
     \end{cases} 
     \middle|
     \begin{aligned}
 	(\pp, \st) \gets \mathsf{Setup}(1^\lambda) \\
-	(\mathsf{ac}, \mathsf{tk}, \tout, a, \atype) \gets \mathcal{A}(\pp) \\
-	(\mathsf{ac}, \mathsf{tk}', \tout', a', \atype') \gets \mathcal{A}(\pp) \\
+	(\ac, \mathsf{tk}, \tout, a, \atype) \gets \mathcal{A}(\pp) \\
+	(\ac, \mathsf{tk}', \tout', a', \atype') \gets \mathcal{A}(\pp) \\
     \end{aligned}
 \right]
 \leq \negl
@@ -138,7 +121,7 @@ $
 \begin{equation*}
 \mathsf{Pr}\left[\mathsf{Balance}_{\Omega,\mathcal{P},\adv,\epsilon_\adv}(1^\lambda) = 1\right] \leq \negl
 \end{equation*}
-where $\mathsf{Pr}\left[\mathsf{Balance}_{\Omega,\mathcal{P},\adv,\epsilon_\adv}\right]$ is defined in \ref{fig:balance}.\\
+where $\mathsf{Pr}\left[\mathsf{Balance}_{\Omega,\mathcal{P},\adv,\epsilon_\adv}\right]$ is defined in \cref{fig:balance}.\\
 \end{definition}
 
 The transaction verification is performed by extracting the current epoch from the state via the time extraction algorithm $\mathsf{TimeExt}$ and then by running the verification algorithm $\mathsf{TimeVf}$. This implies that the balance security properties covers both standard and commit accounts. \\
@@ -155,7 +138,7 @@ The transaction verification is performed by extracting the current epoch from t
     \mathbf{for} \: i \in \mathbb{Z}_l \: \mathbf{do} \\
     \t \accd_{i, S_i} := (\accd_{i,j})_{j \in S_i},
     \accd'_{i, T_i} := (\accd'_{i,j})_{j \in T_i} \\
-    \t \{ \mathsf{ac}_{i,j} \}_{j \in U_i} := \mathsf{StExt}(\mathsf{st}_i), \time_i := \mathsf{TimeExt}(\st_i) \\
+    \t \{ \ac_{i,j} \}_{j \in U_i} := \mathsf{StExt}(\mathsf{st}_i), \time_i := \mathsf{TimeExt}(\st_i) \\
     \t (\{ \mathsf{ac'}_{i,j} \}, \txtype_{i, j})_{j \in T_i} := \mathsf{TxExt}(\mathsf{tx}_i) \\
     \t b'_i := 
     \begin{cases}
@@ -174,7 +157,7 @@ The transaction verification is performed by extracting the current epoch from t
 \label{fig:balance}
 \end{figure}
 
-\paragraph*{Privacy.} Privacy captures spender and receiver anonymity as well as assets confidentiality. The property is modeled by the security experiment $\mathsf{Privacy}_{\Omega,\adv}^b$, which is parameterised by the bit $b$. The experiments begins by initialising the RingCCT system state $\st$ through the $\mathsf{Setup}$ algorithm. The adversary is then gives access to oracles for account generation, corruption, transaction and verification, as defined in \ref{fig:oracles}. \\
+\paragraph*{Privacy.} Privacy captures spender and receiver anonymity as well as assets confidentiality. The property is modeled by the security experiment $\mathsf{Privacy}_{\Omega,\adv}^b$, which is parameterised by the bit $b$. The experiments begins by initialising the RingCCT system state $\st$ through the $\mathsf{Setup}$ algorithm. The adversary is then gives access to oracles for account generation, corruption, transaction and verification, as defined in \cref{fig:oracles}. \\
 Commit and standard accounts can be generated by calling $\mathsf{CommAccGen}\mathcal{O}$ and $\mathsf{AccGen}\mathcal{O}$ respectively, both of which return the set of associated public keys. Existing accounts can be corrupted via $\mathsf{Corr}\mathcal{O}$, which returns the corresponding secret keys unless the account belongs to the set $\mathsf{ID}^*$. The verification oracle $\mathsf{TimeVf}\mathcal{O}$ takes a transaction $\tx$ as input and updates the system state $\st$ if the given transaction is sucessfully verified with the verification algorithm $\mathsf{TimeVf}$. \\
 The transaction oracle $\mathsf{TxGen}\mathcal{O}$ takes as input the tuple $(P, R, \mathcal{S}', \mathcal{S}^*, \mathcal{T}', \mathcal{T}^*)$ provided $\adv$, where $\mathcal{S}'$ and $\mathcal{T}'$ are sets of source and target accounts with keypairs generated by the adversary, and $\mathcal{S}^*$, $\mathcal{T}^*$ instructs the oracle to retrieve keypairs of uncorrupted accounts. The oracle combines the given sets, generates the transaction and returns it alongside the tokens associated with the target accounts. \\ 
 The adversary then generates a pair of transactions with inputs $(P, R, \mathcal{S}'_i, \mathcal{S}^*, \mathcal{T}'_i, \mathcal{T}^*)$, where $i \in {0.1}$, differing only in the selected set of honest source and target accounts. Honest accounts that are involved in verified transactions are recorded and blocked by including them in the set $\mathsf{AC}^*$. \\
@@ -184,7 +167,7 @@ The bit-parametised transaction is then returned to the adversary $\adv$, who ma
 \begin{equation*}
 \mid \mathsf{Pr}\left[\mathsf{Privacy}_{\Omega,\adv}^0(1^\lambda) = 1\right] -  \mathsf{Pr}\left[\mathsf{Privacy}_{\Omega,\adv}^1(1^\lambda) = 1\right] \mid \:\: \leq \negl
 \end{equation*}
-Where $\mathsf{Privacy}_{\Omega,\adv}^b$ is defined in \ref{fig:privacy}. 
+Where $\mathsf{Privacy}_{\Omega,\adv}^b$ is defined in \cref{fig:privacy}. 
 \end{definition}
 
 \begin{figure}
@@ -277,7 +260,7 @@ Where $\mathsf{Privacy}_{\Omega,\adv}^b$ is defined in \ref{fig:privacy}.
     \pcreturn \: b'
 }
 \end{pchstack}
-\caption{Privacy experiment with oracles defined in \ref{fig:oracles}.}
+\caption{Privacy experiment with oracles defined in \cref{fig:oracles}.}
 \label{fig:privacy}
 \end{figure}
 
@@ -285,7 +268,7 @@ Where $\mathsf{Privacy}_{\Omega,\adv}^b$ is defined in \ref{fig:privacy}.
 \begin{equation*}
 \mathsf{Pr}\left[\mathsf{Availability}_{\Omega,\adv}(1^\lambda) = 1\right] \leq \negl
 \end{equation*}
-Where $\mathsf{Availability}_{\Omega,\adv}$ is defined in \ref{fig:availability}. 
+Where $\mathsf{Availability}_{\Omega,\adv}$ is defined in \cref{fig:availability}. 
 \end{definition}
 
 \begin{figure}[H]
@@ -305,23 +288,26 @@ Where $\mathsf{Availability}_{\Omega,\adv}$ is defined in \ref{fig:availability}
     \pcreturn \: b \land b'
 }
 \end{pchstack}
-\caption{Availability experiment with oracles defined in \ref{fig:oracles}.}
+\caption{Availability experiment with oracles defined in \cref{fig:oracles}.}
 \label{fig:availability}
 \end{figure}
 
-\paragraph*{Availability.} Availability captures the notion that a valid transaction created at a given point in time should remain valid in the future, unless the associated output has been spent. This provides security against \textit{denial-of-spending} attacks, wherein an adversary attempts to prevent a specific user or account from spending their assets.  We formalise availability in the security experiment $\mathsf{Availability}_{\Omega,\adv}$ described in \ref{fig:availability}. Similarly to the privacy experiments, we initialise the RingCCT system and provide the adversary $\adv$ access to the same set of oracles. Following oracle interaction, the adversary $\adv$ specifies the input for the oracle $\mathsf{TxGen}\mathcal{O}$, which computes $\tx$. The set of source accounts used by the $\adv$ must be honest and are subsequently blocked once included in the challenge transaction $\tx$. The adversary $\adv$ receive the transaction $\tx$ and further interacts with the oracles, which may update the system state. After $\adv$ halts, the transaction $\tx$ is verified again with the result denoted by $b'$. The experiment returns $b' \land b$, capturing whether the transaction is valid for some state $\st$ but rejected for $\st'$. \\
+\paragraph*{Availability.} Availability captures the notion that a valid transaction created at a given point in time should remain valid in the future, unless the associated output has been spent. This provides security against \textit{denial-of-spending} attacks, wherein an adversary attempts to prevent a specific user or account from spending their assets.  We formalise availability in the security experiment $\mathsf{Availability}_{\Omega,\adv}$ described in \cref{fig:availability}. Similarly to the privacy experiments, we initialise the RingCCT system and provide the adversary $\adv$ access to the same set of oracles. Following oracle interaction, the adversary $\adv$ specifies the input for the oracle $\mathsf{TxGen}\mathcal{O}$, which computes $\tx$. The set of source accounts used by the $\adv$ must be honest and are subsequently blocked once included in the challenge transaction $\tx$. The adversary $\adv$ receive the transaction $\tx$ and further interacts with the oracles, which may update the system state. After $\adv$ halts, the transaction $\tx$ is verified again with the result denoted by $b'$. The experiment returns $b' \land b$, capturing whether the transaction is valid for some state $\st$ but rejected for $\st'$. \\
 We note that in the RingCCT schemes incorporates two verification algorithms, $\mathsf{TimeVf}$ and $\mathsf{Vf}$. The former is revelant only for commit-type accounts, which inherently violate the availability property by design, as the validity of a transaction involving commit accounts depends on the current epoch of the system state. Consequently, the experiment $\mathsf{Availability}_{\Omega,\adv}$ is defined with respect to $\mathsf{Vf}$.
 
 \newpage
 
 \subsection{Construction}
 
+In this section we construct a RingCCT scheme $\Omega$ from a PRF $\Delta$, a commitment scheme $\Gamma$ and a non-interactive argument system $\Pi$. The global state $\st$ encodes the set of all existing accounts $\mathsf{AC}_U$, the set $\mathcal{Z}_U$ containing all tags generated by $\Delta$ by valid transactions, and $\time$ which corresponds to the current epoch of the system. For any spent account there will be a set of tags in $\mathcal{Z}_U$, with each of the tag binding to the account's secret keys. \\
+Master public and secret keys of the RingCCT scheme are public and secret keys of $\Delta$ respectively. An account $\ac$ contains a set of public keys $\mathsf{pks}$ and a commitment $\mathsf{co} := \mathsf{Com}(\accd, r)$ on some account data $\accd := (a, \tout, b)$ where $a$ denotes the ammounts of owned assets, $\tout$ optionally sets an epoch timeout and $b$ is a bit defining the type of the account. The account is associated to the corresponding set of secret keys $\mathsf{sks}$, where for all $\mathsf{sk} \in \mathsf{sks}$ we have an associated $\mathsf{pk} \in \mathsf{pks}$ such that $\Delta.\mathsf{Eval}(\mathsf{sk}) = \mathsf{pk}$. Each of the secret key and the account data can be derived by using the respective master secret key $\mathsf{msk}$ and the token $\tk := (r, \delta, \accd)$ with $\mathsf{sk} := \mathsf{msk} + \delta$ \\ 
+To create a transaction, the $\mathsf{TxGen}$ algorithm computs the tags $\epsilon_i$ of the corresponding secret keys $\mathsf{sk}_i + \delta_i$ for all source accounts $i \in S$, and creates the target accounts $\ac$ .
 \begin{equation*}
 \mathcal{R}(\mathsf{stmnt}, \mathsf{wit}) := \begin{cases} 
     S \subseteq R \\ 
     \mathsf{TagChk}(\mathcal{Z}_{S(i)}) \forall i \in S \\
-    \mathsf{SrcChk}(\mathsf{ac}_i, r, \mathsf{sks}_i, \accd_i, \time, \txtype) = 1 \qquad \forall i \in S \\ 
-    \mathsf{TgtChk}(\mathsf{ac'}_i, \accd'_i) = 1 \qquad \forall i \in T \\ 
+    \mathsf{SrcChk}(\ac_i, r, \mathsf{sks}_i, \accd_i, \time, \txtype) = 1 \qquad \forall i \in S \\ 
+    \mathsf{TgtChk}(\ac'_i, \accd'_i) = 1 \qquad \forall i \in T \\ 
     P(a_S, a'_T) = 1
 \end{cases}
 \end{equation*}
@@ -392,9 +378,9 @@ We note that in the RingCCT schemes incorporates two verification algorithms, $\
 \pseudocode{
     \mathsf{Vf}(\mathsf{st},\mathsf{tx}) \\[0.1\baselineskip ][\hline]
     (\mathsf{AC}_U, \mathcal{Z}_U, \time) := \parse \mathsf{st} \\
-    \{\mathsf{ac}_i\}_{i \in U} := \parse \mathsf{AC}_U \\
+    \{\ac_i\}_{i \in U} := \parse \mathsf{AC}_U \\
     (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}, \tout, \txtype, \pi) := \parse \mathsf{tx} \\
-    \mathsf{AC}_R := \{\mathsf{ac}_i\}_{i \in R} \\
+    \mathsf{AC}_R := \{\ac_i\}_{i \in R} \\
     \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \txtype, \tout) \\
     \pcif \begin{cases}
         P \in \mathcal{P} \tabularnewline
@@ -414,8 +400,8 @@ We note that in the RingCCT schemes incorporates two verification algorithms, $\
 }
 \vspace{1em}
 \pseudocode{
-    \mathsf{TgtChk}(\mathsf{ac}, \accd) \\[0.1\baselineskip ][\hline]
-    (\mathsf{pks}, \mathsf{co}) := \parse \mathsf{ac} \\
+    \mathsf{TgtChk}(\ac, \accd) \\[0.1\baselineskip ][\hline]
+    (\mathsf{pks}, \mathsf{co}) := \parse \ac \\
     (r, \delta, \accd') := \parse \mathsf{tk} \\
     \pcreturn \begin{cases}
         %\accd' \overset{?}{=} \accd \tabularnewline
@@ -424,9 +410,9 @@ We note that in the RingCCT schemes incorporates two verification algorithms, $\
 }
 \vspace{1em}
 \pseudocode{
-    \mathsf{SrcChk}(\mathsf{ac}, r, \mathsf{sks}, \accd, \txtype, \mathcal{Z}) \\[0.1\baselineskip ][\hline]
+    \mathsf{SrcChk}(\ac, r, \mathsf{sks}, \accd, \txtype, \mathcal{Z}) \\[0.1\baselineskip ][\hline]
     (\mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk}) := \parse \mathsf{sks} \\
-    (\mathsf{pks}, \mathsf{co}) := \parse \mathsf{ac} \\
+    (\mathsf{pks}, \mathsf{co}) := \parse \ac \\
     (\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk}) := \parse \mathsf{pks} \\
     \mathbf{assert} \: \atype = \txtype \overset{?}{\neq} 0 \\
     \mathbf{assert} \: \mathsf{co} \neq \Gamma.\mathsf{Com}(\accd, r) \\
@@ -465,7 +451,7 @@ We note that in the RingCCT schemes incorporates two verification algorithms, $\
     \mathsf{TxGen}(\mathsf{st}, P, R, \mathcal{S}, \mathcal{T}) \\[0.1\baselineskip ][\hline]
     \{\mathsf{sks}_i, \accd_i\}_{i\in S} := \parse \mathcal{S} \\
     \{\mathsf{mpks}_i, \accd'_i\}_{i\in T} := \parse \mathcal{T} \\
-    \{\mathsf{ac}_i\}_{i \in U} := \mathsf{StExt(st)} \\
+    \{\ac_i\}_{i \in U} := \mathsf{StExt(st)} \\
     \time := \mathsf{TimeExt(st)} \\
     \tout, \atype \gets \mathsf{AccTimeExt}(\{\accd_i\}_{i\in S}) \\
     \txtype := \atype \cdot (1 + \tout \overset{?}{\leq} \time) \\
@@ -483,9 +469,9 @@ We note that in the RingCCT schemes incorporates two verification algorithms, $\
     \t\t \mathsf{pks}_i := (\mathsf{spk}_i, \mathsf{tpk}_i, \mathsf{rpk}_i) \\
     \t \pcelse \\
     \t\t \mathsf{pks}_i := (\mathsf{spk}_i, \perp, \perp) \\
-    \t \mathsf{ac}'_i := (\mathsf{pks}_i, \mathsf{co}'_i) \\
-    \mathsf{AC}_R := \{\mathsf{ac}_i\}_{i \in R} \\
-    \mathsf{AC}_T := \{\mathsf{ac}'_i\}_{i \in T} \\
+    \t \ac'_i := (\mathsf{pks}_i, \mathsf{co}'_i) \\
+    \mathsf{AC}_R := \{\ac_i\}_{i \in R} \\
+    \mathsf{AC}_T := \{\ac'_i\}_{i \in T} \\
     \mathcal{Z}_{\bar{S}} := \mathsf{EvalTags}(\mathsf{sks}_i)_{i \in S} \\
     \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{C}}, \tout, \txtype) \\
     \mathsf{wit} := ((r,\mathsf{sks}_i, \accd_i)_{i\in S}), (\mathsf{mpks}_i, \accd'_i)_{i\in T}) \\
