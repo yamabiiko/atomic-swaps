@@ -7,13 +7,13 @@ If the account type is standard, the timeout is set to zero and the system behav
 
 \subsection{Syntax}
 \paragraph*{System setup and state.} A RingCCT system is initialized by running the setup algorithm $\mathsf{Setup}$ to generate public parameters and the initial state $\st$. Users may invoke the key genation algorithm $\mathsf{KGen}$ to obtain a master key pair $\mathsf{mpk}, \mathsf{msk}$. 
-The set of all accounts in the systems, denoted by $\mathsf{AC_U} = \{ \ac_i \}_{i\in U}$ (where U stands for universe), can be extracted from the system state $\st$ via the algorithm $\mathsf{StExt}$. 
+The set of all accounts in the systems, denoted by $\mathsf{AC_U} = \{ \ac_i \}_{i\in U}$ (where U stands for universe), can be extracted from the system state $\st$ via the algorithm $\mathsf{StExt}$. The state also encodes an integer-valued epoch counter which can be extracted with the algorithm $\mathsf{TimeExt}$.
 
 \paragraph*{Accounts.}
-Each account $\ac$ comprises a commitment $\mathsf{co}$ to some account data $\accd$, along with a tuple of public keys $\mathsf{pks} := ( \spk, \tpk, \rpk )$, each corresponding to the secret keys  $( \ssk, \tsk, \rsk )$. The account data $\accd$ encodes an amount $a \in \mathbb{Z}$, a timeout epoch $\tout \in \mathbb{N}$, and the account type identified by the bit $b \in \{ 0, 1 \}$. If $b = 0$, the account is said to be \textit{standard} and is exclusively controlled by a single master secret key $\mathsf{msk}$. In this case, only the key pair $(\spk, \ssk)$ is populated, with the remaining keys in $\mathsf{pks}$ set to $\perp$. If $b = 1$, the account is classified as \textit{commit-based} and is associated to two distinct master keys, possibily belonging to distinct users. Prior to epoch $\tout$, the account is jointly controlled by the secret keys $\ssk$ and $\tsk$, where $\tsk$ is associated to a distinct master secret key. After the $\tout$, control over the account transitions to  $\rsk$ exclusively, which is bound to the same master key pair as $\ssk$.
+Each account $\ac$ comprises a commitment $\mathsf{co}$ to some account data $\accd$, along with a tuple of public keys $\mathsf{pks} = ( \spk, \tpk, \rpk )$, each corresponding to the secret keys  $\mathsf{sks} = ( \ssk, \tsk, \rsk )$. The account data $\accd$ encodes an amount $a \in \mathbb{Z}$, a timeout epoch $\tout \in \mathbb{N}$, and the account type identified by the bit $b \in \{ 0, 1 \}$. If $b = 0$, the account is said to be \textit{standard} and is exclusively controlled by a single master secret key $\mathsf{msk}$. In this case, only the key pair $(\spk, \ssk)$ is populated, with the remaining keys in $\mathsf{pks}$ set to $\perp$. If $b = 1$, the account is classified as \textit{commit-based} and is associated to two distinct master keys, possibily belonging to distinct users. Prior to epoch $\tout$, the account is jointly controlled by the secret keys $\ssk$ and $\tsk$, where $\tsk$ is associated to a distinct master secret key. After the $\tout$, control over the account transitions to  $\rsk$ exclusively, which is bound to the same master key pair as $\ssk$.
 
-\paragraph*{Transaction generation.} Transactions are generated via the algorithm $\mathsf{TxGen}$, which accepts a system state $\mathsf{st}$, a set of source account information $\mathcal{S}$, each including a tuple of secret keys $(\mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk})$ and the committed data $\accd$, a set of target account data $\mathcal{T}$ (including public keys and $\accd'$), a ring of public accounts used to obfuscate the true input, and a predicate $P$ over source/target amounts (e.g., sum conservation).
-A transaction $\tx$ can be generated using the transaction algorithm $\mathsf{TxGen}$, which takes as input the system state $\st$, a predicate $P$, an index set $R \subseteq U$ called the ring, a set of source account information $\mathcal{S} = \{ \mathsf{sks}_i, \accd_i \}_{i \in S}$ for some $S \subseteq R$ and a set of target account information $\{ \mathsf{mpks}_i, \accd'_i \}_{i \in T}$.
+\paragraph*{Transaction generation.} Transactions are generated via the algorithm $\mathsf{TxGen}$, which takes an input the system state $\mathsf{st}$, an index set $R \subseteq U$ called the ring, a set of source account information  $\mathcal{S} = \{ \mathsf{sks}_i, \accd_i \}_{i \in S}$ for some $S \subseteq R$, a set of target account data $\mathcal{T} = \{ \mathsf{mpks}_i, \accd'_i \}_{i \in T}$, and a predicate $P$ over source/target amounts (e.g., sum conservation). Target accounts can be of any type, while source accounts are required to be
+The transaction input encodes that the amounts $\{ a_{S_i} \}_{i \in S}$ stored in the source accounts $\{ \ac_i := (\accd_i, \mathsf{co}_i) \}_{i \in S} \subseteq \mathsf{AC}_U$ must be transferred to the target accounts $\{ \ac'_i \}_{i \in T}$, where the received amount is denoted by $\{ a'_{T_i} \}_{i \in T}$. The sum of the amounts received received by the target accounts must satisfy the predicate $P(a_S, a'_T) = 1$.
 
 \paragraph*{Timeout-Aware Ownership Checks}
 The algorithms $\mathsf{SrcChk}$ and $\mathsf{TgtChk}$ verify ownership and integrity of account data based on time:
@@ -36,7 +36,7 @@ $\mathsf{TgtChk}$ ensures that the target account includes a valid commitment to
         \item $(\mathsf{sk},\accd) \gets \mathsf{KDer}(\mathsf{msk, \tau})$: the key derivation algorithm generates derives the keys-account data tuple given the master key $\mathsf{msk}$ owning the account and a token $\tau$ of the account.
 	    \item $(\mathsf{tx,TK}) \gets \mathsf{TxGen}(\mathsf{st},P,R,\mathcal{S},\mathcal{T})$: the transaction algorithm inputs a state $\mathsf{st}$, a predicate $P: \mathbb{Z}^S \times \mathbb{Z}^T \rightarrow \{0,1\}$, an index set R called the ring, a set of source accouts information $\mathcal{S} = \{\mathsf{sks}_i, \accd_i\}_{i\in S}$ and some targets account information $\mathcal{T} = \{\mathsf{mpks}_i, \accd'_i\}_{i\in T}$; where $\mathsf{sks}$ and $\mathsf{mpks}$ may respectively contain the source, target and recovery secret and public keys. If a source or target account is of $\atype$ 0, only the source key pair $\ssk, \mathsf{smpk}$ are defined, respectively. Each account defines its own data as $\accd := (a, \tout, \atype)$, where $a$ represents the amount of assets held by the account, $\atype$ is a bit defining the type of the account (0 for standard and 1 for commit) and $\mathsf{tout}$ sets a specific epoch timeout of the ownership of the target key pair of commit-type accounts, and set to 0 otherwise. 
         \item $(b,\st') \gets \mathsf{Vf}(\st,\tx)$: The verification algorithm outputs a bit b deciding whether to accept or reject that the transaction $\tx$ is a valid relative to the state $\st$, outputting an updated state $\st'$ if the verification is sucessful. This verification is time-independent.
-        \item $(b,\mathsf{st}') \gets \mathsf{TimeVf}(\st,\tx)$: The time verification algorithm performs the same verification as in $\mathsf{Vf}(\st, \tx)$ with the further constraint of checking whether the declared transaction type $\txtype$ and timeout $\tout$ are consistent with respect to the verifier's epoch $\time$ encoded in $\st$.
+        \item $(b,\mathsf{st}') \gets \mathsf{TimeVf}(\st,\tx)$: The time verification algorithm performs the same verification as in $\mathsf{Vf}(\st, \tx)$ with the further constraint of checking whether the declared transaction type $\expired$ and timeout $\tout$ are consistent with respect to the verifier's epoch $\time$ encoded in $\st$.
         \item $\mathsf{AC}_U \gets \mathsf{StExt}(\st)$: The state extraction algorithm
         extracts the set of universe accounts $\mathsf{AC}_U = \{\ac_i\}_{i \in U}$ encoded in the state $\st$.
         \item $\mathsf{AC}_T \gets \mathsf{TxExt}(\tx)$: The transaction extraction algorithm
@@ -44,8 +44,8 @@ $\mathsf{TgtChk}$ ensures that the target account includes a valid commitment to
         \item $\time \gets \mathsf{TimeExt}(\tx)$: The time extraction algorithm
         extracts the epoch $\time$ encoded in the state $\mathsf{st}$.
         \item $(\tout, \atype) \gets \mathsf{AccTimeExt}(\{\accd\})$: The account time extraction algorithm takes a set of account data $\{\accd\}$ and extracts the epoch timeout $\tout$ and the bit $\atype$ if and only if they are all equal in the set. Returns $\perp$ otherwise.
-        \item $b \gets \mathsf{SrcChk}(\mathsf{ac,r,sks,accd,tout,txtype})$: The source checking algorithm outputs a bit $b$ deciding whether to accept or reject that the account $\ac$ is associated to the provided secret keys and that $\accd$ has been commited with randomness $r$. It then checks that the provided secret keys are valid according to the type of transaction $\txtype$
-        \item $b \gets \mathsf{TgtChk}(\mathsf{ac,accd})$: The target checking algorithms outputs a bit $b$ deciding whether to accept or reject that $\accd$ has been commited in $\ac$. 
+        \item $b \gets \mathsf{SrcChk}(\mathsf{ac,r,sks,accd,tout,expired})$: The source checking algorithm outputs a bit $b$ deciding whether to accept or reject that the account $\ac$ is associated to the provided secret keys and that $\accd$ has been commited with randomness $r$. It then checks that the provided secret keys are valid according to the type of transaction $\expired$
+        \item $b \gets \mathsf{TgtChk}(\mathsf{ac, tk, accd})$: The target checking algorithms outputs a bit $b$ deciding whether to accept or reject that $\accd$ has been commited in $\ac$. 
     \end{itemize}
 \end{definition}
 
@@ -54,64 +54,61 @@ $\mathsf{TgtChk}$ ensures that the target account includes a valid commitment to
     Let $\mathcal{P}$ be a family of predicates. A RingCCT scheme $\Omega$ is $\mathcal{P}$-correct if all of the following holds for any $\lambda \in \mathbb{N}$ and any $(pp, *) \in \mathsf{Setup}(1^\lambda)$.
 \end{definition}
 
-\paragraph*{Derivation correctness.} For any $(\mathsf{mpk}, \mathsf{msk}) \in \mathsf{KGen}(\pp)$, with $\mathsf{msk} \in \mathsf{msks}$, $\mathsf{mpk} \in \mathsf{mpks}$ $(\mathsf{sks}, \ac, \mathsf{tk}, \accd, \accd')$ satisfying $(\mathsf{sks}, \accd') \in \mathsf{KDer}(\mathsf{msks}, \mathsf{tk})$ and $\mathsf{TgtChk}(\ac, \mathsf{mpks}, \accd_{i}) = 1$ we have $\accd = \accd'$ and $\forall\pk \in \accd \mid \exists \sk \in \mathsf{sks} : \pk = \Delta.\mathsf{KGen}(\pk)$.
+\paragraph*{Derivation correctness.} For any $(\mathsf{mpk}_i, \mathsf{msk}_i) \in \mathsf{KGen}(\pp)$ with $i \in \{0, 1\}$ let $(\mathsf{sks}, \ac, \mathsf{tk}, \accd, \accd')$ be a tuple satisfying  $(\mathsf{sks}, \accd') \in \mathsf{KDer}(\{\mathsf{msk}_i\}, \mathsf{tk})$ and $\mathsf{TgtChk}(\ac, \tk, \accd) = 1$. \\ Then it follows $\accd = \accd'$ and  that for every $\pk \in \mathsf{pks}$ there exists an $\sk \in \mathsf{sks}$ such that $\pk = \Delta.\mathsf{KGen}(\pk)$.
 
-
-\paragraph*{TxGeneration correctness.} Define the set $V_\mathsf{pp}$ to be the collection of all tuples (\st, P, R, S, T) satisfying the following properties: 
+\paragraph*{TxGeneration correctness.} Define the set $V_\mathsf{pp}$ to be the collection of all tuples (\st, P, R, S, T), satisfying the following properties:
 \begin{itemize}
 \item $\mathsf{P} \in \mathcal{P}$
 \item $\mathsf{P}(\mathsf{a}_S, \mathsf{a}'_T) = 1$
 \item $S \subseteq R \subseteq U$
-\item $\mathsf{SrcChk}(\mathsf{StExt}(\mathsf{st})[i], \mathsf{sks}_{i}, \accd, \atype_{i}, \mathsf{EvalTags}(sks_i))$
+\item $\mathsf{SrcChk}(\mathsf{StExt}(\mathsf{st})[i], (\mathsf{sks}_{i}, r_i, \accd_i), \mathsf{EvalTags}(\mathsf{sks}_i), \tout, \expired)$ for all $i \in S$.
 \end{itemize}
 
-where $\mathcal{S} = \{ \mathsf{sks}_i, \accd_i \}$, $\mathcal{T} = \{ \mathsf{mpks}'_i, \accd'_i \}$, $(a_i, \tout_i, \atype_i) = \accd_i$. For any $(\st, P, R, \mathcal{S}, \mathcal{T}) \in V_\mathsf{pp}$, and any $(\tx, \mathsf{tks}) \in \mathsf{TxGen}(\st,  P, R, \mathcal{S}, \mathcal{T})$, if $(b, \mathsf{st'}) = \mathsf{Vf}(\st, \tx)$, then the following hold: \\
+where $\mathcal{S} = \{ \mathsf{sks}_i, \accd_i \}$, $\mathcal{T} = \{ \mathsf{mpks}'_i, \accd'_i \}$, $\tout = \mathsf{ExtAccTout}(\{\accd_i \}_{i \in S})$ and $\expired = \mathsf{TimedOut}(\mathsf{TimeExt}(\st), \tout)$. \\ 
+Then for any $(\st, P, R, \mathcal{S}, \mathcal{T}) \in V_\mathsf{pp}$, and any $(\tx, \mathsf{tk}) \in \mathsf{TxGen}(\st,  P, R, \mathcal{S}, \mathcal{T})$, if $(b, \mathsf{st'}) = \mathsf{TimeVf}(\st, \tx)$, the following holds:
 \begin{itemize}
 \item $b = 1$
 \item $\mathsf{TxExt}(\tx) \subseteq \mathsf{StExt}(\st')$
-\item $\mathsf{TgtChk}(\mathsf{TxExt}(\mathsf{tx}[i], \mathsf{mpks}_{i}, \accd_{i}) = 1$  for all i $\in T$
+\item $\mathsf{TgtChk}(\mathsf{TxExt}(\mathsf{tx}[i], \tk_i, \accd_i) = 1$  for all i $\in T$
 \end{itemize}
 
 \subsection{Security}
 We here define the security properties of RingCCT.
-
-\paragraph*{Balance.} Balance ensures correct account ownership and prevents of double-spending and overspeding. Specifically, an account may only spend assets that it owns and have not been previously spent. We first require that the source checking algorithms $\mathsf{SrcChk}$ is computationally binding to a set of secret keys and an associated amount, while the target checking algorithm $\mathsf{TgtChk}$ is binding solely to an amount. We then formalise the balance property via the security experiment $\mathsf{Balance}_{\Omega,\mathcal{P},\adv,\epsilon_\adv}$, where $\adv$ denotes an adversary and $\epsilon_\adv$ a knowledge extractor. The adversary $\adv$ generates a sequence of valid transactions $\tx_i$ for $i \in \mathbb{Z}_l$. The knowledge extractor $\epsilon_\adv$ subsequently extracts the information associated with the source and target accounts for every transaction. The experiments returns 1 if some source or target account is ill-formed or if there exist distinct $i < i'$ such that the sets of source accounts used in the transactions $tx_i$ and $tx_i$ overlap, which indicates a double-spending event.
+\paragraph*{Balance.} Balance ensures correct account ownership and prevents of double-spending and overspeding. Specifically, an account may only spend assets that it owns and have not been previously spent. We first require that the source checking algorithms $\mathsf{SrcChk}$ is computationally binding to a set of secret keys and an associated amount, while the target checking algorithm $\mathsf{TgtChk}$ is binding solely to an amount. We then formalise the balance property via the security experiment $\mathsf{Balance}_{\Omega,\mathcal{P},\adv,\mathcal{E}_\adv}$, where $\adv$ denotes an adversary and $\mathcal{E}_\adv$ a knowledge extractor. The adversary $\adv$ generates a sequence of valid transactions $\tx_i$ for $i \in \mathbb{Z}_l$. The knowledge extractor $\mathcal{E}_\adv$ subsequently extracts the information associated with the source and target accounts for every transaction. The experiments returns 1 if some source or target account is ill-formed or if there exist distinct $i < i'$ such that the sets of source accounts used in the transactions $tx_i$ and $tx_i$ overlap, which indicates a double-spending event.
 
 
 \begin{definition}[Balance] A RingCCT scheme is balanced if: \\
-1. The source checking algorithm $\mathsf{SrcChk}$ computationally binds an account to the stored amount and a set of secret keys determined by the account type $\atype$ and epoch timeout $\tout$, that is for any PPT adversary $\adv$ it holds that 
+1. The source checking algorithm $\mathsf{SrcChk}$ computationally binds an account to the stored amount and a set of secret keys determined by the account type $b$ and epoch timeout $\tout$, that is for any PPT adversary $\adv$ it holds that 
 \vspace{0.3cm} \\
 $\mathsf{Pr}\left[
     \begin{cases} 
-	    \mathsf{SrcChk}(\ac, r, \ssk, \tsk, \rsk, \mathsf{accd}, \txtype, \mathcal{Z}_{S}) = 1 \tabularnewline
-	\mathsf{SrcChk}(\ac, r, \ssk', \tsk', \rsk', \mathsf{accd}',\txtype, \mathcal{Z}_{S}') = 1 \tabularnewline
-	(\txtype = 0 \land (\ssk, a) \neq (\ssk', a')) \: \lor \tabularnewline 
-	(\txtype = 1 \land (\ssk, \tsk, a) \neq (\ssk', \tsk', a')) \: \lor \tabularnewline
-	(\txtype = 2 \land (\ssk, \rsk, a) \neq (\ssk', \rsk', a'))
+	\mathsf{SrcChk}(\ac, \mathsf{sc}, \mathcal{Z}_{S}, \tout, \expired) = 1 \tabularnewline
+	\mathsf{SrcChk}(\ac, \mathsf{sc}', \mathcal{Z}_{S}', \tout, \expired) = 1 \tabularnewline
+	\accd \neq \accd' \: \lor \ssk \neq \ssk' \: \lor (b = 1  \: \land \tabularnewline
+        (e = 1 \land \rsk \neq \rsk') \: \lor (e = 0 \land \tsk \neq \tsk'))) \: \tabularnewline
     \end{cases} 
     \middle|
     \begin{aligned}
 	(\pp, \st) \gets \mathsf{Setup}(1^\lambda) \\
-	(\ac, \ssk, \tsk, \rsk, \accd, \mathcal{Z}_{S}, \txtype) \gets \mathcal{A}(\pp) \\
-	(\ac, \ssk', \tsk', \rsk', \accd',  \mathcal{Z}_{S}') \gets \mathcal{A}(\pp) \\
+	(\ac,  \mathsf{sc}, \mathsf{sc}', \mathcal{Z}_{S}, \mathcal{Z}_{S}', \tout, \expired) \gets \mathcal{A}(\pp) \\
     \end{aligned}
 \right]
 \leq \negl
-$ 
-\vspace{0.3cm} \\
+\vspace{0.2cm} \\
+$ where $\mathsf{sc} = (\mathsf{sks}, r, \accd)$ and $\mathsf{sks} = (\ssk, \rsk, \tsk)$. \vspace{0.3cm} \\
 2. The target checking algorithm $\mathsf{TgtChk}$ computationally binds an account to the stored amount and account data, that is for any PPT adversary $\adv$ it holds that
 \vspace{0.3cm} \\
 $\mathsf{Pr}\left[
     \begin{cases} 
-	\mathsf{TgChk}(\ac, \mathsf{tk}, (a, \tout, \atype)) = 1 \tabularnewline
-	\mathsf{TgChk}(\ac, \mathsf{tk}', (a', \tout', \atype')) = 1 \tabularnewline
-	(a, \tout, \atype) \neq (a', \tout', \atype')
+	\mathsf{TgtChk}(\ac, \mathsf{tk}, (a, \tout, b)) = 1 \tabularnewline
+	\mathsf{TgtChk}(\ac, \mathsf{tk}', (a', \tout', b')) = 1 \tabularnewline
+	(a, \tout, b) \neq (a', \tout', b')
     \end{cases} 
     \middle|
     \begin{aligned}
 	(\pp, \st) \gets \mathsf{Setup}(1^\lambda) \\
-	(\ac, \mathsf{tk}, \tout, a, \atype) \gets \mathcal{A}(\pp) \\
-	(\ac, \mathsf{tk}', \tout', a', \atype') \gets \mathcal{A}(\pp) \\
+	(\ac, \mathsf{tk}, \tout, a, b) \gets \mathcal{A}(\pp) \\
+	(\ac, \mathsf{tk}', \tout', a', b') \gets \mathcal{A}(\pp) \\
     \end{aligned}
 \right]
 \leq \negl
@@ -119,35 +116,34 @@ $
 \vspace{0.3cm} \\
 3. For any PPT adversary $\adv$ there exists an expected polynomial-time extractor such that
 \begin{equation*}
-\mathsf{Pr}\left[\mathsf{Balance}_{\Omega,\mathcal{P},\adv,\epsilon_\adv}(1^\lambda) = 1\right] \leq \negl
+\mathsf{Pr}\left[\mathsf{Balance}_{\Omega,\mathcal{P},\adv,\mathcal{E}_\adv}(1^\lambda) = 1\right] \leq \negl
 \end{equation*}
-where $\mathsf{Pr}\left[\mathsf{Balance}_{\Omega,\mathcal{P},\adv,\epsilon_\adv}\right]$ is defined in \cref{fig:balance}.\\
+where $\mathsf{Pr}\left[\mathsf{Balance}_{\Omega,\mathcal{P},\adv,\mathcal{E}_\adv}\right]$ is defined in \cref{fig:balance}.\\
 \end{definition}
 
 The transaction verification is performed by extracting the current epoch from the state via the time extraction algorithm $\mathsf{TimeExt}$ and then by running the verification algorithm $\mathsf{TimeVf}$. This implies that the balance security properties covers both standard and commit accounts. \\
 \begin{figure}[H]
 \begin{pchstack}[center, boxed]
 \pseudocode{
-    \text{Balance} \\[0.1\baselineskip ][\hline] 
+     \mathsf{Balance}_{\Omega,\mathcal{P},\adv,\mathcal{E}_\adv} \\[0.1\baselineskip ][\hline] 
     (\pp, \mathsf{st}_0) \gets \mathsf{Setup}(1^\lambda) \\
     (\mathsf{tx}_i)_{i \in \mathbb{Z}_l} \gets \mathcal{A}(\pp, \mathsf{st}_0) \\
     (P_i, R_i, S_i, T_i)_{i \in \mathbb{Z}_{l}} \gets \mathcal{E}_{\mathsf{A}} (\pp, \mathsf{st}_0, (\mathsf{tx}_i)_{i \in \mathbb{Z}_{l}}) \\
-    \{ \mathsf{sks}_{i,j}, \accd_{i,j} \}_{j \in S_i} := \parse \: (S_i)_{i \in \mathbb{Z}_{l}} \\
-    \{ \mathsf{mpks}_{i,j},\mathsf{tk}_{i,j}, \accd'_{i,j} \}_{j \in T_i}) := \parse \: (T_i)_{i \in \mathbb{Z}_{l}} \\
+    \{ \mathsf{sc}_{i, j} := (\mathsf{sks}_{i,j}, r_{i, j}, \accd_{i,j}) \}_{j \in S_i} := \parse \: (S_i)_{i \in \mathbb{Z}_{l}} \\
+    \{ \mathsf{mpks}_{i,j},\mathsf{tk}_{i,j}, \accd'_{i,j} \}_{j \in T_i} := \parse \: (T_i)_{i \in \mathbb{Z}_{l}} \\
     \mathbf{for} \: t \in \mathbb{Z}_l \: \mathbf{do} \: (b_t, \mathsf{st}_{t+1}) := \mathsf{TimeVf}(\mathsf{st_t}, \mathsf{tx_t}) \\
     \mathbf{for} \: i \in \mathbb{Z}_l \: \mathbf{do} \\
-    \t \accd_{i, S_i} := (\accd_{i,j})_{j \in S_i},
-    \accd'_{i, T_i} := (\accd'_{i,j})_{j \in T_i} \\
-    \t \{ \ac_{i,j} \}_{j \in U_i} := \mathsf{StExt}(\mathsf{st}_i), \time_i := \mathsf{TimeExt}(\st_i) \\
-    \t (\{ \mathsf{ac'}_{i,j} \}, \txtype_{i, j})_{j \in T_i} := \mathsf{TxExt}(\mathsf{tx}_i) \\
+    \t \accd_{i, S_i} := (\accd_{i,j})_{j \in S_i}, \tout_i := \mathsf{ExtAccTout}(\{\accd_{i, j} \}_{j \in S}) \\
+    \t \expired_i := \mathsf{TimedOut}(\mathsf{TimeExt}(\st_i), \tout), \accd'_{i, T_i} := (\accd'_{i,j})_{j \in T_i} \\
+    \t \{ \ac_{i,j} \}_{j \in U_i} := \mathsf{StExt}(\mathsf{st}_i), \{ \mathsf{ac'}_{i,j} \}_{j \in T_i} := \mathsf{TxExt}(\mathsf{tx}_i) \\
     \t b'_i := 
     \begin{cases}
 	\mathsf{TxExt} \subseteq \mathsf{StExt}(\mathsf{st}_{i+1}) \vspace{0.3em} \tabularnewline
 	P_i \in \mathcal{P} \tabularnewline
 	P_i(\accd_{i, S_i}, \accd'_{i, T_i}) \vspace{0.3em} \tabularnewline
 	S_i \subseteq R_i \subseteq U_i \vspace{0.3em} \tabularnewline
-	\mathsf{SrcChk}(\mathsf{StExt}(\mathsf{st}_i)[j], \mathsf{sks}_{i,j}, \accd_{i,j}, \txtype_{i,j}, \mathsf{EvalTags}(sks_i)) = 1 \:\:\: \forall j \in \mathsf{S}_i \vspace{0.3em} \tabularnewline
-	\mathsf{TgtChk}(\mathsf{TxExt}(\mathsf{tx}_i)[j], \mathsf{mpks}_{i,j}, \accd_{i,j}) = 1 \:\:\: \forall j \in \mathsf{T}_i \vspace{0.3em} \tabularnewline
+	\mathsf{SrcChk}(\mathsf{StExt}(\mathsf{st}_i)[j], \mathsf{sc}_{i, j}, \mathsf{EvalTags}(\mathsf{sks}_{i, j}), \tout_i, \expired_i) = 1 \:\:\: \forall j \in \mathsf{S}_i \vspace{0.3em} \tabularnewline
+	\mathsf{TgtChk}(\mathsf{TxExt}(\mathsf{tx}_i)[j], \tk_{i, j}, \accd_{i,j}) = 1 \:\:\: \forall j \in \mathsf{T}_i \vspace{0.3em} \tabularnewline
     \end{cases} \\
     b'' := (\exists i_0 < i_1, S_{i_0} \cap S_{i_1} = \emptyset) \\
     \pcreturn \bigwedge_{i \in \mathbb{Z}_l} b_i \land \neg (\bigwedge_{i \in \mathbb{Z}_l} b_i' \land b_i'')
@@ -211,7 +207,7 @@ Where $\mathsf{Privacy}_{\Omega,\adv}^b$ is defined in \cref{fig:privacy}.
 \begin{pcvstack}
 \pseudocode{
 	\mathsf{TxGen}\mathcal{O}(P, R, \mathcal{S'}, \mathcal{T'}, \mathcal{S}^*, \mathcal{T}^*) \\[0.1\baselineskip ][\hline]
-	 \{\mathsf{sks}_i, \accd_i\}_{i \in S'} := \parse \: \mathcal{S'}  \\
+	 \{\mathsf{sks}_i, r_i, \accd_i\}_{i \in S'} := \parse \: \mathcal{S'}  \\
 	 \{\mathsf{id}_i, \mathsf{tk}_i\}_{i \in S^*} := \parse \: \mathcal{S}^*  \\
 	 \{\mathsf{mpks}_i, \accd'_i\}_{i \in T'} := \parse \: \mathcal{T'} \\
 	 \{\mathsf{id}'_i, \accd'_i\}_{i \in T^*} := \parse \: \mathcal{T}^*  \\
@@ -281,10 +277,11 @@ Where $\mathsf{Availability}_{\Omega,\adv}$ is defined in \cref{fig:availability
     (\mathsf{tx}, \mathsf{TK}) \gets \mathsf{TxGen}\mathcal{O}(P, R, \mathcal{S}', \mathcal{T}', \mathcal{S}^*_i, \mathcal{T}^*_i)
     \{ \mathsf{id}_j,\mathsf{tk}_j \}_{j\in S^*} := \parse \: \mathcal{S}^* \\
     \pcif \mathcal{S}^* \not\subseteq U\: \pcreturn \: 0 \\
-    (\mathsf{ID}^*, \mathsf{AC}^*) := (\{id_j\}_{j \in S^*}, \mathsf{StExt}(\mathsf{st})[\mathcal{S}^*])
-    (b, \perp) := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}) \\
+    (\mathsf{ID}^*, \mathsf{AC}^*) := (\{id_j\}_{j \in S^*}, \mathsf{StExt}(\mathsf{st})[\mathcal{S}^*]) \\
+    \mathsf{time} := \mathsf{TimeExt}(\mathsf{st}) \\
+    (b, \perp) := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}, \mathsf{time}) \\
     \perp \gets \mathcal{A}^\mathcal{O}(\mathsf{tx}, \mathsf{TK}) \\
-    (b', \perp) := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}) \\
+    (b', \perp) := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}, \mathsf{time}) \\
     \pcreturn \: b \land b'
 }
 \end{pchstack}
@@ -292,9 +289,8 @@ Where $\mathsf{Availability}_{\Omega,\adv}$ is defined in \cref{fig:availability
 \label{fig:availability}
 \end{figure}
 
-\paragraph*{Availability.} Availability captures the notion that a valid transaction created at a given point in time should remain valid in the future, unless the associated output has been spent. This provides security against \textit{denial-of-spending} attacks, wherein an adversary attempts to prevent a specific user or account from spending their assets.  We formalise availability in the security experiment $\mathsf{Availability}_{\Omega,\adv}$ described in \cref{fig:availability}. Similarly to the privacy experiments, we initialise the RingCCT system and provide the adversary $\adv$ access to the same set of oracles. Following oracle interaction, the adversary $\adv$ specifies the input for the oracle $\mathsf{TxGen}\mathcal{O}$, which computes $\tx$. The set of source accounts used by the $\adv$ must be honest and are subsequently blocked once included in the challenge transaction $\tx$. The adversary $\adv$ receive the transaction $\tx$ and further interacts with the oracles, which may update the system state. After $\adv$ halts, the transaction $\tx$ is verified again with the result denoted by $b'$. The experiment returns $b' \land b$, capturing whether the transaction is valid for some state $\st$ but rejected for $\st'$. \\
-We note that in the RingCCT schemes incorporates two verification algorithms, $\mathsf{TimeVf}$ and $\mathsf{Vf}$. The former is revelant only for commit-type accounts, which inherently violate the availability property by design, as the validity of a transaction involving commit accounts depends on the current epoch of the system state. Consequently, the experiment $\mathsf{Availability}_{\Omega,\adv}$ is defined with respect to $\mathsf{Vf}$.
-
+\paragraph*{Availability.} Availability captures the notion that a valid transaction created at a given point in time should remain valid in the future, unless the associated output has been spent.This provides security against \textit{denial-of-spending} attacks, wherein an adversary attempts to prevent a specific user or account from spending their assets.  We note that in the RingCCT schemes incorporates two verification algorithms, $\mathsf{TimeVf}$ and $\mathsf{Vf}$. The former verifies against the current epoch of the given state, while the latter takes an input an arbitrary epoch. Given that commit-type accounts inherently violate future availability by design, we only require that the validity of a transaction with respect to some epoch is valid at any point in time. Consequently, the experiment $\mathsf{Availability}_{\Omega,\adv}$ is defined with respect to $\mathsf{Vf}$ \\
+The security experiment $\mathsf{Availability}_{\Omega,\adv}$ is described in \cref{fig:availability}. Similarly to the privacy experiments, we initialise the RingCCT system and provide the adversary $\adv$ access to the same set of oracles. Following oracle interaction, the adversary $\adv$ specifies the input for the oracle $\mathsf{TxGen}\mathcal{O}$, which computes $\tx$. The set of source accounts used by the $\adv$ must be honest and are subsequently blocked once included in the challenge transaction $\tx$. The adversary $\adv$ receive the transaction $\tx$ and further interacts with the oracles, which may update the system state. After $\adv$ halts, the transaction $\tx$ is verified against the previous state's time with the result denoted by $b'$. The experiment returns $b' \land b$, capturing whether the transaction is valid for some state $\st$ but rejected for $\st'$. \\
 \newpage
 
 \subsection{Construction}
@@ -305,18 +301,17 @@ To create a transaction, the $\mathsf{TxGen}$ algorithm computs the tags $\epsil
 \begin{equation*}
 \mathcal{R}(\mathsf{stmnt}, \mathsf{wit}) := \begin{cases} 
     S \subseteq R \\ 
-    \mathsf{TagChk}(\mathcal{Z}_{S(i)}) \forall i \in S \\
-    \mathsf{SrcChk}(\ac_i, r, \mathsf{sks}_i, \accd_i, \time, \txtype) = 1 \qquad \forall i \in S \\ 
-    \mathsf{TgtChk}(\ac'_i, \accd'_i) = 1 \qquad \forall i \in T \\ 
+    \mathsf{SrcChk}(\ac_i, r_i, \mathsf{sc}_i, \mathcal{Z}_i, \tout, \expired) = 1 \qquad \forall i \in S \\ 
+    \mathsf{TgtChk}(\ac'_i, \tk_i, \accd'_i) = 1 \qquad \forall i \in T \\ 
     P(a_S, a'_T) = 1
 \end{cases}
 \end{equation*}
 
 \begin{equation*}
-\mathsf{stmnt} := (P,\mathsf{AC}_R,\mathcal{Z}_{\bar{S}}, \mathsf{AC}_T, \time, \txtype) \\
+\mathsf{stmnt} := (P,\mathsf{AC}_R,\mathcal{Z}_{\bar{S}}, \mathsf{AC}_T, \tout, \expired) \\
 \end{equation*}
 \begin{equation*}
-\mathsf{wit} := ((r,\mathsf{sks}_i, \accd_i)_{i\in S}), (\mathsf{mpks}_i, \accd'_i)_{i\in T}) \\
+	\mathsf{wit} := ((\mathsf{sc}_i)_{i\in S}, (\tk_i, \accd'_i)_{i\in T}) \\
 \end{equation*}
 
 \begin{figure}
@@ -342,6 +337,13 @@ To create a transaction, the $\mathsf{TxGen}$ algorithm computs the tags $\epsil
     (\mathsf{AC}_U, \mathcal{Z}_U, \time) := \parse \mathsf{st} \\
     \pcreturn \mathsf{AC}_U
 }
+\vspace{1em}
+\pseudocode{
+    \mathsf{ExpiredTout}(\tout, \time) \\[0.1\baselineskip ][\hline]
+    \pcif \tout \neq 0 \\
+    \pcelse  \\
+    \t \pcreturn 0 \\
+}
 \end{pcvstack}
 \qquad
 \begin{pcvstack}
@@ -358,9 +360,13 @@ To create a transaction, the $\mathsf{TxGen}$ algorithm computs the tags $\epsil
     \pcreturn \mathsf{AC}_T
 }\vspace{1em}
 \pseudocode{
-    \mathsf{ExtAccType}(\mathsf{AC}) \\[0.1\baselineskip ][\hline]
-    \mathbf{assert} \not\exists \: a,b \in \{ (\mathsf{tout}_i, \mathsf{atype}_i) \}_{i \in \mathsf{AC}} \mid  a \neq b \\
-    \pcreturn (\tout, \atype)
+    \mathsf{ExtAccTout}(\mathcal{A}) \\[0.1\baselineskip ][\hline]
+    \{(a_i, \tout_i, b_i)\}_{i \in \mathcal{A}} := \parse \mathcal{A} \\
+    \mathbf{assert} \not\exists \: i,j \in \mathcal{A} \mid  (\tout_i, b_i) \neq (\tout_j, b_j) \\
+    \tout := a \in \{ \tout_i \}_{i \in \mathcal{A}} \mid a \neq 0 \\
+    \pcif \tout = \: \perp \\
+    \t \pcreturn 0 \\
+    \pcreturn \tout
 }\vspace{1em}
 \pseudocode{
     \mathsf{EvalTags}(\mathsf{sks}) \\[0.1\baselineskip ][\hline]
@@ -376,12 +382,13 @@ To create a transaction, the $\mathsf{TxGen}$ algorithm computs the tags $\epsil
 
 \begin{pcvstack}
 \pseudocode{
-    \mathsf{Vf}(\mathsf{st},\mathsf{tx}) \\[0.1\baselineskip ][\hline]
-    (\mathsf{AC}_U, \mathcal{Z}_U, \time) := \parse \mathsf{st} \\
+    \mathsf{Vf}(\mathsf{st},\mathsf{tx}, \time) \\[0.1\baselineskip ][\hline]
+    (\mathsf{AC}_U, \mathcal{Z}_U, \perp) := \parse \mathsf{st} \\
     \{\ac_i\}_{i \in U} := \parse \mathsf{AC}_U \\
-    (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}, \tout, \txtype, \pi) := \parse \mathsf{tx} \\
+    (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}, \tout, \pi) := \parse \mathsf{tx} \\
     \mathsf{AC}_R := \{\ac_i\}_{i \in R} \\
-    \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \txtype, \tout) \\
+    \expired := \mathsf{TimedOut}(\tout, \time) \\
+    \mathsf{stmnt} := (P, \mathsf{AC}_R, \mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \tout, \expired) \\
     \pcif \begin{cases}
         P \in \mathcal{P} \tabularnewline
         R \subseteq U \tabularnewline
@@ -400,37 +407,39 @@ To create a transaction, the $\mathsf{TxGen}$ algorithm computs the tags $\epsil
 }
 \vspace{1em}
 \pseudocode{
-    \mathsf{TgtChk}(\ac, \accd) \\[0.1\baselineskip ][\hline]
+    \mathsf{TgtChk}(\ac, \tk, \accd) \\[0.1\baselineskip ][\hline]
     (\mathsf{pks}, \mathsf{co}) := \parse \ac \\
     (r, \delta, \accd') := \parse \mathsf{tk} \\
     \pcreturn \begin{cases}
-        %\accd' \overset{?}{=} \accd \tabularnewline
+        \accd' \overset{?}{=} \accd \tabularnewline
         \mathsf{co} \overset{?}{=} \Gamma.\mathsf{Com}(\accd,r)
     \end{cases} 
 }
 \vspace{1em}
 \pseudocode{
-    \mathsf{SrcChk}(\ac, r, \mathsf{sks}, \accd, \txtype, \mathcal{Z}) \\[0.1\baselineskip ][\hline]
+    \mathsf{SrcChk}(\ac, r, \mathsf{sc}, \mathcal{Z}, \tout, \expired) \\[0.1\baselineskip ][\hline]
     (\mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk}) := \parse \mathsf{sks} \\
-    (\mathsf{pks}, \mathsf{co}) := \parse \ac \\
     (\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk}) := \parse \mathsf{pks} \\
-    \mathbf{assert} \: \atype = \txtype \overset{?}{\neq} 0 \\
-    \mathbf{assert} \: \mathsf{co} \neq \Gamma.\mathsf{Com}(\accd, r) \\
-    \pcif  \txtype = \: 0 \\
+    (\mathsf{pks}, \mathsf{co}) := \parse \ac \\
+    (\mathsf{sks}, \accd) := \parse \mathsf{sc} \\
+    (a, \tout', b) := \parse \accd \\
+    \mathbf{assert} \: \mathsf{co} = \Gamma.\mathsf{Com}(\accd, r) \\
+    \mathbf{assert} \: b = 0 \lor (\expired \neq 0 \land \tout' = \tout) \\
+    \pcif b = 0 \\
     \t \pcreturn \begin{cases} 
     	\mathsf{spk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{ssk}) \tabularnewline
-	\Delta.\mathsf{Eval}(\mathsf{ssk}) \overset{?}{=} \mathcal{Z}
+	\Delta.\mathsf{Eval}(\mathsf{ssk}) \overset{?}{\in} \mathcal{Z}
     \end{cases} \\
-    \pcelse \pcif  \txtype = 1  \\
+    \pcelse \pcif \expired = 1  \\
     \t \pcreturn  \begin{cases}
         \mathsf{tpk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{tsk}) \tabularnewline
         \mathsf{spk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{ssk}) \tabularnewline
-	\Delta.\mathsf{Eval}(\mathsf{ssk}), \Delta.\mathsf{Eval}(\mathsf{tsk}) \overset{?}{=} \mathcal{Z}
+	\Delta.\mathsf{Eval}(\mathsf{ssk}), \Delta.\mathsf{Eval}(\mathsf{tsk}) \overset{?}{\in} \mathcal{Z}
     \end{cases} \\
     \pcelse \\
     \t \pcreturn \begin{cases} 
 	\mathsf{rpk} \overset{?}{=} \Delta.\mathsf{KGen}(\mathsf{rsk}) \tabularnewline
-	\Delta.\mathsf{Eval}(\mathsf{ssk}), \Delta.\mathsf{Eval}(\mathsf{rsk}) \overset{?}{=} \mathcal{Z}
+	\Delta.\mathsf{Eval}(\mathsf{ssk}), \Delta.\mathsf{Eval}(\mathsf{rsk}) \overset{?}{\in} \mathcal{Z}
     \end{cases} \\
 }
 \end{pcvstack}
@@ -438,31 +447,27 @@ To create a transaction, the $\mathsf{TxGen}$ algorithm computs the tags $\epsil
 \begin{pcvstack}
 \pseudocode{
     \mathsf{TimeVf}(\mathsf{st}, \mathsf{tx}) \\[0.1\baselineskip ][\hline]
-    (\mathsf{AC}_U, \mathcal{Z}_U, \time) := \parse \mathsf{st} \\
-    (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}, \tout, \txtype, \pi) := \parse \mathsf{tx} \\
-    \pcif \txtype = 0 \: \lor \\
-    \t (\txtype = 1 \land  \time \leq \tout) \: \lor\\
-    \t (\txtype = 2 \land  \time > \tout) \\
-               \t\t \pcreturn \: \mathsf{Vf}(\mathsf{st}, \mathsf{tx}) \\
-    \pcreturn (0, \mathsf{st})
+    \time := \parse \mathsf{TimeExt} \\
+    \pcreturn \mathsf{Vf}(\mathsf{st}, \mathsf{tx}, \time) \\
 }
 \vspace{1em}
 \pseudocode{
     \mathsf{TxGen}(\mathsf{st}, P, R, \mathcal{S}, \mathcal{T}) \\[0.1\baselineskip ][\hline]
-    \{\mathsf{sks}_i, \accd_i\}_{i\in S} := \parse \mathcal{S} \\
-    \{\mathsf{mpks}_i, \accd'_i\}_{i\in T} := \parse \mathcal{T} \\
+    \{\mathsf{sc}_i := (\mathsf{sks}_i, r_i, \accd_i)\}_{i\in S} := \parse \mathcal{S} \\
+    \{(\mathsf{mpks}_i, \accd'_i)\}_{i\in T} := \parse \mathcal{T} \\
     \{\ac_i\}_{i \in U} := \mathsf{StExt(st)} \\
     \time := \mathsf{TimeExt(st)} \\
-    \tout, \atype \gets \mathsf{AccTimeExt}(\{\accd_i\}_{i\in S}) \\
-    \txtype := \atype \cdot (1 + \tout \overset{?}{\leq} \time) \\
-    \mathbf{for} \; i \in T \: \mathbf{do} \\
-    \t r_i \sample \chi \\
+    \tout \gets \mathsf{ExtAccTout}(\{\accd_i\}_{i\in S}) \\
+    \mathbf{assert} \: \tout \neq \: \perp \\
+    \expired \gets \mathsf{TimedOut}(\tout, \time) \\
+    \mathbf{for} \: i \in T \: \mathbf{do} \\
+    \t r'_i \sample \chi \\
     \t \delta_i \sample \mathcal{K} \\
-    \t \mathsf{co}_i := \Gamma.\mathsf{Com}(\accd'_i, r_i) \\
+    \t \mathsf{co}_i := \Gamma.\mathsf{Com}(\accd'_i, r'_i) \\
     \t (a_i, \tout, b_i) := \parse \accd'_i \\
     \t (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i) := \parse \mathsf{mpks}_i \\
     \t \mathsf{spk}_i := \mathsf{smpk}_i + \Delta.\mathsf{Eval}(\delta_i) \\
-    \t \mathsf{tk}_i := (r_i, \delta_i, \accd'_i) \\
+    \t \mathsf{tk}_i := (r'_i, \delta_i, \accd'_i) \\
     \t \pcif b \neq 0 \\
     \t\t \mathsf{tpk}_i := \mathsf{tmpk}_i + \Delta.\mathsf{Eval}(\delta_i) \\
     \t\t \mathsf{rpk}_i := \mathsf{rmpk}_i + \Delta.\mathsf{Eval}(\delta_i) \\
@@ -472,12 +477,12 @@ To create a transaction, the $\mathsf{TxGen}$ algorithm computs the tags $\epsil
     \t \ac'_i := (\mathsf{pks}_i, \mathsf{co}'_i) \\
     \mathsf{AC}_R := \{\ac_i\}_{i \in R} \\
     \mathsf{AC}_T := \{\ac'_i\}_{i \in T} \\
-    \mathcal{Z}_{\bar{S}} := \mathsf{EvalTags}(\mathsf{sks}_i)_{i \in S} \\
-    \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{C}}, \tout, \txtype) \\
-    \mathsf{wit} := ((r,\mathsf{sks}_i, \accd_i)_{i\in S}), (\mathsf{mpks}_i, \accd'_i)_{i\in T}) \\
+    \mathcal{Z}_{S} := \{ \mathsf{EvalTags}(\mathsf{sks}_i) \}_{i \in S} \\
+    \mathsf{stmnt} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{S}, \tout, \expired) \\
+    \mathsf{wit} := ((\mathsf{sc}_i)_{i\in S}), (\tk_i, \accd'_i)_{i\in T}) \\
     \pi \gets \Pi.\mathsf{Prove}(\mathsf{crs},\mathsf{stmnt},\mathsf{wit}) \\
-    \mathsf{tx} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{\bar{C}}, \tout, \txtype, \pi) \\
-    \mathsf{TK} := {\mathsf{tk}_i}_{i \in T} \\
+    \mathsf{tx} := (P,\mathsf{AC}_R,\mathsf{AC}_T,\mathcal{Z}_{S}, \tout, \pi) \\
+    \mathsf{TK} := \{ \mathsf{tk}_i \}_{i \in T} \\
     \pcreturn (\mathsf{tx}, \mathsf{TK})
 }
 \end{pcvstack}
