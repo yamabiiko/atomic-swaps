@@ -12,40 +12,32 @@ The set of all accounts in the systems, denoted by $\mathsf{AC_U} = \{ \ac_i \}_
 \paragraph*{Accounts.}
 Each account $\ac$ comprises a commitment $\mathsf{co}$ to some account data $\accd$, along with a tuple of public keys $\mathsf{pks} = ( \spk, \tpk, \rpk )$, each corresponding to the secret keys  $\mathsf{sks} = ( \ssk, \tsk, \rsk )$. The account data $\accd$ encodes an amount $a \in \mathbb{Z}$, a timeout epoch $\tout \in \mathbb{N}$, and the account type identified by the bit $b \in \{ 0, 1 \}$. If $b = 0$, the account is said to be \textit{standard} and is exclusively controlled by a single master secret key $\mathsf{msk}$. In this case, only the key pair $(\spk, \ssk)$ is populated, with the remaining keys in $\mathsf{pks}$ set to $\perp$. If $b = 1$, the account is classified as \textit{commit-based} and is associated to two distinct master keys, possibily belonging to distinct users. Prior to epoch $\tout$, the account is jointly controlled by the secret keys $\ssk$ and $\tsk$, where $\tsk$ is associated to a distinct master secret key. After the $\tout$, control over the account transitions to  $\rsk$ exclusively, which is bound to the same master key pair as $\ssk$.
 
-\paragraph*{Transaction generation.} Transactions are generated via the algorithm $\mathsf{TxGen}$, which takes an input the system state $\mathsf{st}$, an index set $R \subseteq U$ called the ring, a set of source account information  $\mathcal{S} = \{ \mathsf{sks}_i, \accd_i \}_{i \in S}$ for some $S \subseteq R$, a set of target account data $\mathcal{T} = \{ \mathsf{mpks}_i, \accd'_i \}_{i \in T}$, and a predicate $P$ over source/target amounts (e.g., sum conservation). Target accounts can be of any type, while source accounts are required to be
-The transaction input encodes that the amounts $\{ a_{S_i} \}_{i \in S}$ stored in the source accounts $\{ \ac_i := (\accd_i, \mathsf{co}_i) \}_{i \in S} \subseteq \mathsf{AC}_U$ must be transferred to the target accounts $\{ \ac'_i \}_{i \in T}$, where the received amount is denoted by $\{ a'_{T_i} \}_{i \in T}$. The sum of the amounts received received by the target accounts must satisfy the predicate $P(a_S, a'_T) = 1$.
+\paragraph*{Transaction generation.} Transactions are generated via the algorithm $\mathsf{TxGen}$, which takes as input the system state $\mathsf{st}$, an index set $R \subseteq U$ called the ring, a set of source account information  $\mathcal{S} = \{ \mathsf{sks}_i, r_i, \accd_i \}_{i \in S}$ for some $S \subseteq R$, a set of target account data $\mathcal{T} = \{ \mathsf{mpks}_i, \accd'_i \}_{i \in T}$, and a predicate $P$ over source and target amounts (e.g.,enforcing asset conservation). Each source account $\ac_i := (\accd_i, \mathsf{co}_i)$, for $i \in S$, belongs to the account collection $\mathsf{AC}U$ and holds an amount $a_i$ encoded in $\accd_i = (a_i, \tout_i, b_i)$. The transaction specifies that the amounts ${ a_i }{i \in S}$ are to be transferred to a set of target accounts ${ \ac'i }{i \in T}$, where each $\ac'_i$ is associated with a received amount $a'_i$ stored in $\accd'i$. Correctness of the transaction requires that the predicate $P({ a_i }{i \in S}, { a'i }{i \in T}) = 1$ holds, ensuring the intended relation between source and target assets. The set of source and target accounts may contain a mix of standard and commit-based types. However, to maintain consistency, all commit-based source accounts must share the same epoch timeout $\tout$, since a transaction may only encode a single such timeout.
+ The $\mathsf{TxGen}$ additionally generates the set of tokens $\mathsf{TK} = \{ \tx_i \}_{i \in T}$ corresponding to the target accounts $\{ \ac'_i \}_{i \in T}$. These tokens may be used in the key derivation algorithm $\mathsf{KDer}$ to derive the associated secret keys and account data tuple necessary for future transactions. Tokens are assumed to be securely exchanged to the respective owners of the target accounts through a secure channel. Alternatively each token $tk_i$ may be encrypted under the recipient's master public key and  appended to the corresponding $\ac'_i$ to enable future recovery. \\
 
-\paragraph*{Timeout-Aware Ownership Checks}
-The algorithms $\mathsf{SrcChk}$ and $\mathsf{TgtChk}$ verify ownership and integrity of account data based on time:
-
-$\mathsf{SrcChk}$ ensures that the provided secret keys correctly match the account’s public keys and timeout logic. If the account is a commit account with epoch timeout $\time$, it checks:
-
-$(\mathsf{ssk}, \mathsf{tsk})$ are valid when the transaction clock $\mathsf{clock} \leq \time$,
-
-$(\mathsf{rsk})$ is valid when $\mathsf{clock} > \time$.
-
-$\mathsf{TgtChk}$ ensures that the target account includes a valid commitment to the new account data $\accd'$.
+\paragraph*{Verification.}
+Once a transaction is published, each user may run the verification algorithm $\mathsf{TimeVf}$ deciding whether the transaction is valid with respect to the current state $\st$ and the current epoch $\time = \mathsf{TimeExt}(\st)$. If the verification succeds, the verification outputs and updated state $\st'$. \\
+An auxiliary verification algorithm $\mathsf{Vf}$ may be used to check the validity of a transaction with respect to an arbitrary epoch $\time$.
+The correctness and integrity of account usage within a transaction are verified using the auxiliary algorithms $\mathsf{SrcChk}$ and $\mathsf{TgtChk}$.
 
 	\begin{definition}[Ring  Confidential Commit Transactions (RingCCT)]
-    A RingCCT scheme consists of the PPT algorithms 
-    \[\mathsf{Setup},\mathsf{KGen},\mathsf{KDer}, \mathsf{Tx},\mathsf{Vf},\mathsf{TimeVf}, \mathsf{StExt},\mathsf{TxExt}, \mathsf{TimeExt}, \mathsf{AccTimeExt}, \mathsf{SrcChk},\mathsf{TgtChk}\]
+    A RingCCT scheme consists of the PPT algorithms $\mathsf{Setup},\mathsf{KGen},\mathsf{KDer}, \mathsf{TxGen},\mathsf{Vf},\mathsf{TimeVf}, \mathsf{StExt},\mathsf{TxExt}, \mathsf{TimeExt}, \mathsf{ExtAccTout}, \mathsf{EvalTags}, \mathsf{TimedOut},$ $\mathsf{SrcChk}, \mathsf{TgtChk}$
     whose interfaces are defined as follows.
     \begin{itemize}
         \item $(\mathsf{pp,st}) \gets \mathsf{Setup}(1^\lambda)$: the setup algorithm generates the public parameters $\mathsf{st}$ and an initial global state $\mathsf{st}$.
         \item $(\mathsf{mpk},\mathsf{msk}) \gets \mathsf{KGen}(\pp)$: the key generation algorithm generates a master public key $\mathsf{mpk}$ and a matching secret key $\mathsf{msk}$.
-        \item $(\mathsf{sk},\accd) \gets \mathsf{KDer}(\mathsf{msk, \tau})$: the key derivation algorithm generates derives the keys-account data tuple given the master key $\mathsf{msk}$ owning the account and a token $\tau$ of the account.
-	    \item $(\mathsf{tx,TK}) \gets \mathsf{TxGen}(\mathsf{st},P,R,\mathcal{S},\mathcal{T})$: the transaction algorithm inputs a state $\mathsf{st}$, a predicate $P: \mathbb{Z}^S \times \mathbb{Z}^T \rightarrow \{0,1\}$, an index set R called the ring, a set of source accouts information $\mathcal{S} = \{\mathsf{sks}_i, \accd_i\}_{i\in S}$ and some targets account information $\mathcal{T} = \{\mathsf{mpks}_i, \accd'_i\}_{i\in T}$; where $\mathsf{sks}$ and $\mathsf{mpks}$ may respectively contain the source, target and recovery secret and public keys. If a source or target account is of $\atype$ 0, only the source key pair $\ssk, \mathsf{smpk}$ are defined, respectively. Each account defines its own data as $\accd := (a, \tout, \atype)$, where $a$ represents the amount of assets held by the account, $\atype$ is a bit defining the type of the account (0 for standard and 1 for commit) and $\mathsf{tout}$ sets a specific epoch timeout of the ownership of the target key pair of commit-type accounts, and set to 0 otherwise. 
-        \item $(b,\st') \gets \mathsf{Vf}(\st,\tx)$: The verification algorithm outputs a bit b deciding whether to accept or reject that the transaction $\tx$ is a valid relative to the state $\st$, outputting an updated state $\st'$ if the verification is sucessful. This verification is time-independent.
-        \item $(b,\mathsf{st}') \gets \mathsf{TimeVf}(\st,\tx)$: The time verification algorithm performs the same verification as in $\mathsf{Vf}(\st, \tx)$ with the further constraint of checking whether the declared transaction type $\expired$ and timeout $\tout$ are consistent with respect to the verifier's epoch $\time$ encoded in $\st$.
-        \item $\mathsf{AC}_U \gets \mathsf{StExt}(\st)$: The state extraction algorithm
-        extracts the set of universe accounts $\mathsf{AC}_U = \{\ac_i\}_{i \in U}$ encoded in the state $\st$.
-        \item $\mathsf{AC}_T \gets \mathsf{TxExt}(\tx)$: The transaction extraction algorithm
-        extracts the set of universe accounts $\mathsf{AC}_T = \{\ac_i\}_{i \in T}$ encoded in the state $\st$.
-        \item $\time \gets \mathsf{TimeExt}(\tx)$: The time extraction algorithm
-        extracts the epoch $\time$ encoded in the state $\mathsf{st}$.
-        \item $(\tout, \atype) \gets \mathsf{AccTimeExt}(\{\accd\})$: The account time extraction algorithm takes a set of account data $\{\accd\}$ and extracts the epoch timeout $\tout$ and the bit $\atype$ if and only if they are all equal in the set. Returns $\perp$ otherwise.
-        \item $b \gets \mathsf{SrcChk}(\mathsf{ac,r,sks,accd,tout,expired})$: The source checking algorithm outputs a bit $b$ deciding whether to accept or reject that the account $\ac$ is associated to the provided secret keys and that $\accd$ has been commited with randomness $r$. It then checks that the provided secret keys are valid according to the type of transaction $\expired$
-        \item $b \gets \mathsf{TgtChk}(\mathsf{ac, tk, accd})$: The target checking algorithms outputs a bit $b$ deciding whether to accept or reject that $\accd$ has been commited in $\ac$. 
+        \item $(\mathsf{sk},\accd) \gets \mathsf{KDer}(\mathsf{msks, \tk})$: the key derivation algorithm generates derives the keys-account data tuple given the master keys set $\mathsf{msks}$ owning the account and a token $\tk$ of the account.
+	\item $(\mathsf{tx,TK}) \gets \mathsf{TxGen}(\mathsf{st},P,R,\mathcal{S},\mathcal{T})$: the transaction algorithm inputs a state $\mathsf{st}$, a predicate $P: \mathbb{Z}^S \times \mathbb{Z}^T \rightarrow \{0,1\}$, an index set R called the ring, a set of source accounts information $\mathcal{S} = \{(\mathsf{sks}_i, r_i \accd_i)\}_{i\in S}$ and a set of target account information $\mathcal{T} = \{\mathsf{mpks}_i, \accd'_i\}_{i\in T}$. Each account is associated with data of the form $\accd := (a, \tout, b)$, where $a$ denotes the account's asset balance, $\tout \in \mathbb{N}$ specifies an epoch-based timeout for ownership logic, and the bit $b \in \{ 0, 1 \}$ indicates the account type - where 0 corresponds to a standard account, and 1 to a commit-based account. The algorithm outputs a transaction $\tx$ and the set of tokens $\mathsf{TK} = \{ \tx_i \}_{i \in T}$ of the target accounts. The transaction $\tx$ is intended to be published to all users of the system, while the token $\tk_i$ is meant to be securely exchanged to the owner of $\mathsf{mpk}$ for $i \in T$.
+        \item $(b) \gets \mathsf{Vf}(\st,\tx, \time)$: The verification algorithm outputs a bit $b \in \{ 0, 1 \}$ deciding whether the transaction $\tx$ is valid relative to the state $\st$ and the given input epoch $\time \in \mathbb{N}$.
+	\item $(b,\mathsf{st}') \gets \mathsf{TimeVf}(\st,\tx)$: The time verification algorithm extracts the current epoch from the given state and inputs it to the $\mathsf{Vf}$ algorithm,  outputing the result bit $b \in \{ 0, 1 \}$ and a possibly updated state $\st'$.
+        \item $\mathsf{AC}_U \gets \mathsf{StExt}(\st)$: The state extraction algorithm extracts the set of universe accounts $\mathsf{AC}_U = \{\ac_i\}_{i \in U}$ encoded in the state $\st$.
+        \item $\mathsf{AC}_T \gets \mathsf{TxExt}(\tx)$: The transaction extraction algorithm extracts the set of target accounts $\mathsf{AC}_T = \{\ac_i\}_{i \in T}$ encoded in the state $\st$.
+	\item $\time \gets \mathsf{TimeExt}(\tx)$: The time extraction algorithm extracts the epoch $\time \in \mathbb{N}$ encoded in the state $\mathsf{st}$.
+	\item $\tout \gets \mathsf{ExtAccTout}(\mathcal{A})$: The account timeout extraction algorithm takes as input set of account data $\mathcal{A} = \{ \accd_i \}_{i \in \mathcal{A}}$ and performs a consistency check to verify that the timeout values $\tout$ are identical across all commit-based and standard accounts in the set. If this condition holds, the algorithm returns the common timeout epoch $\tout \in \mathbb{N}$ associated with the commit-based accounts (if any exist), or returns $0$ if there are no commit-based accounts. If the timeout values are inconsistent, the algorithm returns $\perp$.
+	\item $\expired \gets \mathsf{TimedOut}(\time, \tout)$: The timed out algorithm outputs a bit $\expired \in \{0, 1\}$ determining whether $\tout$ is non-zero and $\tout < \time$, with $\tout, \time in \mathbb{N}$.
+	\item $\mathcal{Z} \gets \mathsf{EvalTags}(\mathsf{sks})$: The tag evaluation algorithm outputs the set of tags $\mathcal{Z} = \{ \zeta_i \}_{i \in \mathsf{sks}}$ evaluated on the given tuple of secret keys $\mathsf{sks}$.
+	\item $b \gets \mathsf{SrcChk}(\ac,\mathsf{sc},\mathcal{Z}, \tout, \expired)$: The source checking takes as input the account $\ac$, along with the related keys and account data encaspulated in $\mathsf{sc} := (\sks, r, \accd)$, a set of tags $\mathcal{Z}$, an epoch timeout $\tout \in \mathbb{N}$, and an expiration bit $\expired \in \{ 0, 1 \}$. The algorithm outputs a bit $b \in \{ 0, 1 \}$ deciding whether to accept or reject that the account $\ac$ is associated to the provided secret keys $\sks$ and tags $\mathcal{Z}$, given  the epoch $\tout$ and the expiration status $\expired$, and that the account data $\accd$ has been commited with randomness $r$.
+        \item $b \gets \mathsf{TgtChk}(\mathsf{ac, tk, accd})$: The target checking algorithms outputs a bit $b \in \{ 0, 1 \}$ deciding whether to accept or reject that $\accd$ has been commited in $\ac$. 
     \end{itemize}
 \end{definition}
 
@@ -156,7 +148,7 @@ The transaction verification is performed by extracting the current epoch from t
 \paragraph*{Privacy.} Privacy captures spender and receiver anonymity as well as assets confidentiality. The property is modeled by the security experiment $\mathsf{Privacy}_{\Omega,\adv}^b$, which is parameterised by the bit $b$. The experiments begins by initialising the RingCCT system state $\st$ through the $\mathsf{Setup}$ algorithm. The adversary is then gives access to oracles for account generation, corruption, transaction and verification, as defined in \cref{fig:oracles}. \\
 Commit and standard accounts can be generated by calling $\mathsf{CommAccGen}\mathcal{O}$ and $\mathsf{AccGen}\mathcal{O}$ respectively, both of which return the set of associated public keys. Existing accounts can be corrupted via $\mathsf{Corr}\mathcal{O}$, which returns the corresponding secret keys unless the account belongs to the set $\mathsf{ID}^*$. The verification oracle $\mathsf{TimeVf}\mathcal{O}$ takes a transaction $\tx$ as input and updates the system state $\st$ if the given transaction is sucessfully verified with the verification algorithm $\mathsf{TimeVf}$. \\
 The transaction oracle $\mathsf{TxGen}\mathcal{O}$ takes as input the tuple $(P, R, \mathcal{S}', \mathcal{S}^*, \mathcal{T}', \mathcal{T}^*)$ provided $\adv$, where $\mathcal{S}'$ and $\mathcal{T}'$ are sets of source and target accounts with keypairs generated by the adversary, and $\mathcal{S}^*$, $\mathcal{T}^*$ instructs the oracle to retrieve keypairs of uncorrupted accounts. The oracle combines the given sets, generates the transaction and returns it alongside the tokens associated with the target accounts. \\ 
-The adversary then generates a pair of transactions with inputs $(P, R, \mathcal{S}'_i, \mathcal{S}^*, \mathcal{T}'_i, \mathcal{T}^*)$, where $i \in {0.1}$, differing only in the selected set of honest source and target accounts. Honest accounts that are involved in verified transactions are recorded and blocked by including them in the set $\mathsf{AC}^*$. \\
+The adversary then generates a pair of transactions with inputs $(P, R, \mathcal{S}'_i, \mathcal{S}^*, \mathcal{T}'_i, \mathcal{T}^*)$, where $i \in \{0,1\}$, differing only in the selected set of honest source and target accounts. Honest accounts that are involved in verified transactions are recorded and blocked by including them in the set $\mathsf{AC}^*$. \\
 The bit-parametised transaction is then returned to the adversary $\adv$, who may further interact with oracles before outputting a bit that represents the outcome of the experiment.
 
 \begin{definition}[Privacy] A RingCCT scheme is private if for all PPT adversaries $\adv$ it holds that
@@ -301,7 +293,7 @@ To create a transaction, the $\mathsf{TxGen}$ algorithm computs the tags $\epsil
 \begin{equation*}
 \mathcal{R}(\mathsf{stmnt}, \mathsf{wit}) := \begin{cases} 
     S \subseteq R \\ 
-    \mathsf{SrcChk}(\ac_i, r_i, \mathsf{sc}_i, \mathcal{Z}_i, \tout, \expired) = 1 \qquad \forall i \in S \\ 
+    \mathsf{SrcChk}(\ac_i, \mathsf{sc}_i, \mathcal{Z}_i, \tout, \expired) = 1 \qquad \forall i \in S \\ 
     \mathsf{TgtChk}(\ac'_i, \tk_i, \accd'_i) = 1 \qquad \forall i \in T \\ 
     P(a_S, a'_T) = 1
 \end{cases}
@@ -339,10 +331,8 @@ To create a transaction, the $\mathsf{TxGen}$ algorithm computs the tags $\epsil
 }
 \vspace{1em}
 \pseudocode{
-    \mathsf{ExpiredTout}(\tout, \time) \\[0.1\baselineskip ][\hline]
-    \pcif \tout \neq 0 \\
-    \pcelse  \\
-    \t \pcreturn 0 \\
+    \mathsf{TimedOut}(\tout, \time) \\[0.1\baselineskip ][\hline]
+    \pcreturn \tout \neq 0 \land \tout \overset{?}{<} \time \\
 }
 \end{pcvstack}
 \qquad
@@ -417,12 +407,12 @@ To create a transaction, the $\mathsf{TxGen}$ algorithm computs the tags $\epsil
 }
 \vspace{1em}
 \pseudocode{
-    \mathsf{SrcChk}(\ac, r, \mathsf{sc}, \mathcal{Z}, \tout, \expired) \\[0.1\baselineskip ][\hline]
+    \mathsf{SrcChk}(\ac, \mathsf{sc}, \mathcal{Z}, \tout, \expired) \\[0.1\baselineskip ][\hline]
+    (\mathsf{sks}, r, \accd) := \parse \mathsf{sc} \\
+    (a, \tout', b) := \parse \accd \\
+    (\mathsf{pks}, \mathsf{co}) := \parse \ac \\
     (\mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk}) := \parse \mathsf{sks} \\
     (\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk}) := \parse \mathsf{pks} \\
-    (\mathsf{pks}, \mathsf{co}) := \parse \ac \\
-    (\mathsf{sks}, \accd) := \parse \mathsf{sc} \\
-    (a, \tout', b) := \parse \accd \\
     \mathbf{assert} \: \mathsf{co} = \Gamma.\mathsf{Com}(\accd, r) \\
     \mathbf{assert} \: b = 0 \lor (\expired \neq 0 \land \tout' = \tout) \\
     \pcif b = 0 \\
