@@ -24,18 +24,39 @@ This time-dependent control structure enables the definition of disjoint executi
 In this section we construct a protocol that realizes atomic swaps on a generic blockchain interface supporting commit transactions.
 
 \subsubsection{Blockchain syntax}
-
-\definition, A blockchain system supporting confidential constructions consists of the following algorithms, whose interfaces are defined as follows.
+\begin{definition} A blockchain system supporting confidential transactions is defined by the following sets of the algorithms \[(\mathsf{TxPub}, \mathsf{TxGen}, \mathsf{CommitTx}, \mathsf{TxVf}, \mathsf{GetState}, \mathsf{TimeExt})\]
 \begin{itemize}[topsep=0pt, itemsep=0pt, leftmargin=2em]
-    \item $\mathbf{0/1} \gets \mathbf{TxPub}(\tx)$: publishes the transaction $\tx$. Outputs 1 if the transaction is accepted, 0 otherwise.
-    \item $\mathbf{tx}  \gets \mathbf{TxGen}(\st, \{ \pk, \sk \}_S, \pk_T, \amnt)$: creates a signed transaction transferring $\amnt$ to $\pk_T$ from an account defined by the set $\{ \pk, \sk \}_S$.
-\item $\mathbf{0/1} \gets \mathbf{CommitTx}(\st, \{ \pk, \sk \}_S, \mathsf{pk}_T, \{ \pk \}_0, \{ \pk \}_1, T, \amnt)$: creates a commit transaction transferring $\mathsf{amnt}$ from $\mathsf{ac}_S$ to a commit-based account defined by the main public key $\pk_T$, two index sets of public keys $\{ \pk \}_0, \{ \pk \}_1$ and a timeout $T$.
-    \item $\mathbf{0/1} \gets \mathbf{TxVf}(\st, \tx)$: verifies the validity of the transaction based on the given state. Outputs 1 if the verification succeeds, 0 otherwise.
-    \item $\mathsf{st} \gets \mathbf{GetState}$: gets the latest blockchain state, which encodes the set of accounts, verified transactions and current epoch of the blockchain.
+    \item $\mathbf{0/1} \gets \mathbf{TxPub}(\tx)$: publishes the transaction $\tx$ on the blockchain. Outputs 1 if the transaction is accepted, 0 otherwise.
+    \item $\mathbf{tx}  \gets \mathbf{TxGen}(\st, \{ \pk_i, \sk_i \}_{i \in \mathsf{SC}}, \pk_\mathsf{TG}, \amnt)$: generates a signed transaction transferring an amount $\amnt$ from a source account associated to the keypairs in the set $\mathsf{SC} = \{\pk_i, \sk_i \}_{i \in \mathsf{SC}}$ to the target public key $\pk_\mathsf{TG}$, based on the current state $\st$.
+    \item $\mathbf{tx} \gets \mathbf{CommitTx}(\st,  \{ \pk_i, \sk_i \}_{i \in \mathsf{SC}}, \mathsf{pk}_\mathsf{TG}, \{ \pk_i \}_{i \in I_0}, \{ \pk_i \}_{i \in I_11}, T, \amnt)$: produces a commit transaction transferring $\amnt$ from a source account associated to the keypairs in the set $\mathsf{SC} = \{\pk_i, \sk_i \}_{i \in \mathsf{SC}}$  to a commit-type account defined by a main public key $\pk_\mathsf{TG}$, auxiliary key sets $I_0 = \{ \pk_i \}_{i \in I_0}$ and $I_1 = \{ \pk_i \}_{i \in I_1}$, and a timeout parameter $T$.
+    \item $\mathbf{0/1} \gets \mathbf{TxVf}(\st, \tx)$: Verifies whether a transaction $\tx$ is valid under the given blockchain state $\st$ and its encoded epoch, which may be extracted using $\mathsf{TimeExt}$. If the source account of the transaction is a commit-type account, it requires that the secret keys corresponding to $\pk_T$ and either one of the auxiliary sets, $\{ \pk_i \}_{i \in I_0}$ or  $I_1 = \{ \pk_i \}_{i \in I_1}$ are included in the set $\mathsf{SC}$ based on defined timeout $T$. Returns 1 if the transaction is valid, 0 otherwise.
+    \item $\mathsf{st} \gets \mathbf{GetState}$: Returns the current state $\mathsf{st}$ from the global system state (consensus), including account records, verified transactions, and the current epoch.
     \item $\mathsf{time} \gets \mathbf{TimeExt}$: extracts the epoch from the state.
 \end{itemize}
-
-We require the standard safety and liveness security properties for the blockchains.
+\end{definition}
+\subsubsection{Construction}
+\paragraph*{Notation.} In order to encode the concurrent execution of routines in an asynchronous setting, we use the following notation in the protocol's pseudocode definition.
+\begin{itemize}[nosep, noitemsep]
+    \item $\mathbf{wait} \:\: \mathsf{fn}(...)$ - Suspends execution until the execution of the algoritm $\mathsf{fn}(...)$ terminates. If $\mathsf{fn}(...)$ returns $\perp$, the current execution block aborts and returns $\perp$.
+    \item $\mathbf{wait} \: \{...\}$ - Enforces the $\mathbf{wait}$ operation to all asynchonous routines inside the execution block.
+    \item $\mathbf{assert} \: \{...\}$ - Verifies that enclosed expression or routine returns 1. If not, the current block terminates and returns $\perp$.
+    \item $\mathbf{select} \: \{...\}$ - Concurrently runs multiple asynchronous $\mathbf{wait}$ routines in the block and returns the value of the first routine that completes successfully.
+\end{itemize}
+All routines that interact with network channels—such as accessing the blockchain interface or executing a two-party computation (2PC) with another participant—are treated as asynchronous. This reflects the fact that such operations may incur unpredictable delays and cannot be assumed to complete within a fixed timeframe. \\
+In the protocol specification, variables and routines that are specific to a particular blockchain $\mathbb{B}$ are annotated with a subscript to distinguish their context, unless otherwise clear. For example, a public key belonging to chain $\mathbb{B}$ is denoted by $\mathsf{pk_{(\mathbb{B})}}$. \\
+Parties may communicate over an unreliable and unauthenticated channel, with no assumptions regarding security or message delivery guarantees. Communication is modeled using the primitives $\mathsf{send}$ and $\mathsf{receive}$, which respectively transmit and await data over the channel.
+\paragraph*{Setup.} Let $\mathbb{A}$ and $\mathbb{B}$ denote two blockchains that support confidential constructions, as defined previously. Consider two parties, $P_0$ and $P_1$, who wish to perform a cross-chain asset exchange: $P_0$ aims to swap $\amnt_\mathbb{A}$ units of currency on $\mathbb{A}$ in exchange for $\amnt_\mathbb{B}$ units on $\mathbb{B}$ from $P_1$, and vice versa. \\
+Each party generates keypairs for both chains. Specifically, $P_0$ generates $(\pk_i, \sk_i)$ on chain $\mathbb{A}$ and $(\pk_s, \sk_s)$ on chain $\mathbb{B}$, while $P_1$ generates $(\pk_i, \sk_i)$ on $\mathbb{B}$ and $(\pk_s, \sk_s)$ on $\mathbb{A}$. \\
+The parties agree on a common set of global parameters: timeouts $T_0$ and $T_1$, and transfer amounts $\amnt_\mathbb{A}$ and $\amnt_\mathbb{B}$. Given this setup, both parties proceed to execute the protocol described in \cref{generic_atomic_protocol}, using the global parameters as public input and their respective keypairs as private input.
+\paragraph*{Key generation and commit phase.} 
+Each party begins by generating three cryptographic key pairs, each serving a distinct role in the protocol. The pair $(\sk_m, \pk_m)$ is designated as the main keypair, associated with the control of a commit-type account that will eventually hold the locked assets. The second pair, $(\sk_r, \pk_r)$ functions as a recovery keypair, enabling the party to reclaim funds in case the protocol fails to complete within the allotted timeout. The third pair, $(\sk_c, \pk_c)$ is the commitment keypair, which is owned by the respective counterparty in order to allow for a joint ownership of the commit account. Party $P_0$ generates its main and recovery keypairs on blockchain $\mathbb{B}$. Party $P_1$ follows the symmetric strategy: it generates its main and recovery keypairs on blockchain $\mathbb{B}$, and its commitment keypair on blockchain $\mathbb{A}$. Following key generation, the parties exchange their respective public commitment keys over an off-chain channel. \\
+Using this setup, $P_0$ locally executes, with respect to chain $\mathbb{A}$ \[\mathsf{CommitTx}(\st, \{ (\pki, \ski) \}, \pkm , \{ \pkc \}, \{ \pkr \}, T_0, \amnt)\], where $(\pki, \ski)$ is the party's source keypair, $\amnt$ is the amount to be exchanged with respect to $\mathbb{A}$, $T_0$ is the agreed timeout parameter, $\pkm$ and $\pkr$ are the main and recovery public key, and $\pkc$ is the commitment public key received by the counterparty. $P_1$ then symmetrically executes $\mathsf{CommitTx}$ with respect to chain $\mathbb{B}$ and using timeout $T_1$, and both parties publish the transactions $\mathsf{tx}_r$ through the $\mathbf{TxPub}$.
+\paragraph*{Swap or refund phase.}
+The parties now proceed to concurrently write two routines corresponding to the swap and refund mechanism. The refund routine checks whether $T_0$ or $T_1$ (respectively for $P_0$ and $P_1$ are timed out, and if so generate and publish the refund transaction using the master and recovery key pair as source $\mathsf{SC} := \{ (\pkm, \skm), (\pkr, \skr) \}$ paying back $\amnt$ to $\pki$. \\
+The swap routine send the previously published transactions initialized the commit accounts $\mathsf{tx}_r$ to the respective counterparty, and they both verify that the transactions are valid through the algorithm $\mathsf{TxVf}$ and that the the $\pkc$ and $\amnt$ are set correctly. The parties now proceed to run the 2PC protocol $\Gamma_\mathsf{Swap}$ as defined in \cref{generic_2pc}. 
+After publishing the commit transactions, both parties proceed to concurrently execute two protocol routines that implement the refund and swap mechanisms. These routines are designed to ensure liveness and atomicity of the asset exchange in the presence of network delays or adversarial behavior.
+The refund routine serves as a timeout-based recovery path. Each party locally monitors the blockchain state and checks whether the corresponding timeout parameter  or  has expired. Upon detecting a timeout, the party generates and publishes a refund transaction using its main and recovery keypairs as signing authorities, i.e., it sets as source keypairs $\mathsf{SC} := \{ (\pkm, \skm), (\pkr, \skr) \}$. This transaction transfers the originally committed amount $\amnt$ back to the inital public key pair $\pk_i$, ensuring that funds are reclaimed securely if the protocol fails to complete. \\
+In parallel, each party initiates the swap routine, which coordinates the completion of the atomic asset exchange. The parties begin by sending the previously published commit transactions $\tx_r$, which initialize the commit-type accounts, to their respective counterparties over an off-chain channel. Upon receipt, each party verifies the validity of the received transaction using the verification algorithm. Additionally, they confirm that the embedded commitment public key $\pkc$ and the committed amount $\amnt$ match the expected values agreed upon during setup. If the validation succeeds, the parties then execute the two-party computation protocol $\Gamma_{\mathsf{Swap}}$, as defined in \cref{generic_2pc}.
 
 \begin{figure}[H]
     \begin{pchstack}[center, boxed]
@@ -53,6 +74,7 @@ We require the standard safety and liveness security properties for the blockcha
     }
     \end{pchstack}
     \caption{Protocol definition of 2PC $\Gamma_{\mathsf{CommitTx}}$}
+    \label{fig:generic_2pc}
     \end{figure}
     \begin{figure}[H]
     \begin{minipage}[t]{0.5\textwidth}
@@ -121,6 +143,7 @@ We require the standard safety and liveness security properties for the blockcha
     \end{pchstack}
     \end{minipage}%
     \caption{Full protocol execution for $P_0$ and $P_1$, respectively left and right}
+    \label{fig:generic_atomic_protocol}
     \end{figure}
 
 \subsection{Comparison with HTLC-based Atomic Swaps}
