@@ -311,7 +311,8 @@ where the statement $\mathsf{stmnt}$ and witness $\mathsf{wit}$ are of the form
 \begin{equation*}
 	\mathsf{wit} := ((\mathsf{sc}_i)_{i\in S}, (\tk_i, \accd'_i)_{i\in T}) \\
 \end{equation*}
-respectively, where $\mathsf{sc}_i = (\mathsf{sks}_i, r_i, \accd_i)$. To verify a transaction, the verifier checks that the predicate $P$ is admissible, the ring $R$ is a subset of the universe accounts $R \subseteq U$, the proof for the above relation is sound, and that no tags $\zeta$ given in the transaction appeared before, i.e. $\mathcal{Z}_S \cup \mathcal{Z}_U = \emptyset$. If these checks are passed, the verified would agree to advance the state from $\st$ to $\st' := (\mathcsf{AC}_T \cup \mathcsf{AC}_T
+respectively, where $\mathsf{sc}_i = (\mathsf{sks}_i, r_i, \accd_i)$. To verify a transaction, the verifier checks that the predicate $P$ is admissible, the ring $R$ is a subset of the universe accounts $R \subseteq U$, the proof for the above relation is sound, and that no tags $\zeta$ given in the transaction appeared before, i.e. $\mathcal{Z}_S \cup \mathcal{Z}_U = \emptyset$. 
+If these checks are passed, the verified would agree to advance the state from $\st$ to $\st' := (\mathsf{AC}_T \cup \mathsf{AC}_T ...)$\rlai{incomplete}
 
 \begin{figure}
 \begin{minipage}[t]{\textwidth}
