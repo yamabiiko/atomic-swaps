@@ -2,8 +2,6 @@
 
 \section{Atomic Swaps and Existing Solutions}\label{sec:atomic_swap_overview}
 
-\rlai*{Define (formally or informally) atomic swaps, overview existing constructions from HTLCs and TLPs.}
-
 \subsection{Existing solutions}
 
 \subsubsection{Hash Time Lock Contracts}
@@ -16,7 +14,6 @@ A Hash Time-Lock Contract (HTLC) is a contract that enables conditional payment 
 	\item $\mathsf{pk_0}$ is the public key of the sender (who can reclaim the funds after the timeout).
 	\item $\mathsf{pk_1}$ is the public key of the intended recipient (who can claim the funds upon presenting the correct preimage $r$ before the timeout).
 \end{itemize}
-
 
 The HTLC transfers $\mathsf{amnt_a}$ to $\mathsf{pk_1}$ if invoked before timeout $T$ with input value $r$ such that $\mathcal{H}(r) = h$. 
 If the contract is invoked after timeout $T$, it refunds the assets $\mathsf{amnt_a}$ to $\mathsf{pk_0}$ unconditionally.
@@ -44,6 +41,11 @@ Many privacy-preserving cryptocurrencies, such as Monero or Zcash, do not suppor
 \paragraph*{Miner incentives attacks} HTLCs may also suffer from incentive misalignments, particularly in adversarial mining environments. Miners observing the hash preimage during the redemption phase may attempt to front-run or extract value, especially when the reward from a successful claim is higher than the block reward or other fees. These risks have been documented in Kolluri et al., 2022, which explores protocol designs vulnerable to such "griefing" attacks in HTLC settings.
 
 \subsubsection{Universal Atomic Swaps}
+\begin{itemize}
+\item this needs to be a little rewritten, pointing out on the impracticaly of the protocol due to ASICs
+\item also mention the "bug" of the proposed protocol due to not considering chain's confirmation time (might be used as motivation for our blockchain interface?)
+\end{itemize}
+
 Thyagarajan et al. \cite{uas} introduced one of the first atomic swap protocols substituting blockchain timelocks with a cryptographic primitive. 
 The core building block utilized are Verifiable Timed Signatures (VTS) \cite{vts}, which lets a user generate a timed commitment $C$ of a signature $\sigma$ on a message $m$ under a public key $\mathsf{pk}$. The commitment $C $ must hide the signature $\sigma$ for time $\mathsf{T}$ and producing a proof $\pi$ that $C$ contains a valid signature $\sigma$. This ensures that $\sigma$ can be publicly recovered in time $\mathsf{T}$ by anyone who solves the computational puzzle. We note that a similar construction called Verifiable Timed Discretelog (VTD) allows to commit on a dlog value instead of a signature, and can be alternatively used in the protocol.
 

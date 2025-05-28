@@ -103,22 +103,6 @@
 \item We propose an extension of RingCT, the underlying transaction scheme of Monero, which allows to realise commit transactions in privacy-preserving cryptocurrencies. We propose a generic construction and show how to efficiently instantiate it over groups where discrete logarithm and other related problems are hard. 
 \item We provide a prototype implementation of CommitTx-based atomic swaps
 \end{itemize}
-
-\textbf{Discussion}
-\begin{itemize}
-    \item Why chains might want to support commit transactions but not "hash time lock contracts (HTLC)"? 
-    \item From UAS paper: Both chains need to support the same hash function for HTLC-based atomic swaps to work. 
-    \item On the other hand, commit transactions is a "local" functionality. 
-    \item HTLC implies commit transaction (?) (But then this will imply HTLC-based atomic swaps do not need to share the same hash function?)
-    \item In our construction, CommitTx accounts are trivially distinguishable from ordinary accounts. We justify this design choice by arguing that it is impossible to achieve "cross-type account indistinguishability" without violating availability.
-\end{itemize}
-\textbf{TODO}
-\begin{itemize}
-    \item Find out what are already known/considered for commit transactions (or however it is called)
-    \item Discuss "natural applications" of commit transactions, beyond atomic swaps, e.g. P2P escrow system 
-    \item Find out what goes wrong if one tries to realise HTLC in privacy-preserving chains, e.g. Monero.
-    \item A more detailed comparison between CommitTx-based and HTLC-based atomic swaps, and see how exactly does the former avoid needing both chains to share common configurations, e.g. the same hash function.
-\end{itemize}
 \end{todobox}
 
 \input{intro}
