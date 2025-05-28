@@ -33,7 +33,7 @@ The correctness and integrity of account usage within a transaction are verified
         \item $(\mathsf{pp,st}) \gets \mathsf{Setup}(1^\lambda)$: the setup algorithm generates the public parameters $\mathsf{st}$ and an initial global state $\mathsf{st}$.
         \item $(\mathsf{mpk},\mathsf{msk}) \gets \mathsf{KGen}(\pp)$: the key generation algorithm generates a master public key $\mathsf{mpk}$ and a matching secret key $\mathsf{msk}$.
         \item $(\mathsf{sk},\accd) \gets \mathsf{KDer}(\mathsf{msks, \tk})$: the key derivation algorithm generates derives the keys-account data tuple given the master keys set $\mathsf{msks}$ owning the account and a token $\tk$ of the account.
-	\item $(\mathsf{tx,TK}) \gets \mathsf{TxGen}(\mathsf{st},P,R,\mathcal{S},\mathcal{T})$: the transaction algorithm inputs a state $\mathsf{st}$, a predicate $P: \mathbb{Z}^S \times \mathbb{Z}^T \rightarrow \{0,1\}$, an index set R called the ring, a set of source accounts information $\mathcal{S} = \{(\mathsf{sks}_i, r_i \accd_i)\}_{i\in S}$ and a set of target account information $\mathcal{T} = \{\mathsf{mpks}_i, \accd'_i\}_{i\in T}$. Each account is associated with data of the form $\accd := (a, \tout, b)$, where $a$ denotes the account's asset balance, $\tout \in \mathbb{N}$ specifies an epoch-based timeout for ownership logic, and the bit $b \in \{ 0, 1 \}$ indicates the account type - where 0 corresponds to a standard account, and 1 to a commit-based account. The algorithm outputs a transaction $\tx$ and the set of tokens $\mathsf{TK} = \{ \tx_i \}_{i \in T}$ of the target accounts. The transaction $\tx$ is intended to be published to all users of the system, while the token $\tk_i$ is meant to be securely exchanged to the owner of $\mathsf{mpk}$ for $i \in T$.
+	\item $(\mathsf{tx,TK}) \gets \mathsf{TxGen}(\mathsf{st},P,R,\mathcal{S},\mathcal{T})$: the transaction algorithm inputs a state $\mathsf{st}$, a predicate $P: \mathbb{Z}^S \times \mathbb{Z}^T \rightarrow \{0,1\}$, an index set R called the ring, a set of source accounts information $\mathcal{S} = \{(\mathsf{sks}_i, r_i, \accd_i)\}_{i\in S}$ and a set of target account information $\mathcal{T} = \{\mathsf{mpks}_i, \accd'_i\}_{i\in T}$. Each account is associated with data of the form $\accd := (a, \tout, b)$, where $a$ denotes the account's asset balance, $\tout \in \mathbb{N}$ specifies an epoch-based timeout for ownership logic, and the bit $b \in \{ 0, 1 \}$ indicates the account type - where 0 corresponds to a standard account, and 1 to a commit-based account. The algorithm outputs a transaction $\tx$ and the set of tokens $\mathsf{TK} = \{ \tx_i \}_{i \in T}$ of the target accounts. The transaction $\tx$ is intended to be published to all users of the system, while the token $\tk_i$ is meant to be securely exchanged to the owner of $\mathsf{mpk}$ for $i \in T$.
         \item $(b) \gets \mathsf{Vf}(\st,\tx, \time)$: The verification algorithm outputs a bit $b \in \{ 0, 1 \}$ deciding whether the transaction $\tx$ is valid relative to the state $\st$ and the given input epoch $\time \in \mathbb{N}$.
 	\item $(b,\mathsf{st}') \gets \mathsf{TimeVf}(\st,\tx)$: The time verification algorithm extracts the current epoch from the given state and inputs it to the $\mathsf{Vf}$ algorithm,  outputing the result bit $b \in \{ 0, 1 \}$ and a possibly updated state $\st'$.
         \item $\mathsf{AC}_U \gets \mathsf{StExt}(\st)$: The state extraction algorithm extracts the set of universe accounts $\mathsf{AC}_U = \{\ac_i\}_{i \in U}$ encoded in the state $\st$.
@@ -270,17 +270,17 @@ Where $\mathsf{Availability}_{\Omega,\adv}$ is defined in \cref{fig:availability
 \pseudocode{
     \mathsf{Availability}_{\Omega, \mathcal{A}} \\[0.1\baselineskip ][\hline] 
     (\pp, \mathsf{st}) \gets \mathsf{Setup}(1^\lambda) \\
-    \mathcal{O} := \{\mathsf{KGen}\mathcal{O}, \mathsf{Corr}\mathcal{O}, \mathsf{TxGen}\mathcal{O}, \mathsf{Vf}\mathcal{O}\} \\
-    (P,R, \mathcal{S}', \mathcal{T}', (\mathcal{S}^*_i, \mathcal{T}^*_i)_{i \in \{0,1\}}) \gets \mathcal{A}^\mathcal{O}(\pp) \\
-    (\mathsf{tx}, \mathsf{TK}) \gets \mathsf{TxGen}\mathcal{O}(P, R, \mathcal{S}', \mathcal{T}', \mathcal{S}^*_i, \mathcal{T}^*_i)
-    \{ \mathsf{id}_j,\mathsf{tk}_j \}_{j\in S^*} := \parse \: \mathcal{S}^* \\
+    \mathcal{O} := \{\mathsf{KGen}\mathcal{O}, \mathsf{Corr}\mathcal{O}, \mathsf{TxGen}\mathcal{O}, \mathsf{TimeVf}\mathcal{O}\} \\
+    (P,R, \mathcal{S}, \mathcal{T}) \gets \mathcal{A}^\mathcal{O}(\pp) \\
+    (\mathsf{tx}, \mathsf{TK}) \gets \mathsf{TxGen}\mathcal{O}(P, R, \mathcal{S}, \mathcal{T}) \\
+    \{ \mathsf{id}_j,\mathsf{tk}_j \}_{j\in S} := \parse \: \mathcal{S} \\
     \pcif \mathcal{S}^* \not\subseteq U\: \pcreturn \: 0 \\
-    (\mathsf{ID}^*, \mathsf{AC}^*) := (\{id_j\}_{j \in S^*}, \mathsf{StExt}(\mathsf{st})[\mathcal{S}^*]) \\
+    (\mathsf{ID}^*, \mathsf{AC}^*) := (\{\mathsf{id}_j\}_{j \in S}, \mathsf{StExt}(\mathsf{st})[\mathcal{S}]) \\
     \mathsf{time} := \mathsf{TimeExt}(\mathsf{st}) \\
-    (b, \perp) := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}, \mathsf{time}) \\
+    b := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}, \mathsf{time}) \\
     \perp \gets \mathcal{A}^\mathcal{O}(\mathsf{tx}, \mathsf{TK}) \\
-    (b', \perp) := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}, \mathsf{time}) \\
-    \pcreturn \: b \land b'
+    b' := \mathsf{Vf}(\mathsf{st}, \mathsf{tx}, \mathsf{time}) \\
+    \pcreturn \: b \land \lnot b'
 }
 \end{pchstack}
 \caption{Availability experiment with oracles defined in \cref{fig:oracles}.}
