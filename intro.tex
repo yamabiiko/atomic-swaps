@@ -1,5 +1,24 @@
 % TeX root = main.tex
 
+\begin{todobox}
+    Potential Deadlines: 
+    \begin{itemize}
+        \item PETS 2026: Aug 31, 2025 and Nov 30, 2025
+        \item EuroSP 2026: Oct-ish, 2025 
+        \item SP 2026: Nov 13, 2025 
+    \end{itemize}
+
+    TODOs:
+    \begin{itemize}
+        \item Format: Prepare IEEE format and PETS format, and have a rough idea of what will end up in the submission version
+        \item Intro: Comparison with other swap protocols for privacy-preserving chains: SwapCT \url{https://eprint.iacr.org/2021/631}, Sweep-UC \url{https://eprint.iacr.org/2022/1605}
+        \item Atomic Swap: (Probably not this project?) Formal modelling and proving of atomic swap protocol security
+        \item RingCCT Definition: Reduce number of master public keys from 3 to 2, and introduce the notion of ``type'' to the tags
+        \item RingCCT Construction: Replace the tagging scheme with a PRF
+        \item Instantiation and performance evaluation: Write it!
+    \end{itemize}
+\end{todobox}
+
 \section{Introduction}
 
 An atomic cross-chain swap is a cryptographic protocol that enables two mutually distrustful parties to exchange assets residing on separate blockchains, ensuring the \textit{atomicity} property: either both parties receive the corresponding asset from the other, or no transfer takes place. This guarantee must hold even in the presence of network delays or adversarial behavior, ensuring that neither party can cause a loss of funds for the other. To achieve this, atomic swap protocols rely on mechanisms that place each participant’s asset into a conditional transfer state—locked in such a way that it can be claimed by the counterparty upon satisfying specific conditions (e.g., revealing a secret or solving a puzzle), or refunded to the sender after a designated timeout. \\
