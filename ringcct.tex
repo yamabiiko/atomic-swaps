@@ -120,15 +120,15 @@ where $\mathsf{Pr}\left[\mathsf{Balance}_{\Omega,\mathcal{P},\adv,\mathcal{E}_\a
 \end{definition}
 
 The transaction verification is performed by extracting the current epoch from the state via the time extraction algorithm $\mathsf{TimeExt}$ and then by running the verification algorithm $\mathsf{TimeVf}$. This implies that the balance security properties covers both standard and commit accounts. \\
-\begin{figure}[H]
+\begin{figure}[t]
 \begin{pchstack}[center, boxed]
 \pseudocode{
      \mathsf{Balance}_{\Omega,\mathcal{P},\adv,\mathcal{E}_\adv} \\[0.1\baselineskip ][\hline] 
     (\pp, \mathsf{st}_0) \gets \mathsf{Setup}(1^\lambda) \\
     (\mathsf{tx}_i)_{i \in \mathbb{Z}_l} \gets \mathcal{A}(\pp, \mathsf{st}_0) \\
     (P_i, R_i, S_i, T_i)_{i \in \mathbb{Z}_{l}} \gets \mathcal{E}_{\mathsf{A}} (\pp, \mathsf{st}_0, (\mathsf{tx}_i)_{i \in \mathbb{Z}_{l}}) \\
-    \{ \mathsf{sc}_{i, j} := (\mathsf{sks}_{i,j}, r_{i, j}, \accd_{i,j}) \}_{j \in S_i} := \parse \: (S_i)_{i \in \mathbb{Z}_{l}} \\
-    \{ \mathsf{mpks}_{i,j},\mathsf{tk}_{i,j}, \accd'_{i,j} \}_{j \in T_i} := \parse \: (T_i)_{i \in \mathbb{Z}_{l}} \\
+    \{ \mathsf{sc}_{i, j} := (\mathsf{sks}_{i,j}, r_{i, j}, \accd_{i,j}) \}_{j \in S_i} := \pcparse \: (S_i)_{i \in \mathbb{Z}_{l}} \\
+    \{ \mathsf{mpks}_{i,j},\mathsf{tk}_{i,j}, \accd'_{i,j} \}_{j \in T_i} := \pcparse \: (T_i)_{i \in \mathbb{Z}_{l}} \\
     \mathbf{for} \: t \in \mathbb{Z}_l \: \mathbf{do} \: (b_t, \mathsf{st}_{t+1}) := \mathsf{TimeVf}(\mathsf{st_t}, \mathsf{tx_t}) \\
     \mathbf{for} \: i \in \mathbb{Z}_l \: \mathbf{do} \\
     \t \accd_{i, S_i} := (\accd_{i,j})_{j \in S_i}, \tout_i := \mathsf{ExtAccTout}(\{\accd_{i, j} \}_{j \in S}) \\
@@ -205,10 +205,10 @@ Where $\mathsf{Privacy}_{\Omega,\adv}^b$ is defined in \cref{fig:privacy}.
 \begin{pcvstack}
 \pseudocode{
 	\mathsf{TxGen}\mathcal{O}(P, R, \mathcal{S'}, \mathcal{T'}, \mathcal{S}^*, \mathcal{T}^*) \\[0.1\baselineskip ][\hline]
-	 \{\mathsf{sks}_i, r_i, \accd_i\}_{i \in S'} := \parse \: \mathcal{S'}  \\
-	 \{\mathsf{id}_i, \mathsf{tk}_i\}_{i \in S^*} := \parse \: \mathcal{S}^*  \\
-	 \{\mathsf{mpks}_i, \accd'_i\}_{i \in T'} := \parse \: \mathcal{T'} \\
-	 \{\mathsf{id}'_i, \accd'_i\}_{i \in T^*} := \parse \: \mathcal{T}^*  \\
+	 \{\mathsf{sks}_i, r_i, \accd_i\}_{i \in S'} := \pcparse \: \mathcal{S'}  \\
+	 \{\mathsf{id}_i, \mathsf{tk}_i\}_{i \in S^*} := \pcparse \: \mathcal{S}^*  \\
+	 \{\mathsf{mpks}_i, \accd'_i\}_{i \in T'} := \pcparse \: \mathcal{T'} \\
+	 \{\mathsf{id}'_i, \accd'_i\}_{i \in T^*} := \pcparse \: \mathcal{T}^*  \\
          \pcif \mathcal{S}^* \cap \mathcal{S}' \neq \emptyset \lor \mathcal{T}' \cap \mathcal{T}^* \: \pcreturn \perp \\
          \pcif (\{\mathsf{id}_{i\in S^*}\} \cup \{\mathsf{id}_{i\in T^*}\}) \cap \mathsf{ID}^* \neq \emptyset \: \pcreturn \perp \\
          \pcif \mathsf{StExt}(\mathsf{st})[\mathcal{S}^*] \cap \mathsf{AC}^* \neq \emptyset \: \pcreturn \perp \\
@@ -234,7 +234,7 @@ Where $\mathsf{Privacy}_{\Omega,\adv}^b$ is defined in \cref{fig:privacy}.
 \label{fig:oracles}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[t]
 \begin{pchstack}[center, boxed]
 \pseudocode{
     \mathsf{Privacy}^b_{\mathcal{A}} \\[0.1\baselineskip ][\hline] 
@@ -245,8 +245,8 @@ Where $\mathsf{Privacy}_{\Omega,\adv}^b$ is defined in \cref{fig:privacy}.
     \t (\mathsf{tx}_i, *) \gets \mathsf{TxGen}\mathcal{O}(P, R, \mathcal{S}', \mathcal{T}', \mathcal{S}^*_i, \mathcal{T}^*_i) \\
     \t (b_i, \mathsf{st'_i}) := \mathsf{TimeVf}(\mathsf{st}, \mathsf{tx}_i) \\
     \t \pcif b_i = 0 \: \pcreturn \: 0 \\
-    \{ \mathsf{id}_{i,j},\mathsf{tk}_{i,j} \}_{j\in S^*_i} := \parse \: \mathcal{S}^*_i \\
-    \{ \mathsf{id}'_{i,j},\accd_{i,j} \}_{j\in S^*_i} := \parse \: \mathcal{T}^*_i \\
+    \{ \mathsf{id}_{i,j},\mathsf{tk}_{i,j} \}_{j\in S^*_i} := \pcparse \: \mathcal{S}^*_i \\
+    \{ \mathsf{id}'_{i,j},\accd_{i,j} \}_{j\in S^*_i} := \pcparse \: \mathcal{T}^*_i \\
     \mathsf{ID}^* := \mathsf{ID}^* \cup \{\mathsf{id}_{i,j}\}_{j\in S^*_i} \cup \{\mathsf{id;}_{i,j}\}_{j\in T^*_i} \\
     \mathsf{AC}^* := \mathsf{AC}^* \cup \mathsf{StExt}(\mathsf{st})[\mathcal{S}^*_i] \cup \mathsf{TxExt}(\mathsf{tx}_i)[\mathcal{T}^*_i] \\
     \mathbf{if} (|\mathcal{S^*_0}| \neq |\mathcal{S^*_1}|) \lor (|\mathsf{StExt}(\mathsf{st}'_0) \ \mathsf{StExt}(\mathsf{st})| \neq |\mathsf{StExt}(\mathsf{st}'_1) \ \mathsf{StExt}(\mathsf{st})|) \:\: \pcreturn \: 0 \\
@@ -265,7 +265,7 @@ Where $\mathsf{Privacy}_{\Omega,\adv}^b$ is defined in \cref{fig:privacy}.
 Where $\mathsf{Availability}_{\Omega,\adv}$ is defined in \cref{fig:availability}. 
 \end{definition}
 
-\begin{figure}[H]
+\begin{figure}[t]
 \begin{pchstack}[center, boxed]
 \pseudocode{
     \mathsf{Availability}_{\Omega, \mathcal{A}} \\[0.1\baselineskip ][\hline] 
@@ -273,7 +273,7 @@ Where $\mathsf{Availability}_{\Omega,\adv}$ is defined in \cref{fig:availability
     \mathcal{O} := \{\mathsf{KGen}\mathcal{O}, \mathsf{Corr}\mathcal{O}, \mathsf{TxGen}\mathcal{O}, \mathsf{TimeVf}\mathcal{O}\} \\
     (P,R, \mathcal{S}, \mathcal{T}) \gets \mathcal{A}^\mathcal{O}(\pp) \\
     (\mathsf{tx}, \mathsf{TK}) \gets \mathsf{TxGen}\mathcal{O}(P, R, \mathcal{S}, \mathcal{T}) \\
-    \{ \mathsf{id}_j,\mathsf{tk}_j \}_{j\in S} := \parse \: \mathcal{S} \\
+    \{ \mathsf{id}_j,\mathsf{tk}_j \}_{j\in S} := \pcparse \: \mathcal{S} \\
     \pcif \mathcal{S}^* \not\subseteq U\: \pcreturn \: 0 \\
     (\mathsf{ID}^*, \mathsf{AC}^*) := (\{\mathsf{id}_j\}_{j \in S}, \mathsf{StExt}(\mathsf{st})[\mathcal{S}]) \\
     \mathsf{time} := \mathsf{TimeExt}(\mathsf{st}) \\
@@ -328,13 +328,13 @@ If these checks are passed, the verified would agree to advance the state from $
 \vspace{1em}
 \pseudocode{
     \mathsf{TimeExt}(\mathsf{st}) \\[0.1\baselineskip ][\hline]
-    (\mathsf{AC}_U, \mathcal{Z}_U, \time) := \parse \mathsf{st} \\
+    (\mathsf{AC}_U, \mathcal{Z}_U, \time) := \pcparse \mathsf{st} \\
     \pcreturn \time
 }
 \vspace{1em}
 \pseudocode{
     \mathsf{StExt}(\mathsf{st}) \\[0.1\baselineskip ][\hline]
-    (\mathsf{AC}_U, \mathcal{Z}_U, \time) := \parse \mathsf{st} \\
+    (\mathsf{AC}_U, \mathcal{Z}_U, \time) := \pcparse \mathsf{st} \\
     \pcreturn \mathsf{AC}_U
 }
 \vspace{1em}
@@ -354,12 +354,12 @@ If these checks are passed, the verified would agree to advance the state from $
 \vspace{1em}
 \pseudocode{
     \mathsf{TxExt}(\mathsf{tx}) \\[0.1\baselineskip ][\hline]
-    (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}) := \parse \mathsf{tx} \\
+    (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}) := \pcparse \mathsf{tx} \\
     \pcreturn \mathsf{AC}_T
 }\vspace{1em}
 \pseudocode{
     \mathsf{ExtAccTout}(\mathcal{A}) \\[0.1\baselineskip ][\hline]
-    \{(a_i, \tout_i, b_i)\}_{i \in \mathcal{A}} := \parse \mathcal{A} \\
+    \{(a_i, \tout_i, b_i)\}_{i \in \mathcal{A}} := \pcparse \mathcal{A} \\
     \mathbf{assert} \not\exists \: i,j \in \mathcal{A} \mid  (\tout_i, b_i) \neq (\tout_j, b_j) \\
     \tout := a \in \{ \tout_i \}_{i \in \mathcal{A}} \mid a \neq 0 \\
     \pcif \tout = \: \perp \\
@@ -381,9 +381,9 @@ If these checks are passed, the verified would agree to advance the state from $
 \begin{pcvstack}
 \pseudocode{
     \mathsf{Vf}(\mathsf{st},\mathsf{tx}, \time) \\[0.1\baselineskip ][\hline]
-    (\mathsf{AC}_U, \mathcal{Z}_U, \perp) := \parse \mathsf{st} \\
-    \{\ac_i\}_{i \in U} := \parse \mathsf{AC}_U \\
-    (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}, \tout, \pi) := \parse \mathsf{tx} \\
+    (\mathsf{AC}_U, \mathcal{Z}_U, \perp) := \pcparse \mathsf{st} \\
+    \{\ac_i\}_{i \in U} := \pcparse \mathsf{AC}_U \\
+    (P,R,\mathsf{AC}_T, \mathcal{Z}_{\bar{S}}, \tout, \pi) := \pcparse \mathsf{tx} \\
     \mathsf{AC}_R := \{\ac_i\}_{i \in R} \\
     \expired := \mathsf{TimedOut}(\tout, \time) \\
     \mathsf{stmnt} := (P, \mathsf{AC}_R, \mathsf{AC}_T,\mathcal{Z}_{\bar{S}}, \tout, \expired) \\
@@ -399,15 +399,15 @@ If these checks are passed, the verified would agree to advance the state from $
 \vspace{1em}
 \pseudocode{
     \mathsf{KDer}(\mathsf{msks},\tau) \\[0.1\baselineskip ][\hline]
-    (r, \delta, \accd) := \parse \tau \\
+    (r, \delta, \accd) := \pcparse \tau \\
     \mathsf{sks} := \{ \mathsf{msk}_i +\delta \}_{i\in \mathsf{msks}}\\
     \pcreturn (\mathsf{sks}, r, \accd)
 }
 \vspace{1em}
 \pseudocode{
     \mathsf{TgtChk}(\ac, \tk, \accd) \\[0.1\baselineskip ][\hline]
-    (\mathsf{pks}, \mathsf{co}) := \parse \ac \\
-    (r, \delta, \accd') := \parse \mathsf{tk} \\
+    (\mathsf{pks}, \mathsf{co}) := \pcparse \ac \\
+    (r, \delta, \accd') := \pcparse \mathsf{tk} \\
     \pcreturn \begin{cases}
         \accd' \overset{?}{=} \accd \tabularnewline
         \mathsf{co} \overset{?}{=} \Gamma.\mathsf{Com}(\accd,r)
@@ -416,11 +416,11 @@ If these checks are passed, the verified would agree to advance the state from $
 \vspace{1em}
 \pseudocode{
     \mathsf{SrcChk}(\ac, \mathsf{sc}, \mathcal{Z}, \tout, \expired) \\[0.1\baselineskip ][\hline]
-    (\mathsf{sks}, r, \accd) := \parse \mathsf{sc} \\
-    (a, \tout', b) := \parse \accd \\
-    (\mathsf{pks}, \mathsf{co}) := \parse \ac \\
-    (\mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk}) := \parse \mathsf{sks} \\
-    (\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk}) := \parse \mathsf{pks} \\
+    (\mathsf{sks}, r, \accd) := \pcparse \mathsf{sc} \\
+    (a, \tout', b) := \pcparse \accd \\
+    (\mathsf{pks}, \mathsf{co}) := \pcparse \ac \\
+    (\mathsf{ssk}, \mathsf{tsk}, \mathsf{rsk}) := \pcparse \mathsf{sks} \\
+    (\mathsf{spk}, \mathsf{tpk}, \mathsf{rpk}) := \pcparse \mathsf{pks} \\
     \mathbf{assert} \: \mathsf{co} = \Gamma.\mathsf{Com}(\accd, r) \\
     \mathbf{assert} \: b = 0 \lor (\expired \neq 0 \land \tout' = \tout) \\
     \pcif b = 0 \\
@@ -445,14 +445,14 @@ If these checks are passed, the verified would agree to advance the state from $
 \begin{pcvstack}
 \pseudocode{
     \mathsf{TimeVf}(\mathsf{st}, \mathsf{tx}) \\[0.1\baselineskip ][\hline]
-    \time := \parse \mathsf{TimeExt} \\
+    \time := \pcparse \mathsf{TimeExt} \\
     \pcreturn \mathsf{Vf}(\mathsf{st}, \mathsf{tx}, \time) \\
 }
 \vspace{1em}
 \pseudocode{
     \mathsf{TxGen}(\mathsf{st}, P, R, \mathcal{S}, \mathcal{T}) \\[0.1\baselineskip ][\hline]
-    \{\mathsf{sc}_i := (\mathsf{sks}_i, r_i, \accd_i)\}_{i\in S} := \parse \mathcal{S} \\
-    \{(\mathsf{mpks}_i, \accd'_i)\}_{i\in T} := \parse \mathcal{T} \\
+    \{\mathsf{sc}_i := (\mathsf{sks}_i, r_i, \accd_i)\}_{i\in S} := \pcparse \mathcal{S} \\
+    \{(\mathsf{mpks}_i, \accd'_i)\}_{i\in T} := \pcparse \mathcal{T} \\
     \{\ac_i\}_{i \in U} := \mathsf{StExt(st)} \\
     \time := \mathsf{TimeExt(st)} \\
     \tout \gets \mathsf{ExtAccTout}(\{\accd_i\}_{i\in S}) \\
@@ -462,8 +462,8 @@ If these checks are passed, the verified would agree to advance the state from $
     \t r'_i \sample \chi \\
     \t \delta_i \sample \mathcal{K} \\
     \t \mathsf{co}_i := \Gamma.\mathsf{Com}(\accd'_i, r'_i) \\
-    \t (a_i, \tout, b_i) := \parse \accd'_i \\
-    \t (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i) := \parse \mathsf{mpks}_i \\
+    \t (a_i, \tout, b_i) := \pcparse \accd'_i \\
+    \t (\mathsf{smpk}_i, \mathsf{tmpk}_i, \mathsf{rmpk}_i) := \pcparse \mathsf{mpks}_i \\
     \t \mathsf{spk}_i := \mathsf{smpk}_i + \Delta.\mathsf{Eval}(\delta_i) \\
     \t \mathsf{tk}_i := (r'_i, \delta_i, \accd'_i) \\
     \t \pcif b \neq 0 \\

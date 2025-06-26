@@ -1,19 +1,75 @@
 \documentclass{article}      	% Style of the document                     
-\usepackage{fullpage}
-\usepackage{amsmath,amsthm}     	   	% Maths    
-\newtheorem{definition}{Definition}                                      
-\usepackage[utf8]{inputenc}	% UTF-8 characters                                               
-\usepackage[T1]{fontenc}    	% Tuki ääkkösille (Finnish names don't cause problems)                                            
-\usepackage{parskip}        		% Linebreak between paragraphs                
-\usepackage{svg}
-\usepackage{graphicx}       		% Graphics package for adding figures                        
-\usepackage{epstopdf}       		% Possibility to add *.eps figures
-\usepackage{ dsfont }            % Symbol for real numbers
-\usepackage{extarrows}
-\usepackage{float}
-\usepackage{makeidx}
-\usepackage{enumitem}        % possibility to label list items by alphabet
-\newcommand{\M}[1]{\ensuremath{\text{\texttt{#1}}}}
+
+%% CONFIG
+
+\IfFileExists{./.config.tex}{
+  \input{.config}
+}
+{
+  \def\isanonymous{1}
+  \def\isfullversion{1}
+  \def\buildexternal{1}
+}
+
+%% There is a package that you should include first: nag. Why first? Because it warns you about
+%% obsolete commands and package. https://daniel-j-h.github.io/post/latex-a-modern-approach/
+\usepackage[l2tabu,orthodox]{nag}
+
+% Full submissions, submitted by the full paper submission deadline, should contain the abstract and the complete paper. The abstract should summarize the paper’s contributions. There is no page limit and authors are encouraged to use the “full version” of their paper as the submission. The submission should contain, within the initial ten pages following the title page, a clear presentation of the merits of the paper, including a discussion of the paper’s importance within the context of prior work and a description of the key technical and conceptual ideas used to achieve its main claims. The submission should be addressed to a broad spectrum of theoretical computer science researchers. Proofs must be provided which can enable the main mathematical claims of the paper to be fully verified. Although there is no bound on the length of a submission, material other than the abstract, references, and the first ten pages will be read at the committee’s discretion. Authors are encouraged to put the references at the very end of the submission. The submission should be typeset using 11-point or larger fonts, in a single-column, single-space (between lines) format with ample spacing throughout and 1-inch margins all around, on letter-size (8 1/2 x 11 inch) paper. Submissions deviating significantly from these guidelines risk rejection without consideration of their merits.
+
+%% ANONYMOUS SUBMISSIONS
+
+\usepackage{ifthen}
+\newcommand{\anonymous}[2]{%
+\ifthenelse{\equal{\isanonymous}{1}}%
+{#1}%
+{#2}%
+}%
+
+\newcommand{\fullversion}[2]{%
+\ifthenelse{\equal{\isfullversion}{1}}%
+{#1}%
+{#2}%
+}%
+
+\newcommand{\submissionresizebox}[1]{
+  \fullversion{
+    #1
+  }{
+    \resizebox{.95\textwidth}{!}{#1}
+  }
+}
+
+\fullversion{
+    \usepackage{fullpage}
+}{}
+
+%% MARGINS
+
+\fullversion{
+  \usepackage[margin=1in]{geometry}
+  \setlength{\marginparwidth}{1in}
+  \setlength{\marginparsep}{0pt}
+}{
+  \usepackage[pass]{geometry}
+}
+
+%% MISC PACKAGES
+
+\usepackage{microtype}
+\usepackage[bookmarksdepth=2,backref]{hyperref}
+\hypersetup{colorlinks=true,linkcolor={red!50!black},citecolor=darkgray,linkcolor=darkgray}
+\usepackage{booktabs}  %% tables
+\usepackage{comment}
+\usepackage[inline]{enumitem}
+\usepackage{nicematrix}
+\usepackage{thm-restate}
+\usepackage{tabularx}
+\usepackage{breakcites}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xspace}
 \usepackage[
     lambda,
     operators,
@@ -32,17 +88,38 @@
     asymptotics,
     keys]{cryptocode}
 
+
+\usepackage{ifluatex}
+\ifluatex
+\usepackage{luatex85}
+\fi
+% \usepackage{navigator} % Somehow incompatible?
+
+
+\usepackage{amsthm}     	   	% Maths    
+\newtheorem{definition}{Definition}                                      
+\usepackage[utf8]{inputenc}	% UTF-8 characters                                               
+\usepackage[T1]{fontenc}    	
 % \usepackage{todonotes}
 \usepackage{tcolorbox}
 
-\usepackage{amsmath,amsfonts,graphicx,amssymb,amsthm}
+\usepackage{amsfonts,graphicx}
 
 
-\usepackage[bookmarksdepth=2,draft=false]{hyperref}
-\hypersetup{colorlinks=true,linkcolor={red!50!black},citecolor=darkgray,linkcolor=darkgray}
+%% PDF SETUP
+
+\pagestyle{plain}
+\hypersetup{colorlinks=true,citecolor=darkgray,linkcolor=darkgray}
+\allowdisplaybreaks
+
+%% REFERENCES
 \usepackage[capitalize]{cleveref}
+\AddToHook{cmd/appendix/before}{\crefalias{section}{appendix}}
+\AddToHook{cmd/appendix/before}{\crefalias{subsection}{appendix}}
+\DeclareRobustCommand{\cshref}[1]{{\abbrevcrefs\cref{#1}}}
 
-\usepackage[draft]{comments-bugs-todos}
+%% COMMENTS, BUGS, TODOS
+\usepackage[draft]{comments-bugs-todos} % use "draft" option to show comments, bugs, todos
 
 \input{macro}
 
@@ -73,14 +150,9 @@
     }
 }
 
-
-
-\usepackage{biblatex}
-\addbibresource{references.bib}
-
 \begin{document}         
 \author{Russell W. F. Lai \and Lorenzo Tucci}
-\title{RingCCT: confidential commit transactions and atomic swaps}
+\title{Ring Confidential Commit Transactions (RingCCT) for Private Atomic Swaps}
 
 \maketitle
 
@@ -111,3 +183,8 @@
 \input{comm_tx}
 \input{ringcct}
 \input{experiments}
+
+\bibliographystyle{alpha}
+\bibliography{cryptobib/abbrev3,cryptobib/crypto,references}
+
+\end{document}

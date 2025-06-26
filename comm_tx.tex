@@ -72,7 +72,7 @@ The use of the XOR-locked encoding guarantees that $P_1$ can finalize its transa
 This mechanism enforces a strict dependency between the two on-chain actions, thereby preserving the atomicity of the swap.
 Furthermore, the protocol is resilient to failures or delays during the swap phase. If any assertion fails, any subroutine returns an error, or any asynchronous operation stalls indefinitely—such as unresponsiveness from a counterparty or delay in transaction propagation—each party is programmed to invoke the refund mechanism once the respective timeout $T_0$ or $T_1$ elapses. This design guarantees that, even in the presence of faults or adversarial behavior, no party suffers financial loss, and the protocol atomicity is mantained.
 
-\begin{figure}[H]
+\begin{figure}[t]
     \begin{pchstack}[center, boxed]
     \pseudocode{
 	    P_0((\pkm, \skm)_\bca,  (\pkc, \skc)_\bcb, \mathsf{\pk_{\mathsf{s}, \bcb}}) \qquad \qquad P_1((\pkm, \skm)_\bcb,  (\pkc, \skc)_\bca, \mathsf{\pk_{\mathsf{s}, \bca}}) \\[0.1\baselineskip ][\hline] 
@@ -90,7 +90,7 @@ Furthermore, the protocol is resilient to failures or delays during the swap pha
     \caption{Protocol definition of 2PC $\Gamma_{\mathsf{CommitTx}}$}
     \label{fig:generic_2pc}
     \end{figure}
-    \begin{figure}[H]
+    \begin{figure}[t]
     \begin{minipage}[t]{0.5\textwidth}
     \begin{pchstack}[boxed]
     \pseudocode{
